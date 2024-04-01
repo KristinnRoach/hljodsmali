@@ -1,3 +1,10 @@
+@import 'mixins';
+
+/* Variables */
+
+$color-1: green;
+$color-2: yellow;
+
 .main {
   display: flex;
   flex-direction: column;
@@ -5,6 +12,7 @@
   align-items: center;
   padding: 6rem;
   min-height: 100vh;
+  color: $color-1;
 }
 
 .description {
@@ -16,22 +24,22 @@
   width: 100%;
   z-index: 2;
   font-family: var(--font-mono);
-}
 
-.description a {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-}
+  a {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+  }
 
-.description p {
-  position: relative;
-  margin: 0;
-  padding: 1rem;
-  background-color: rgba(var(--callout-rgb), 0.5);
-  border: 1px solid rgba(var(--callout-border-rgb), 0.3);
-  border-radius: var(--border-radius);
+  p {
+    position: relative;
+    margin: 0;
+    padding: 1rem;
+    background-color: $color-2;
+    border: 1px solid rgba(var(--callout-border-rgb), 0.3);
+    border-radius: var(--border-radius);
+  }
 }
 
 .code {
@@ -44,6 +52,11 @@
   grid-template-columns: repeat(4, minmax(25%, auto));
   max-width: 100%;
   width: var(--max-width);
+
+  /* Tablet and Smaller Desktop */
+  @include tablet() {
+    grid-template-columns: repeat(2, 50%);
+  }
 }
 
 .card {
@@ -98,7 +111,7 @@
 
 .center::before,
 .center::after {
-  content: "";
+  content: '';
   left: 50%;
   position: absolute;
   filter: blur(45px);
@@ -200,13 +213,6 @@
       rgb(var(--background-end-rgb)) 40%
     );
     z-index: 1;
-  }
-}
-
-/* Tablet and Smaller Desktop */
-@media (min-width: 701px) and (max-width: 1120px) {
-  .grid {
-    grid-template-columns: repeat(2, 50%);
   }
 }
 

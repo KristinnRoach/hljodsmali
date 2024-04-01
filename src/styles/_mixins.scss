@@ -1,0 +1,7 @@
+/* Tablet and Smaller Desktop */
+
+@mixin tablet() {
+  @media (min-width: 701px) and (max-width: 1120px) {
+    @content;
+  }
+}
