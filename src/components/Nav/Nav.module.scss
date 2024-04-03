@@ -1,0 +1,14 @@
+.nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+
+  :first-child {
+    margin-right: auto;
+  }
+
+  a {
+    font-size: 1rem;
+  }
+}

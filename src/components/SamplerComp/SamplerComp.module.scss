@@ -1,0 +1,47 @@
+.samplerBtnsContainer {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: 4rem;
+  gap: 1rem;
+
+  button {
+    font-size: 1.2rem;
+  }
+}
+
+// .samplerButton {
+//   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+//   border-radius: 9999px;
+//   padding: 0.5rem 0.75rem;
+// }
+
+.recordingOff {
+  background-color: rgba(190, 0, 0, 0.753);
+  color: white;
+}
+
+.recordingOn {
+  color: white;
+  background-color: rgb(255, 0, 0);
+}
+
+.loopOn {
+  background-color: rgb(0, 166, 0);
+  color: white;
+}
+
+.loopOff {
+  background-color: rgba(0, 172, 43, 0.581);
+  color: black;
+}
+
+.holdOn {
+  background-color: blue;
+  color: white;
+}
+
+.holdOff {
+  background-color: rgba(2, 2, 206, 0.605);
+  color: white;
+}
