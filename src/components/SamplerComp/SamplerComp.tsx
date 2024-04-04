@@ -9,8 +9,6 @@ import styles from './SamplerComp.module.scss';
 
 import { createSample, fetchSamples } from '../../db/db_samples';
 
-//  CLEAR OLD SAMPLE WHEN RE-RECORDING
-
 const SamplerComp: React.FC = () => {
   const audioFormat = 'audio/ogg';
   const pocketBase = new PocketBase('http://127.0.0.1:8090/');
@@ -153,10 +151,12 @@ const SamplerComp: React.FC = () => {
     }
   };
 
+  const [showSampleList, setShowSampleList] = useState<boolean>(false);
+
   const getSamplesList = async (name: string) => {
     const sampleObjArray = await fetchSamples();
     setUserSamples(sampleObjArray);
-    console.log(JSON.stringify(userSamples));
+    setShowSampleList(!showSampleList);
   };
 
   const downloadAudio = () => {
@@ -234,7 +234,7 @@ const SamplerComp: React.FC = () => {
       <button onClick={getSamplesList}>Samples</button>
 
       <ul className={styles.samplesList}>
-        {userSamples[0] &&
+        {showSampleList &&
           userSamples.map((sample, index) => (
             <li key={index}>
               <button onClick={chooseSample} className={styles.singleSample}>
