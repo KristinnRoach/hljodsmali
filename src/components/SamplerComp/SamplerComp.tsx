@@ -15,7 +15,7 @@ const SamplerComp: React.FC = () => {
 
   const [audioElementSrc, setAudioElementSrc] = useState<string>('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [userSamples, setUserSamples] = useState<Obj[]>([]);
+  const [userSamples, setUserSamples] = useState<Record<string, any>>([]); // búa til sample type
 
   const loopEnabledRef = useRef<boolean>(false);
 
