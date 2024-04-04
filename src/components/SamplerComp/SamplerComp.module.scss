@@ -10,11 +10,34 @@
   }
 }
 
-// .samplerButton {
-//   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
-//   border-radius: 9999px;
-//   padding: 0.5rem 0.75rem;
-// }
+.samplesList {
+  list-style: none;
+  display: flex;
+  gap: 0.5rem;
+  max-width: 25vw;
+  max-height: 25vh;
+  flex-wrap: wrap;
+
+  li {
+    display: flex;
+    background-color: rgba(58, 255, 107, 0.196);
+    border-radius: 50%;
+  }
+
+  .singleSample {
+    background-color: rgb(245, 255, 99);
+    padding: 0.5rem;
+    color: black;
+    text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.221);
+    text-align: center;
+  }
+  //
+}
+
+.downloadButton {
+  background-color: rgba(2, 2, 206, 0.605);
+  color: white;
+}
 
 .recordingOff {
   background-color: rgba(190, 0, 0, 0.753);
@@ -42,6 +65,6 @@
 }
 
 .holdOff {
-  background-color: rgba(2, 2, 206, 0.605);
+  background-color: rgb(0, 149, 166);
   color: white;
 }

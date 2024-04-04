@@ -1,0 +1,25 @@
+// import React from 'react';
+
+// interface Props {
+//   name?: string;
+//   created?: string;
+//   sample_file?: HTMLAudioElement;
+// }
+
+// const Samples: React.FC<Props> = ({
+//   name = 'name missing',
+//   created = 'no date',
+//   sample_file = 'no sample file',
+// }) => {
+//   return (
+//     <ul>
+//       <li>
+//         <p>{`${name}`}</p>
+//         <audio>{`${sample_file}`}</audio>
+//         <date>{`${created}`}</date>
+//       </li>
+//     </ul>
+//   );
+// };
+
+// export default Samples;

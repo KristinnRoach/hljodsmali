@@ -8,9 +8,9 @@ import Shapes from '../components/Shapes/Shapes.jsx';
 export default function Home() {
   return (
     <>
-      <div className={styles.top}>
+      {/* <div className={styles.top}>
         <Nav />
-      </div>
+      </div> */}
       <main className={styles.main}>
         <div className={styles.controls}>
           <SamplerComp />

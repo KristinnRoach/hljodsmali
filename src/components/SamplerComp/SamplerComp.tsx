@@ -1,47 +1,43 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import PocketBase from 'pocketbase';
 
 import { keyMap } from '../../utils/keymap.js';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import styles from './SamplerComp.module.scss';
 
+import { createSample, fetchSamples } from '../../db/db_samples';
+
 //  CLEAR OLD SAMPLE WHEN RE-RECORDING
 
 const SamplerComp: React.FC = () => {
-  // const dataType = "video/webm";
+  const audioFormat = 'audio/ogg';
+  const pocketBase = new PocketBase('http://127.0.0.1:8090/');
 
   const [audioElementSrc, setAudioElementSrc] = useState<string>('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [loopEnabled, setLoopEnabled] = useState(false);
-  const [holdOn, setHoldOn] = useState(false);
+  const [userSamples, setUserSamples] = useState<Obj[]>([]);
 
-  // const loopEnabled = useRef<boolean>(false);
+  const loopEnabledRef = useRef<boolean>(false);
 
   const audioElementRef = useRef<HTMLAudioElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const blobsRef = useRef<Blob[]>([]);
   const clonesRef = useRef<HTMLAudioElement[]>([]);
 
   const keysPressedRef = useRef<string[]>([]);
 
   useEffect(() => {
-    const playSample = (note: number) => {
+    const playSample = (note: number, key: string) => {
       if (audioElementSrc) {
         const audioElement = audioElementRef.current;
-        // audioElement.loop = loopEnabled;
         audioElement.preservesPitch = false;
 
-        // if (clonesRef.current.length === 0 && audioElement.ended) {
-        //   // Reuse the existing audio element if it's not currently playing
-        //   audioElement.currentTime = 0;
-        //   //   audioElement.preservesPitch = false; // unecessary?
-        //   audioElement.playbackRate = 2 ** ((note - 60) / 12);
-        //   audioElement.play();
-        // } else {
         const clone = audioElementRef.current?.cloneNode(
           true
         ) as HTMLAudioElement;
+
         if (clone) {
           clone.preservesPitch = false;
           clone.playbackRate = 2 ** ((note - 60) / 12);
@@ -49,28 +45,18 @@ const SamplerComp: React.FC = () => {
           clone.play();
           clone.addEventListener('ended', onAudioEnded);
         }
-        // }
       }
     };
 
     const onAudioEnded = (event: Event) => {
-      const clone = event.target as HTMLAudioElement;
-      stopSample(clone);
-
-      if (loopEnabled) {
-        // .current ef ref
-        clone.play();
-        clone.addEventListener('ended', onAudioEnded);
-      } else {
-        clone.removeEventListener('ended', onAudioEnded);
-        clonesRef.current = clonesRef.current.filter((c) => c !== clone);
-      }
-    };
-
-    const stopSample = (sample: HTMLAudioElement) => {
-      if (sample) {
+      const sample = event.target as HTMLAudioElement;
+      if (!loopEnabledRef.current) {
         sample.pause();
         sample.currentTime = 0;
+        sample.removeEventListener('ended', onAudioEnded);
+        clonesRef.current = clonesRef.current.filter((c) => c !== sample);
+      } else {
+        sample.play();
       }
     };
 
@@ -78,11 +64,10 @@ const SamplerComp: React.FC = () => {
       const key = event.code;
       const note = keyMap[key];
 
-      if (note) {
-        // && !keysPressedRef.current.includes(key)
+      if (note && !keysPressedRef.current.includes(key)) {
         keysPressedRef.current.push(key);
         // event.preventDefault();
-        playSample(note);
+        playSample(note, key);
       }
     };
 
@@ -91,7 +76,7 @@ const SamplerComp: React.FC = () => {
       const note = keyMap[key];
       keysPressedRef.current = keysPressedRef.current.filter((k) => k !== key);
       console.log('keysPressedRef.current: ' + keysPressedRef.current);
-      if (!holdOn && note) {
+      if (loopEnabledRef.current && note) {
         // annars feid?
         const clone = clonesRef.current.find(
           (c) => c.dataset.note === note.toString()
@@ -103,34 +88,34 @@ const SamplerComp: React.FC = () => {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    // document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('keyup', handleKeyUp);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      // document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('keyup', handleKeyUp);
     };
-  }, [audioElementSrc, holdOn, loopEnabled]); //
+  }, [audioElementSrc]);
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // echoCancelation?
+      // Clear previously recorded audio blobs
+      blobsRef.current = [];
 
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera ref?
       const audioContext = new AudioContext();
       const source = audioContext.createMediaStreamSource(stream);
       mediaRecorderRef.current = new MediaRecorder(stream);
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
+          blobsRef.current.push(event.data);
         }
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/wav' });
+        const blob = new Blob(blobsRef.current, { type: audioFormat });
         const url = URL.createObjectURL(blob);
         setAudioElementSrc(url);
-        // Clear recorded audio chunks after creating the audio source URL
-        chunksRef.current = [];
       };
 
       mediaRecorderRef.current.start();
@@ -147,23 +132,70 @@ const SamplerComp: React.FC = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (blobsRef.current[0]) {
+      const name = prompt('Enter a name for the sample:');
+
+      if (name !== null && name.trim() !== '') {
+        await createSample(name, blobsRef.current[0]);
+      } else {
+        alert('Invalid name or cancelled.');
+      }
+    } else {
+      console.error('No recorded audio blobs found');
+    }
+  };
+
+  const chooseSample = (e) => {
+    const clicked = event.target.nextSibling;
+    if (clicked && clicked.tagName === 'AUDIO') {
+      setAudioElementSrc(clicked.src);
+    }
+  };
+
+  const getSamplesList = async (name: string) => {
+    const sampleObjArray = await fetchSamples();
+    setUserSamples(sampleObjArray);
+    console.log(JSON.stringify(userSamples));
+  };
+
+  const downloadAudio = () => {
+    if (audioElementSrc) {
+      const link = document.createElement('a');
+      link.href = audioElementSrc;
+      link.download = 'sample-hljodsmali.wav';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const stopSample = (sample: HTMLAudioElement) => {
+    if (sample) {
+      sample.pause();
+      sample.currentTime = 0;
+    }
+  };
+
+  const stopAllSamples = (event: Event) => {
+    const sample = event.target as HTMLAudioElement;
+    stopSample(sample);
+    clonesRef.current = clonesRef.current.filter((c) => c !== sample);
+  };
+
+  const [loopState, setLoopState] = useState<boolean>(false);
+
   const toggleLoop = () => {
-    if (loopEnabled) {
-      clonesRef.current.forEach((clone) => {
-        stopSample(clone);
-        clone.removeEventListener('ended', onAudioEnded);
+    loopEnabledRef.current = !loopEnabledRef.current;
+    setLoopState(!loopState);
+
+    if (!loopEnabledRef.current) {
+      clonesRef.current.forEach((clone, index) => {
+        clone.addEventListener('ended', stopAllSamples);
       });
       clonesRef.current = [];
     }
-    setLoopEnabled(!loopEnabled);
-    // loopEnabled.current = !loopEnabled.current;
   };
-
-  const toggleHold = () => {
-    setHoldOn(!holdOn);
-  };
-
-  // Þegar slekk á loop eða hold triggera release á sömplum svo hættiiii!
 
   return (
     <div className={styles.samplerBtnsContainer}>
@@ -178,31 +210,40 @@ const SamplerComp: React.FC = () => {
         trueClick={startRecording}
         falseClick={stopRecording}
       />
-      <ConditionClassButton
-        id="loop-button"
-        condition={loopEnabled} // .current
-        baseClassName={styles.samplerButton}
-        trueClick={toggleLoop}
-        falseClick={toggleLoop}
-        trueClassName={styles.loopOn}
-        falseClassName={styles.loopOff}
-        trueContent="∞ !"
-        falseContent="! ∞"
-        inactive={!audioElementSrc}
-      />
-      <ConditionClassButton
-        id="hold-button"
-        condition={holdOn}
-        baseClassName={styles.samplerButton}
-        trueClick={toggleHold}
-        falseClick={toggleHold}
-        trueClassName={styles.holdOn}
-        falseClassName={styles.holdOff}
-        trueContent="Hold On !"
-        falseContent="Hold Off !"
-        inactive={!audioElementSrc}
-      />
-      <audio ref={audioElementRef} src={audioElementSrc}></audio>
+
+      {audioElementSrc && (
+        <>
+          <ConditionClassButton
+            id="loop-button"
+            condition={loopState}
+            baseClassName={loopState ? styles.loopOn : styles.loopOff}
+            trueClick={toggleLoop}
+            falseClick={toggleLoop}
+            trueContent="∞"
+            falseContent="! ∞"
+            inactive={!audioElementSrc}
+          />
+          <button onClick={handleSave}>Save</button>
+          <button className={styles.downloadButton} onClick={downloadAudio}>
+            Download
+          </button>
+          <audio ref={audioElementRef} src={audioElementSrc}></audio>
+        </>
+      )}
+
+      <button onClick={getSamplesList}>Samples</button>
+
+      <ul className={styles.samplesList}>
+        {userSamples[0] &&
+          userSamples.map((sample, index) => (
+            <li key={index}>
+              <button onClick={chooseSample} className={styles.singleSample}>
+                {sample.name}
+              </button>
+              <audio src={sample.audioUrl}></audio>
+            </li>
+          ))}
+      </ul>
     </div>
   );
 };
