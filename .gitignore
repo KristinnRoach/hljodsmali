@@ -2,6 +2,7 @@
 
 /pb_data
 .env*
+/src/app/(pages)/(auth)
 
 # dependencies
 /node_modules
