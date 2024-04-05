@@ -1,3 +1,8 @@
+.samplerWrapper {
+  display: flex;
+  column-gap: 15%;
+}
+
 .samplerBtnsContainer {
   display: flex;
   justify-content: space-around;
@@ -31,7 +36,21 @@
     text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.221);
     text-align: center;
   }
-  //
+
+  .deleteButton {
+    padding: 0 0 0 0.5rem;
+    border: none;
+    box-shadow: none;
+    background: none;
+    color: grey;
+    transition: font-size 0.3s ease;
+  }
+
+  .deleteButton:hover {
+    font-size: 1.35rem;
+    color: red;
+    cursor: pointer;
+  }
 }
 
 .downloadButton {

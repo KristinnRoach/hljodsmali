@@ -38,3 +38,7 @@ export const createSample = async (
     console.error('Error uploading audio:', error);
   }
 };
+
+export async function deleteSample(sampleId: string): Promise<void> {
+  await pb.collection('samples').delete(sampleId);
+}

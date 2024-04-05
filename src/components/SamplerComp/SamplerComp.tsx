@@ -6,7 +6,7 @@ import PocketBase from 'pocketbase';
 import { keyMap } from '../../utils/keymap';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import styles from './SamplerComp.module.scss';
-import { createSample, fetchSamples } from '../../db/db_samples';
+import { createSample, fetchSamples, deleteSample } from '../../db/db_samples';
 import { Sample, KeyMap } from '../../types';
 
 const SamplerComp: React.FC = () => {
@@ -143,13 +143,20 @@ const SamplerComp: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
+  async function loadUserSamples() {
+    const sampleObjArray = await fetchSamples();
+    setUserSamples(sampleObjArray);
+  }
+
+  const handleSave = async (): Promise<void> => {
     if (blobsRef.current[0]) {
       const name = prompt('Enter a name for the sample:');
 
       if (name !== null && name.trim() !== '') {
         await createSample(name, blobsRef.current[0]);
+        await loadUserSamples();
       } else {
+        console.error('Invalid name or cancelled.');
         alert('Invalid name or cancelled.');
       }
     } else {
@@ -169,11 +176,26 @@ const SamplerComp: React.FC = () => {
 
   const [showSampleList, setShowSampleList] = useState<boolean>(false);
 
-  const getSamplesList = async () => {
-    const sampleObjArray = await fetchSamples();
-    setUserSamples(sampleObjArray);
-    setShowSampleList(!showSampleList);
+  const toggleShowSamples = (): void => {
+    loadUserSamples();
+    setShowSampleList((prevShowSampleList) => !prevShowSampleList);
   };
+
+  async function handleDelete(
+    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ): Promise<void> {
+    const sampleId: string = event.currentTarget.id;
+
+    if (sampleId) {
+      try {
+        await deleteSample(sampleId);
+        await loadUserSamples();
+      } catch {
+        console.error('Delete sample failed');
+        alert('Delete sample failed');
+      }
+    }
+  }
 
   const downloadAudio = () => {
     if (audioElementSrc) {
@@ -201,7 +223,7 @@ const SamplerComp: React.FC = () => {
 
   const [loopState, setLoopState] = useState<boolean>(false);
 
-  const toggleLoop = () => {
+  const toggleLoop = (): void => {
     loopEnabledRef.current = !loopEnabledRef.current;
     setLoopState(!loopState);
 
@@ -214,37 +236,39 @@ const SamplerComp: React.FC = () => {
   };
 
   return (
-    <div className={styles.samplerBtnsContainer}>
-      <ConditionClassButton
-        condition={!isRecording}
-        baseClassName={styles.samplerButton}
-        trueClassName={styles.recordingOff}
-        falseClassName={styles.recordingOn}
-        trueContent="Record!"
-        falseContent="  Stop "
-        trueClick={startRecording}
-        falseClick={stopRecording}
-      />
+    <div className={styles.samplerWrapper}>
+      <div className={styles.samplerBtnsContainer}>
+        <ConditionClassButton
+          condition={!isRecording}
+          baseClassName={styles.samplerButton}
+          trueClassName={styles.recordingOff}
+          falseClassName={styles.recordingOn}
+          trueContent="&#x23FA;"
+          falseContent="&#x23F9;"
+          trueClick={startRecording}
+          falseClick={stopRecording}
+        />
 
-      {audioElementSrc && (
-        <>
-          <ConditionClassButton
-            condition={loopState}
-            baseClassName={loopState ? styles.loopOn : styles.loopOff}
-            trueClick={toggleLoop}
-            falseClick={toggleLoop}
-            trueContent="∞"
-            falseContent="! ∞"
-          />
-          <button onClick={handleSave}>Save</button>
-          <button className={styles.downloadButton} onClick={downloadAudio}>
-            Download
-          </button>
-          <audio ref={audioElementRef} src={audioElementSrc}></audio>
-        </>
-      )}
+        {audioElementSrc && (
+          <>
+            <ConditionClassButton
+              condition={loopState}
+              baseClassName={loopState ? styles.loopOn : styles.loopOff}
+              trueClick={toggleLoop}
+              falseClick={toggleLoop}
+              trueContent="&#x1F501;" // "∞"
+              falseContent="&#x1F502;" // "! ∞"
+            />
+            <button onClick={handleSave}>&#x1F4BE;</button>
+            <button className={styles.downloadButton} onClick={downloadAudio}>
+              &#x2B07;
+            </button>
+            <audio ref={audioElementRef} src={audioElementSrc}></audio>
+          </>
+        )}
 
-      <button onClick={getSamplesList}>Samples</button>
+        <button onClick={toggleShowSamples}>🎵</button>
+      </div>
 
       <ul className={styles.samplesList}>
         {showSampleList &&
@@ -252,6 +276,13 @@ const SamplerComp: React.FC = () => {
             <li key={index}>
               <button onClick={chooseSample} className={styles.singleSample}>
                 {sample.name}
+                <button
+                  onClick={handleDelete}
+                  id={sample.id}
+                  className={styles.deleteButton}
+                >
+                  x
+                </button>
               </button>
               <audio src={sample.audioUrl}></audio>
             </li>
