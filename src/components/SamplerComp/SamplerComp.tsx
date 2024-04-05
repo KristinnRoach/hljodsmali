@@ -7,7 +7,7 @@ import { keyMap } from '../../utils/keymap.js';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import styles from './SamplerComp.module.scss';
 import { createSample, fetchSamples } from '../../db/db_samples';
-import { Sample } from './types';
+import { Sample } from '../../types';
 
 const SamplerComp: React.FC = () => {
   const audioFormat = 'audio/ogg';

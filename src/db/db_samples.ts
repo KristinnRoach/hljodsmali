@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase';
 
-import { Sample } from './types';
+import { Sample } from '../types';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
