@@ -95,7 +95,7 @@ function Geometry({ rate, position, geometry, materials }) {
       const key = e.code;
       const note = keyMap[key];
       if (note) {
-        e.preventDefault();
+        // e.preventDefault();
         animateMesh(meshRef.current);
       }
     }

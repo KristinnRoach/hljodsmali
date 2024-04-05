@@ -30,7 +30,7 @@ const SamplerComp: React.FC = () => {
 
   useEffect(() => {
     const playSample = (note: number, key: string) => {
-      if (audioElementSrc) {
+      if (audioElementRef.current) {
         const audioElement = audioElementRef.current;
         audioElement.preservesPitch = false;
 
@@ -104,7 +104,7 @@ const SamplerComp: React.FC = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera ref?
       // const audioContext = new AudioContext();
       audioContextRef.current = new AudioContext();
-      const source = audioContext.createMediaStreamSource(stream);
+      const source = audioContextRef.current.createMediaStreamSource(stream);
       mediaRecorderRef.current = new MediaRecorder(stream);
 
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -115,8 +115,12 @@ const SamplerComp: React.FC = () => {
 
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(blobsRef.current, { type: audioFormat });
-        const url = URL.createObjectURL(blob);
-        setAudioElementSrc(url);
+        setAudioElementSrc((prevState) => {
+          if (prevState) {
+            URL.revokeObjectURL(prevState);
+          }
+          return URL.createObjectURL(blob);
+        });
       };
 
       mediaRecorderRef.current.start();
@@ -130,10 +134,7 @@ const SamplerComp: React.FC = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      // Cleanup MediaRecorder resources
-      mediaRecorderRef.current.ondataavailable = null;
-      mediaRecorderRef.current.onstop = null;
-      mediaRecorderRef.current = null;
+
       // Close the audio context
       if (audioContextRef.current) {
         audioContextRef.current.close();
