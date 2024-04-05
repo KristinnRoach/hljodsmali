@@ -160,7 +160,8 @@ const SamplerComp: React.FC = () => {
   const chooseSample = (
     event: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
-    const clicked = event.target.nextSibling as HTMLAudioElement;
+    const clicked = (event.target as HTMLElement)
+      ?.nextSibling as HTMLAudioElement;
     if (clicked && clicked.tagName === 'AUDIO') {
       setAudioElementSrc(clicked.src);
     }
@@ -215,7 +216,6 @@ const SamplerComp: React.FC = () => {
   return (
     <div className={styles.samplerBtnsContainer}>
       <ConditionClassButton
-        id="record-button"
         condition={!isRecording}
         baseClassName={styles.samplerButton}
         trueClassName={styles.recordingOff}
@@ -229,7 +229,6 @@ const SamplerComp: React.FC = () => {
       {audioElementSrc && (
         <>
           <ConditionClassButton
-            id="loop-button"
             condition={loopState}
             baseClassName={loopState ? styles.loopOn : styles.loopOff}
             trueClick={toggleLoop}
