@@ -4,3 +4,7 @@ export type Sample = {
   sample_file: Blob;
   audioUrl?: string;
 };
+
+export type KeyMap = {
+  [key: string]: number;
+};

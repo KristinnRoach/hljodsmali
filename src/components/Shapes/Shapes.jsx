@@ -6,7 +6,7 @@ import { ContactShadows, Float, Environment } from '@react-three/drei';
 import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 
-import { keyMap } from '../../utils/keymap.js';
+import { keyMap } from '../../utils/keymap';
 import styles from './Shapes.module.scss';
 
 export default function Shapes() {

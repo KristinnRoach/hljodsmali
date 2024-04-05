@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import PocketBase from 'pocketbase';
 
-import { keyMap } from '../../utils/keymap.js';
+import { keyMap } from '../../utils/keymap';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import styles from './SamplerComp.module.scss';
 import { createSample, fetchSamples } from '../../db/db_samples';
-import { Sample } from '../../types';
+import { Sample, KeyMap } from '../../types';
 
 const SamplerComp: React.FC = () => {
   const audioFormat = 'audio/ogg';
@@ -62,7 +62,7 @@ const SamplerComp: React.FC = () => {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.code;
-      const note = keyMap[key];
+      const note: number | undefined = keyMap[key];
 
       if (note && !keysPressedRef.current.includes(key)) {
         keysPressedRef.current.push(key);
