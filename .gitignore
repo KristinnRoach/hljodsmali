@@ -2,6 +2,7 @@
 
 /pb_data
 .env*
+*.glós
 
 # dependencies
 /node_modules

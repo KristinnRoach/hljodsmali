@@ -1,10 +1,13 @@
 import Link from 'next/link';
-import PocketBase from 'pocketbase';
-import { useState, useEffect } from 'react';
+import { ReactNode } from 'react';
 
 import styles from './Nav.module.scss';
 
-export default function Nav({ children }: { children: React.ReactNode }) {
+interface NavProps {
+  children: ReactNode;
+}
+
+export default function Nav({ children }: NavProps) {
   return (
     <nav className={styles.nav}>
       <Link href="/">Home</Link>

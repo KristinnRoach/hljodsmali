@@ -1,9 +1,9 @@
 import { FC } from 'react';
 
-interface pageProps {}
+interface LoadingProps {}
 
-const loading: FC<pageProps> = ({}) => {
+const Loading: FC<LoadingProps> = ({}) => {
   return <div>loading...</div>;
 };
 
-export default loading;
+export default Loading;

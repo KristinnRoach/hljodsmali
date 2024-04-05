@@ -1,10 +1,12 @@
 import PocketBase from 'pocketbase';
 
+import { Sample } from './types';
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const pb = new PocketBase('http://127.0.0.1:8090');
 
-export async function fetchSamples() {
+export async function fetchSamples(): Promise<Sample[]> {
   const data = await pb.collection('samples').getFullList({
     sort: '-created',
   });
@@ -12,17 +14,20 @@ export async function fetchSamples() {
   const samplesWithSrcURL = data?.map((sample: any) => {
     const audioUrl = pb.files.getUrl(sample, sample.sample_file, {});
 
-    // Object with audio elements for each sample
+    // Object with audioUrl for each sample
     return {
       ...sample,
       audioUrl: audioUrl,
     };
   });
 
-  return samplesWithSrcURL;
+  return samplesWithSrcURL || [];
 }
 
-export const createSample = async (name: string, sample_file: Blob) => {
+export const createSample = async (
+  name: string,
+  sample_file: Blob
+): Promise<void> => {
   const formData = new FormData();
   formData.append('name', name);
   formData.append('sample_file', sample_file);

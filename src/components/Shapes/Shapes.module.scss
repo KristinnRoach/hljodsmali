@@ -1,4 +1,8 @@
 .container {
-  width: 100vw;
+  position: fixed;
+  bottom: 0;
+  transform: translateX(-50%);
   height: 100vh;
+  width: 100vw;
+  z-index: -1; // fix for clicking buttons
 }

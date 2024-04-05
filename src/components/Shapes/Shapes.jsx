@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Float, Environment } from '@react-three/drei';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 
 import { keyMap } from '../../utils/keymap.js';
@@ -44,8 +44,6 @@ function Geometries() {
     },
   ];
 
-  // geometry: new THREE.BoxGeometry(1.0, 0.5, 1.0),
-
   const materials = [new THREE.MeshNormalMaterial()];
 
   return geometries.map(({ position, rate, geometry }) => (
@@ -62,25 +60,23 @@ function Geometries() {
 function Geometry({ rate, position, geometry, materials }) {
   const meshRef = useRef();
   const [visible, setVisible] = useState(false);
+  const startingMaterial = gsap.utils.random(materials);
 
-  const startingMaterial = getRandomMaterial();
+  const animateMesh = useCallback(
+    (thisMesh) => {
+      gsap.to(thisMesh.rotation, {
+        x: `+=${gsap.utils.random(0, 2)}`,
+        y: `+=${gsap.utils.random(0, 2)}`,
+        z: `+=${gsap.utils.random(0, 2)}`,
+        duration: 1.3,
+        ease: 'elastic.out(1, 0.3)',
+        yoyo: true,
+      });
 
-  function getRandomMaterial() {
-    return gsap.utils.random(materials);
-  }
-
-  function animateMesh(thisMesh) {
-    gsap.to(thisMesh.rotation, {
-      x: `+=${gsap.utils.random(0, 2)}`,
-      y: `+=${gsap.utils.random(0, 2)}`,
-      z: `+=${gsap.utils.random(0, 2)}`,
-      duration: 1.3,
-      ease: 'elastic.out(1, 0.3',
-      yoyo: true,
-    });
-
-    thisMesh.material = getRandomMaterial();
-  }
+      thisMesh.material = gsap.utils.random(materials);
+    },
+    [materials]
+  );
 
   function handleClick(e) {
     const clickedMesh = e.object;
@@ -109,7 +105,7 @@ function Geometry({ rate, position, geometry, materials }) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [animateMesh]);
 
   useEffect(() => {
     let context = gsap.context(() => {

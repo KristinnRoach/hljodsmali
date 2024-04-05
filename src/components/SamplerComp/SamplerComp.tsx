@@ -6,16 +6,18 @@ import PocketBase from 'pocketbase';
 import { keyMap } from '../../utils/keymap.js';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import styles from './SamplerComp.module.scss';
-
 import { createSample, fetchSamples } from '../../db/db_samples';
+import { Sample } from './types';
 
 const SamplerComp: React.FC = () => {
   const audioFormat = 'audio/ogg';
   const pocketBase = new PocketBase('http://127.0.0.1:8090/');
 
+  const audioContextRef = useRef<AudioContext | null>(null);
+
   const [audioElementSrc, setAudioElementSrc] = useState<string>('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [userSamples, setUserSamples] = useState<Record<string, any>>([]); // búa til sample type
+  const [userSamples, setUserSamples] = useState<Sample[]>([]);
 
   const loopEnabledRef = useRef<boolean>(false);
 
@@ -100,7 +102,8 @@ const SamplerComp: React.FC = () => {
       blobsRef.current = [];
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera ref?
-      const audioContext = new AudioContext();
+      // const audioContext = new AudioContext();
+      audioContextRef.current = new AudioContext();
       const source = audioContext.createMediaStreamSource(stream);
       mediaRecorderRef.current = new MediaRecorder(stream);
 
@@ -127,6 +130,15 @@ const SamplerComp: React.FC = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      // Cleanup MediaRecorder resources
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current = null;
+      // Close the audio context
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
     }
   };
 
@@ -144,8 +156,10 @@ const SamplerComp: React.FC = () => {
     }
   };
 
-  const chooseSample = (e) => {
-    const clicked = event.target.nextSibling;
+  const chooseSample = (
+    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ) => {
+    const clicked = event.target.nextSibling as HTMLAudioElement;
     if (clicked && clicked.tagName === 'AUDIO') {
       setAudioElementSrc(clicked.src);
     }
@@ -153,7 +167,7 @@ const SamplerComp: React.FC = () => {
 
   const [showSampleList, setShowSampleList] = useState<boolean>(false);
 
-  const getSamplesList = async (name: string) => {
+  const getSamplesList = async () => {
     const sampleObjArray = await fetchSamples();
     setUserSamples(sampleObjArray);
     setShowSampleList(!showSampleList);
@@ -221,7 +235,6 @@ const SamplerComp: React.FC = () => {
             falseClick={toggleLoop}
             trueContent="∞"
             falseContent="! ∞"
-            inactive={!audioElementSrc}
           />
           <button onClick={handleSave}>Save</button>
           <button className={styles.downloadButton} onClick={downloadAudio}>
