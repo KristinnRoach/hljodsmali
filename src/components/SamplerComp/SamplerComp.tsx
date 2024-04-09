@@ -11,7 +11,8 @@ import { Sample, KeyMap } from '../../types';
 
 const SamplerComp: React.FC = () => {
   const audioFormat = 'audio/ogg';
-  const pocketBase = new PocketBase('http://127.0.0.1:8090/');
+  const pocketBase = new PocketBase('https://hljodsmali.pockethost.io/');
+  pocketBase.autoCancellation(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -170,6 +171,8 @@ const SamplerComp: React.FC = () => {
     const clicked = (event.target as HTMLElement)
       ?.nextSibling as HTMLAudioElement;
     if (clicked && clicked.tagName === 'AUDIO') {
+      blobsRef.current = [];
+
       setAudioElementSrc(clicked.src);
     }
   };

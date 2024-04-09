@@ -4,7 +4,8 @@ import { Sample } from '../types';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const pb = new PocketBase('http://127.0.0.1:8090');
+const pb = new PocketBase('https://hljodsmali.pockethost.io/');
+pb.autoCancellation(false);
 
 export async function fetchSamples(): Promise<Sample[]> {
   const data = await pb.collection('samples').getFullList({
