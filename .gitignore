@@ -1,8 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-/pb_data
+/pb
+.pocketbase
 .env*
-*.glós
+*.kiddi
 
 # dependencies
 /node_modules
