@@ -1,37 +1,11 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Appið hýst á Vercel:
 
-## Getting Started
+https://hljod-smali.vercel.app/
 
-First, run the development server:
+Leiðbeiningar:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Taktu upp stutt hljóð, með að ýta á upptökuhnappinn einu sinni til að byrja og svo aftur til að stoppa. Góð byrjun væri til dæmis að syngja eða flauta eina stutta nótu, eða slá í gler glas eða eitthvað sem gefur frá sér tón. Best er að tónninn byrji strax eða sé þegar byrjaður þegar upptaka hefst.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Eftir upptöku getur þú spilað á hljóðið eins og píanó með tölvulyklaborðinu. Lyklarnir 'Z' til 'Þ' eru eins og hvítar nótur á píanói og svörtu nóturnar eru í röðinni fyrir ofan. Raðirnar fyrir ofan, frá 'Q' til '?' eru áttund fyrir ofan, upprunalega upptakan er á 'Q'.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
-# nextjs-starter
+Ýttu á 'Save' takkann til að vista hljóðbútinn sem þú varst að taka upp í 'community' gagnagrunninn sem þú getur skoðað með því að ýta á takkann með nótu merkinu. Þar getur þú prófað að spila á hvaða hljóð sem eru í gagnagrunninum. Þú getur eytt upptökum með að ýta á 'x' við þann hljóðbút.
