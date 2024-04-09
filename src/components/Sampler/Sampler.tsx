@@ -1,32 +1,34 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import PocketBase from 'pocketbase';
 
+import {
+  createSample,
+  fetchSamples,
+  deleteSample,
+  getPocketBase,
+} from '../../db/db_samples';
+
+import { Sample, KeyMap } from '../../types';
 import { keyMap } from '../../utils/keymap';
 import ConditionClassButton from '../Button/ConditionClassButton';
-import styles from './SamplerComp.module.scss';
-import { createSample, fetchSamples, deleteSample } from '../../db/db_samples';
-import { Sample, KeyMap } from '../../types';
+import styles from './Sampler.module.scss';
 
-const SamplerComp: React.FC = () => {
+const Sampler: React.FC = () => {
+  const pocketBase = getPocketBase();
+
   const audioFormat = 'audio/ogg';
-  const pocketBase = new PocketBase('https://hljodsmali.pockethost.io/');
-  pocketBase.autoCancellation(false);
-
-  const audioContextRef = useRef<AudioContext | null>(null);
 
   const [audioElementSrc, setAudioElementSrc] = useState<string>('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [userSamples, setUserSamples] = useState<Sample[]>([]);
 
-  const loopEnabledRef = useRef<boolean>(false);
-
+  const audioContextRef = useRef<AudioContext | null>(null);
   const audioElementRef = useRef<HTMLAudioElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const blobsRef = useRef<Blob[]>([]);
   const clonesRef = useRef<HTMLAudioElement[]>([]);
-
+  const loopEnabledRef = useRef<boolean>(false);
   const keysPressedRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -295,4 +297,4 @@ const SamplerComp: React.FC = () => {
   );
 };
 
-export default SamplerComp;
+export default Sampler;

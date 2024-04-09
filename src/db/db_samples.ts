@@ -4,8 +4,17 @@ import { Sample } from '../types';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const pb = new PocketBase('https://hljodsmali.pockethost.io/');
+const pb = new PocketBase(
+  process.env.POCKETBASE_URL || 'https://hljodsmali.pockethost.io/'
+);
 pb.autoCancellation(false);
+
+export function getPocketBase(): PocketBase {
+  if (!pb) {
+    console.error('PocketBase is not initialized.');
+  }
+  return pb;
+}
 
 export async function fetchSamples(): Promise<Sample[]> {
   const data = await pb.collection('samples').getFullList({
