@@ -36,6 +36,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
         ) as HTMLAudioElement;
 
         if (clone) {
+          // && key not in KeysPressed / map ?
           clone.preservesPitch = false;
           clone.playbackRate = 2 ** ((note - 60) / 12);
           clonesRef.current.push(clone);
@@ -56,6 +57,16 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
         sample.play();
       }
     };
+
+    function prepPlayback(blob: Blob): HTMLAudioElement | null {
+      const audioElement = audioElementRef.current;
+      if (!audioElement) return null;
+
+      const clone = audioElement.cloneNode(true) as HTMLAudioElement;
+      clone.preservesPitch = false;
+
+      return clone;
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.code;
@@ -93,12 +104,24 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     };
   }, [audioElementSrc]);
 
+  function prepPlayback(blob: Blob) {
+    const audioElement = audioElementRef.current; // henda
+    if (!audioElement) return;
+
+    const clone = audioElementRef.current?.cloneNode(true) as HTMLAudioElement;
+
+    if (clone) {
+      clone.preservesPitch = false;
+      clonesRef.current.push(clone);
+    }
+  }
+
   const startRecording = async () => {
     try {
       // Clear previously recorded audio blobs
       blobsRef.current = [];
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera ref?
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera setScene useState eða ref?
       // const audioContext = new AudioContext();
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -118,6 +141,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
           }
           return URL.createObjectURL(blob);
         });
+        prepPlayback(blob);
       };
 
       mediaRecorderRef.current.start();
@@ -131,7 +155,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     const countdownSteps = [3, 2, 1];
 
     const renderCountdownStep = (step: number) => {
-      const recordButton = document.getElementById('record-button');
+      const recordButton = document.getElementById('record-button'); // gera state í staðinn
       if (recordButton && recordButton.textContent) {
         recordButton.textContent = step.toString();
       }
@@ -149,15 +173,19 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+    const stream = mediaRecorderRef.current?.stream;
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        // skoða - finna bottle neck f loop delay
+        track.stop();
+      });
+    }
+    setIsRecording(false);
 
-      // Close the audio context
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
+    // Close the audio context
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
     }
   };
 
@@ -165,6 +193,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     if (audioUrl) {
       blobsRef.current = [];
       setAudioElementSrc(audioUrl);
+      setLoopState(false);
     }
   };
 
@@ -190,7 +219,9 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
   const [loopState, setLoopState] = useState<boolean>(false);
 
   const toggleLoop = (): void => {
-    loopEnabledRef.current = !loopEnabledRef.current;
+    console.log(clonesRef.current.toString());
+
+    loopEnabledRef.current = !loopEnabledRef.current; // key eða id til að identify-a sampl
     setLoopState(!loopState);
 
     if (!loopEnabledRef.current) {
