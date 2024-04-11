@@ -13,10 +13,10 @@ import styles from './Samples.module.scss';
 interface SamplesProps {
   currentSampleUrl: string;
   currentSampleBlob: Blob;
-  chooseSample: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  chooseSample: (audioUrl: string) => void;
 }
 
-const Samples: React.FC<> = ({
+const Samples: React.FC<SamplesProps> = ({
   currentSampleUrl,
   currentSampleBlob,
   chooseSample,
@@ -102,7 +102,7 @@ const Samples: React.FC<> = ({
         {userSamples.map((sample, index) => (
           <li key={index}>
             <button
-              onClick={() => chooseSample(sample.audioUrl)}
+              onClick={() => chooseSample(sample.audioUrl!)}
               className={styles.singleSample}
               data-src={sample.audioUrl}
             >

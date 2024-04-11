@@ -1,26 +1,25 @@
 'use client';
 import React, { useState } from 'react';
 
-export default function DropZone({
-  children,
-}: Readonly<{
+interface DropZoneProps {
   children: React.ReactNode;
-}>) {
+}
+
+export default function DropZone({ children }: DropZoneProps) {
   const [audioUrl, setAudioUrl] = useState<string>('');
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
 
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
+  // const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+  //   e.preventDefault();
+  // };
 
-  const handleDragLeave = () => {};
+  // const handleDragLeave = () => {};
 
-  const handleDragEnd = () => {
-    e.preventDefault();
-  };
+  // const handleDragEnd = () => {
+  // };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -54,7 +53,8 @@ export default function DropZone({
     >
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child, { droppedAudioUrl: audioUrl });
+          const ChildComponent = child.type as React.ComponentType<any>;
+          return <ChildComponent {...child.props} droppedAudioUrl={audioUrl} />;
         }
         return child;
       })}

@@ -24,9 +24,9 @@
   flex-wrap: wrap;
   opacity: 0%;
 
-  transition: opacity 5s ease;
+  transition: opacity 0.3s ease;
   &.visible {
-    opacity: 100%;
+    opacity: 100%; // henda eða nota betur
   }
 
   li {

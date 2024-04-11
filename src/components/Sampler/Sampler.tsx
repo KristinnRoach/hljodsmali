@@ -9,7 +9,7 @@ import ConditionClassButton from '../Button/ConditionClassButton';
 import Samples from '../Samples/Samples';
 import styles from './Sampler.module.scss';
 
-const Sampler: React.FC<{ droppedAudioUrl: string }> = ({
+const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
   droppedAudioUrl,
 }) => {
   const audioFormat = 'audio/ogg';
@@ -130,8 +130,11 @@ const Sampler: React.FC<{ droppedAudioUrl: string }> = ({
   const countdownAndRecord = async () => {
     const countdownSteps = [3, 2, 1];
 
-    const renderCountdownStep = (step) => {
-      document.getElementById('record-button').textContent = step.toString();
+    const renderCountdownStep = (step: number) => {
+      const recordButton = document.getElementById('record-button');
+      if (recordButton && recordButton.textContent) {
+        recordButton.textContent = step.toString();
+      }
     };
 
     const performCountdown = async () => {
