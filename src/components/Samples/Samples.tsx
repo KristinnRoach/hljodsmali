@@ -93,34 +93,35 @@ const Samples: React.FC<SamplesProps> = ({
         </button>
         <button onClick={toggleShowSamples}>🎵</button>
       </div>
+      {showSampleList && (
+        <ul
+          className={`${styles.samplesList} ${
+            showSampleList ? styles.visible : ''
+          }`}
+        >
+          {userSamples.map((sample, index) => (
+            <li key={index}>
+              <button
+                onClick={() => chooseSample(sample.audioUrl!)}
+                className={styles.singleSample}
+                data-src={sample.audioUrl}
+              >
+                {sample.name}
+              </button>
 
-      <ul
-        className={`${styles.samplesList} ${
-          showSampleList ? styles.visible : ''
-        }`}
-      >
-        {userSamples.map((sample, index) => (
-          <li key={index}>
-            <button
-              onClick={() => chooseSample(sample.audioUrl!)}
-              className={styles.singleSample}
-              data-src={sample.audioUrl}
-            >
-              {sample.name}
-            </button>
+              <audio src={sample.audioUrl}></audio>
 
-            <audio src={sample.audioUrl}></audio>
-
-            <button
-              onClick={() => confirmDelete(sample)}
-              id={sample.id}
-              className={styles.deleteButton}
-            >
-              x
-            </button>
-          </li>
-        ))}
-      </ul>
+              <button
+                onClick={() => confirmDelete(sample)}
+                id={sample.id}
+                className={styles.deleteButton}
+              >
+                x
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

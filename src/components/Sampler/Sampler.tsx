@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+// import { PitchDetector } from 'pitchy';
 
 import { Sample, KeyMap } from '../../types';
 import { keyMap } from '../../utils/keymap';
@@ -21,80 +22,69 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
   const audioElementRef = useRef<HTMLAudioElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const blobsRef = useRef<Blob[]>([]);
-  const clonesRef = useRef<HTMLAudioElement[]>([]);
+  const voicesRef = useRef<HTMLAudioElement[]>([]);
   const loopEnabledRef = useRef<boolean>(false);
   const keysPressedRef = useRef<string[]>([]);
 
-  useEffect(() => {
-    const playSample = (note: number, key: string) => {
-      if (audioElementRef.current) {
-        const audioElement = audioElementRef.current;
-        audioElement.preservesPitch = false;
-
-        const clone = audioElementRef.current?.cloneNode(
-          true
-        ) as HTMLAudioElement;
-
-        if (clone) {
-          // && key not in KeysPressed / map ?
-          clone.preservesPitch = false;
-          clone.playbackRate = 2 ** ((note - 60) / 12);
-          clonesRef.current.push(clone);
-          clone.play();
-          clone.addEventListener('ended', onAudioEnded);
-        }
-      }
-    };
-
-    const onAudioEnded = (event: Event) => {
-      const sample = event.target as HTMLAudioElement;
-      if (!loopEnabledRef.current) {
-        sample.pause();
-        sample.currentTime = 0;
-        sample.removeEventListener('ended', onAudioEnded);
-        clonesRef.current = clonesRef.current.filter((c) => c !== sample);
-      } else {
-        sample.play();
-      }
-    };
-
-    function prepPlayback(blob: Blob): HTMLAudioElement | null {
-      const audioElement = audioElementRef.current;
-      if (!audioElement) return null;
-
-      const clone = audioElement.cloneNode(true) as HTMLAudioElement;
-      clone.preservesPitch = false;
-
-      return clone;
+  const onAudioPause = useCallback((event: Event) => {
+    const sample = event.target as HTMLAudioElement;
+    if (!loopEnabledRef.current) {
+      sample.pause();
+      sample.currentTime = 0;
+      sample.removeEventListener('pause', onAudioPause);
+      voicesRef.current = voicesRef.current.filter((c) => c !== sample);
+    } else {
+      sample.play();
     }
+  }, []);
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const key = event.code;
-      const note: number | undefined = keyMap[key];
+  const playSample = (note: number, key: string) => {
+    if (audioElementRef.current) {
+      const audioElement = audioElementRef.current;
+      audioElement.preservesPitch = false;
 
-      if (note && !keysPressedRef.current.includes(key)) {
-        keysPressedRef.current.push(key);
-        // event.preventDefault();
-        playSample(note, key);
+      const thisVoice = audioElementRef.current?.cloneNode(
+        true
+      ) as HTMLAudioElement;
+
+      if (thisVoice) {
+        thisVoice.preservesPitch = false;
+        thisVoice.playbackRate = 2 ** ((note - 60) / 12);
+        voicesRef.current.push(thisVoice);
+        thisVoice.play();
+        thisVoice.addEventListener('pause', onAudioPause);
+        // clone.addEventListener('ended', onAudioEnded);
       }
-    };
+    }
+  };
 
-    const handleKeyUp = (event: KeyboardEvent) => {
-      const key = event.code;
-      const note = keyMap[key];
-      keysPressedRef.current = keysPressedRef.current.filter((k) => k !== key);
-      console.log('keysPressedRef.current: ' + keysPressedRef.current);
-      if (loopEnabledRef.current && note) {
-        // annars feid?
-        const clone = clonesRef.current.find(
-          (c) => c.dataset.note === note.toString()
-        );
-        if (clone) {
-          stopSample(clone);
-        }
+  const handleKeyDown = (event: KeyboardEvent) => {
+    const key = event.code;
+    const note: number | undefined = keyMap[key];
+
+    if (note && !keysPressedRef.current.includes(key)) {
+      keysPressedRef.current.push(key);
+      playSample(note, key);
+    }
+  };
+
+  const handleKeyUp = (event: KeyboardEvent) => {
+    const key = event.code;
+    const note = keyMap[key];
+    keysPressedRef.current = keysPressedRef.current.filter((k) => k !== key);
+    console.log('keysPressedRef.current: ' + keysPressedRef.current);
+    if (loopEnabledRef.current && note) {
+      // annars feid?
+      const clone = voicesRef.current.find(
+        (c) => c.dataset.note === note.toString()
+      );
+      if (clone) {
+        stopSample(clone);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
 
@@ -102,27 +92,15 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
     };
-  }, [audioElementSrc]);
-
-  function prepPlayback(blob: Blob) {
-    const audioElement = audioElementRef.current; // henda
-    if (!audioElement) return;
-
-    const clone = audioElementRef.current?.cloneNode(true) as HTMLAudioElement;
-
-    if (clone) {
-      clone.preservesPitch = false;
-      clonesRef.current.push(clone);
-    }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startRecording = async () => {
     try {
       // Clear previously recorded audio blobs
       blobsRef.current = [];
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera setScene useState eða ref?
-      // const audioContext = new AudioContext();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera useState eða ref?
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -134,53 +112,40 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(blobsRef.current, { type: audioFormat });
-        setAudioElementSrc((prevState) => {
-          if (prevState) {
-            URL.revokeObjectURL(prevState);
-          }
-          return URL.createObjectURL(blob);
-        });
-        prepPlayback(blob);
+        const recordedBlob = new Blob(blobsRef.current, { type: audioFormat });
+        prepPlayback(recordedBlob);
       };
 
-      mediaRecorderRef.current.start();
       setIsRecording(true);
+      mediaRecorderRef.current.start();
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
   };
 
-  const countdownAndRecord = async () => {
-    const countdownSteps = [3, 2, 1];
-
-    const renderCountdownStep = (step: number) => {
-      const recordButton = document.getElementById('record-button'); // gera state í staðinn
-      if (recordButton && recordButton.textContent) {
-        recordButton.textContent = step.toString();
+  function prepPlayback(blob: Blob) {
+    const recordedUrl = URL.createObjectURL(blob);
+    setAudioElementSrc((prevState) => {
+      if (prevState) {
+        URL.revokeObjectURL(prevState);
       }
-    };
+      return recordedUrl;
+    });
+    // const voice = audioElementRef.current?.cloneNode(true) as HTMLAudioElement;
+    if (audioElementRef.current) {
+      audioElementRef.current.preservesPitch = false;
+    }
+  }
 
-    const performCountdown = async () => {
-      for (const step of countdownSteps) {
-        renderCountdownStep(step);
+  const stopRecording = async () => {
+    setIsRecording(false);
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-      startRecording();
-    };
-    performCountdown();
-  };
-
-  const stopRecording = () => {
-    const stream = mediaRecorderRef.current?.stream;
-    if (stream) {
-      stream.getTracks().forEach((track) => {
-        // skoða - finna bottle neck f loop delay
+    const mrStream = mediaRecorderRef.current?.stream;
+    if (mrStream) {
+      mrStream.getTracks().forEach((track) => {
         track.stop();
       });
     }
-    setIsRecording(false);
 
     // Close the audio context
     if (audioContextRef.current) {
@@ -203,6 +168,27 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     }
   }, [droppedAudioUrl]);
 
+  const countdownAndRecord = async () => {
+    const countdownSteps = [3, 2, 1];
+
+    const renderCountdownStep = (step: number) => {
+      const recordButton = document.getElementById('record-button'); // gera state í staðinn
+      if (recordButton && recordButton.textContent) {
+        recordButton.textContent = step.toString();
+      }
+    };
+
+    const performCountdown = async () => {
+      for (const step of countdownSteps) {
+        renderCountdownStep(step);
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      startRecording();
+    };
+    performCountdown();
+  };
+
   const stopSample = (sample: HTMLAudioElement) => {
     if (sample) {
       sample.pause();
@@ -213,22 +199,23 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
   const stopAllSamples = (event: Event) => {
     const sample = event.target as HTMLAudioElement;
     stopSample(sample);
-    clonesRef.current = clonesRef.current.filter((c) => c !== sample);
+    voicesRef.current = voicesRef.current.filter((c) => c !== sample);
   };
 
   const [loopState, setLoopState] = useState<boolean>(false);
 
   const toggleLoop = (): void => {
-    console.log(clonesRef.current.toString());
+    console.log(voicesRef.current.toString());
 
     loopEnabledRef.current = !loopEnabledRef.current; // key eða id til að identify-a sampl
     setLoopState(!loopState);
 
     if (!loopEnabledRef.current) {
-      clonesRef.current.forEach((clone, index) => {
+      voicesRef.current.forEach((clone, index) => {
+        clone.addEventListener('pause', stopAllSamples);
         clone.addEventListener('ended', stopAllSamples);
       });
-      clonesRef.current = [];
+      voicesRef.current = [];
     }
   };
 
@@ -246,6 +233,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
           trueClick={countdownAndRecord}
           falseClick={stopRecording}
         />
+        {/* <PitchDetection /> */}
 
         {audioElementSrc && (
           <>
