@@ -2,26 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  createSample,
-  fetchSamples,
-  deleteSample,
-  getPocketBase,
-} from '../../db/db_samples';
-
 import { Sample, KeyMap } from '../../types';
 import { keyMap } from '../../utils/keymap';
+import { fetchBlobFromUrl } from '../../utils/fetch';
 import ConditionClassButton from '../Button/ConditionClassButton';
+import Samples from '../Samples/Samples';
 import styles from './Sampler.module.scss';
 
-const Sampler: React.FC = () => {
-  const pocketBase = getPocketBase();
-
+const Sampler: React.FC<{ droppedAudioUrl: string }> = ({
+  droppedAudioUrl,
+}) => {
   const audioFormat = 'audio/ogg';
 
   const [audioElementSrc, setAudioElementSrc] = useState<string>('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [userSamples, setUserSamples] = useState<Sample[]>([]);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioElementRef = useRef<HTMLAudioElement>(null);
@@ -146,72 +140,18 @@ const Sampler: React.FC = () => {
     }
   };
 
-  async function loadUserSamples() {
-    const sampleObjArray = await fetchSamples();
-    setUserSamples(sampleObjArray);
-  }
-
-  const handleSave = async (): Promise<void> => {
-    if (blobsRef.current[0]) {
-      const name = prompt('Enter a name for the sample:');
-
-      if (name !== null && name.trim() !== '') {
-        await createSample(name, blobsRef.current[0]);
-        await loadUserSamples();
-      } else {
-        console.error('Invalid name or cancelled.');
-        alert('Invalid name or cancelled.');
-      }
-    } else {
-      console.error('No recorded audio blobs found');
-    }
-  };
-
-  const chooseSample = (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    const clicked = (event.target as HTMLElement)
-      ?.nextSibling as HTMLAudioElement;
-    if (clicked && clicked.tagName === 'AUDIO') {
+  const chooseSample = (audioUrl: string) => {
+    if (audioUrl) {
       blobsRef.current = [];
-
-      setAudioElementSrc(clicked.src);
+      setAudioElementSrc(audioUrl);
     }
   };
 
-  const [showSampleList, setShowSampleList] = useState<boolean>(false);
-
-  const toggleShowSamples = (): void => {
-    loadUserSamples();
-    setShowSampleList((prevShowSampleList) => !prevShowSampleList);
-  };
-
-  async function handleDelete(
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ): Promise<void> {
-    const sampleId: string = event.currentTarget.id;
-
-    if (sampleId) {
-      try {
-        await deleteSample(sampleId);
-        await loadUserSamples();
-      } catch {
-        console.error('Delete sample failed');
-        alert('Delete sample failed');
-      }
+  useEffect(() => {
+    if (droppedAudioUrl) {
+      chooseSample(droppedAudioUrl);
     }
-  }
-
-  const downloadAudio = () => {
-    if (audioElementSrc) {
-      const link = document.createElement('a');
-      link.href = audioElementSrc;
-      link.download = 'sample-hljodsmali.wav';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
+  }, [droppedAudioUrl]);
 
   const stopSample = (sample: HTMLAudioElement) => {
     if (sample) {
@@ -241,8 +181,8 @@ const Sampler: React.FC = () => {
   };
 
   return (
-    <div className={styles.samplerWrapper}>
-      <div className={styles.samplerBtnsContainer}>
+    <div className={styles.wrapper}>
+      <div className={styles.controlsBox}>
         <ConditionClassButton
           condition={!isRecording}
           baseClassName={styles.samplerButton}
@@ -258,41 +198,24 @@ const Sampler: React.FC = () => {
           <>
             <ConditionClassButton
               condition={loopState}
-              baseClassName={loopState ? styles.loopOn : styles.loopOff}
+              baseClassName={styles.samplerButton}
+              trueClassName={styles.loopOn}
+              falseClassName={styles.loopOff}
               trueClick={toggleLoop}
               falseClick={toggleLoop}
               trueContent="&#x1F501;" // "∞"
               falseContent="&#x1F502;" // "! ∞"
             />
-            <button onClick={handleSave}>&#x1F4BE;</button>
-            <button className={styles.downloadButton} onClick={downloadAudio}>
-              &#x2B07;
-            </button>
             <audio ref={audioElementRef} src={audioElementSrc}></audio>
           </>
         )}
-
-        <button onClick={toggleShowSamples}>🎵</button>
       </div>
 
-      <ul className={styles.samplesList}>
-        {showSampleList &&
-          userSamples.map((sample, index) => (
-            <li key={index}>
-              <button onClick={chooseSample} className={styles.singleSample}>
-                {sample.name}
-                <button
-                  onClick={handleDelete}
-                  id={sample.id}
-                  className={styles.deleteButton}
-                >
-                  x
-                </button>
-              </button>
-              <audio src={sample.audioUrl}></audio>
-            </li>
-          ))}
-      </ul>
+      <Samples
+        chooseSample={chooseSample}
+        currentSampleBlob={blobsRef.current[0]} // should this be state or ref??
+        currentSampleUrl={audioElementSrc}
+      />
     </div>
   );
 };

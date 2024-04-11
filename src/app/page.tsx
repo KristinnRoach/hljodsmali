@@ -1,18 +1,17 @@
-import styles from '../styles/page.module.scss';
+import DropZone from '../components/DropZone/DropZone';
 import Sampler from '../components/Sampler/Sampler';
-import Nav from '../components/Nav/Nav';
 import Shapes from '../components/Shapes/Shapes.jsx';
+
+import styles from '../styles/page.module.scss';
 
 export default function Home() {
   return (
     <>
       <main className={styles.main}>
-        <div className={styles.controls}>
+        <DropZone>
           <Sampler />
-        </div>
-        <div className={styles.animation}>
           <Shapes />
-        </div>
+        </DropZone>
       </main>
     </>
   );
