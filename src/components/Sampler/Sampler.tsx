@@ -127,6 +127,24 @@ const Sampler: React.FC<{ droppedAudioUrl: string }> = ({
     }
   };
 
+  const countdownAndRecord = async () => {
+    const countdownSteps = [3, 2, 1];
+
+    const renderCountdownStep = (step) => {
+      document.getElementById('record-button').textContent = step.toString();
+    };
+
+    const performCountdown = async () => {
+      for (const step of countdownSteps) {
+        renderCountdownStep(step);
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      startRecording();
+    };
+    performCountdown();
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -184,13 +202,14 @@ const Sampler: React.FC<{ droppedAudioUrl: string }> = ({
     <div className={styles.wrapper}>
       <div className={styles.controlsBox}>
         <ConditionClassButton
+          id="record-button"
           condition={!isRecording}
           baseClassName={styles.samplerButton}
           trueClassName={styles.recordingOff}
           falseClassName={styles.recordingOn}
           trueContent="&#x23FA;"
           falseContent="&#x23F9;"
-          trueClick={startRecording}
+          trueClick={countdownAndRecord}
           falseClick={stopRecording}
         />
 

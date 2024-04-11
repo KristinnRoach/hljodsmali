@@ -1,6 +1,7 @@
 import React from 'react';
 
 interface Props {
+  id?: string;
   condition?: boolean;
   baseClassName?: string;
   trueClassName?: string;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 const ConditionClassButton: React.FC<Props> = ({
+  id = '',
   condition = true,
   baseClassName = '',
   trueClassName = '',
@@ -23,6 +25,7 @@ const ConditionClassButton: React.FC<Props> = ({
 }) => {
   return (
     <button
+      id={id}
       className={`${baseClassName} ${
         condition ? trueClassName : falseClassName
       }`}
