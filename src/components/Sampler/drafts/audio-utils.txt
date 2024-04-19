@@ -1,0 +1,15 @@
+  // function trimEndpoint(sample: HTMLAudioElement): void {
+  //   // const sample = clonesRef.current[clonesRef.current.length - 1];
+  //   console.log(sample.duration);
+  //   const trimmedEnd = sample.duration - 1; // Adjust endpoint 100ms earlier
+  //   console.log(trimmedEnd);
+
+  //   if (trimmedEnd > 0) {
+  //     sample.addEventListener('timeupdate', () => {
+  //       if (sample.currentTime >= trimmedEnd) {
+  //         sample.pause(); //skoða/einfalda í samhengi við loop + cleanup
+  //       }
+  //     });
+  //   }
+  // }
+

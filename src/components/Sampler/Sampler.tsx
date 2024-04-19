@@ -1,62 +1,51 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-// import { PitchDetector } from 'pitchy';
+import $ from 'jquery';
 
-import { Sample, KeyMap } from '../../types';
+import { Sample, Voice, KeyMap } from '../../types';
 import { keyMap } from '../../utils/keymap';
 import { fetchBlobFromUrl } from '../../utils/fetch';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import Samples from '../Samples/Samples';
 import styles from './Sampler.module.scss';
 
-const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
-  droppedAudioUrl,
-}) => {
+const Sampler: React.FC<{
+  droppedAudioUrl?: string;
+}> = ({ droppedAudioUrl }) => {
   const audioFormat = 'audio/ogg';
 
-  const [audioElementSrc, setAudioElementSrc] = useState<string>('');
+  const [droppedUrlState, setDroppedUrlState] = useState<string | null>(
+    droppedAudioUrl | null
+  );
+
+  /*
+  if (droppedAudioUrl !== droppedUrlState) {
+    setDroppedUrlState(droppedAudioUrl);
+    prepPlayback(droppedAudioUrl);
+  }
+*/
+
+  // const [audioElementSrc, setAudioElementSrc] = useState<string>('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
 
-  const audioContextRef = useRef<AudioContext | null>(null);
   const audioElementRef = useRef<HTMLAudioElement>(null);
+  const urlRef = useState<string>('');
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const blobsRef = useRef<Blob[]>([]);
-  const voicesRef = useRef<HTMLAudioElement[]>([]);
-  const loopEnabledRef = useRef<boolean>(false);
+
+  const blobsRef = useRef<Blob[]>([]); // óþarfi að hafa ref?
+
+  const voicesRef = useRef<HTMLAudioElement[]>([]); // hægt að leysa með type?
   const keysPressedRef = useRef<string[]>([]);
 
-  const onAudioPause = useCallback((event: Event) => {
-    const sample = event.target as HTMLAudioElement;
-    if (!loopEnabledRef.current) {
-      sample.pause();
-      sample.currentTime = 0;
-      sample.removeEventListener('pause', onAudioPause);
-      voicesRef.current = voicesRef.current.filter((c) => c !== sample);
-    } else {
-      sample.play();
-    }
-  }, []);
+  const loopEnabledRef = useRef<boolean>(false); // henda, global loop óþarfi í bili
+  const [loopState, setLoopState] = useState<boolean>(false); // leysa per voice með type
 
-  const playSample = (note: number, key: string) => {
-    if (audioElementRef.current) {
-      const audioElement = audioElementRef.current;
-      audioElement.preservesPitch = false;
-
-      const thisVoice = audioElementRef.current?.cloneNode(
-        true
-      ) as HTMLAudioElement;
-
-      if (thisVoice) {
-        thisVoice.preservesPitch = false;
-        thisVoice.playbackRate = 2 ** ((note - 60) / 12);
-        voicesRef.current.push(thisVoice);
-        thisVoice.play();
-        thisVoice.addEventListener('pause', onAudioPause);
-        // clone.addEventListener('ended', onAudioEnded);
-      }
-    }
-  };
+  const [fadeInTime, setFadeInTime] = useState(50);
+  const fadeInTimeRef = useRef(50);
+  // const [fadeOutTime, setFadeOutTime] = useState(50);
+  // const fadeOutTimeRef = useRef(50);
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const key = event.code;
@@ -64,7 +53,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
 
     if (note && !keysPressedRef.current.includes(key)) {
       keysPressedRef.current.push(key);
-      playSample(note, key);
+      playSample(note); // fadeInTimeRef.current, fadeOutTimeRef.current
     }
   };
 
@@ -72,9 +61,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     const key = event.code;
     const note = keyMap[key];
     keysPressedRef.current = keysPressedRef.current.filter((k) => k !== key);
-    console.log('keysPressedRef.current: ' + keysPressedRef.current);
     if (loopEnabledRef.current && note) {
-      // annars feid?
       const clone = voicesRef.current.find(
         (c) => c.dataset.note === note.toString()
       );
@@ -82,6 +69,72 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
         stopSample(clone);
       }
     }
+  };
+
+  const handleFadeInChange = (event) => {
+    const newFadeInTime = parseInt(event.target.value);
+    setFadeInTime(newFadeInTime);
+    fadeInTimeRef.current = newFadeInTime;
+  };
+
+  const handleFadeOutChange = (event) => {
+    const newFadeOutTime = parseInt(event.target.value);
+    setFadeOutTime(newFadeOutTime);
+    fadeOutTimeRef.current = newFadeOutTime;
+  };
+
+  function onPause(sample: HTMLAudioElement) {
+    if (!loopEnabledRef.current) {
+      sample.currentTime = 0;
+      sample.removeEventListener('pause', onPause);
+      voicesRef.current = voicesRef.current.filter((c) => c !== sample);
+    } else {
+      //     thisVoice.currentTime = 0;
+
+      sample.play();
+      //     $(thisVoice).animate({ volume: 1 }, fadeInTime); // þarf að bæta við fade out aftur
+      //     fadeOutSample(thisVoice);
+    }
+  }
+  /*
+
+  function onPlay(sample: HTMLAudioElement) {}
+
+  function fadeOutSample(thisVoice) {
+    setTimeout(() => {
+      $(thisVoice).animate({ volume: 0 }, fadeOutTime); // RELEASE
+    }, startFadeTime);
+
+    setTimeout(() => {
+      thisVoice.pause();
+      voicesRef.current = voicesRef.current.filter((c) => c !== thisVoice); // nóg clean-up?
+    }, endFadeTime);
+  }
+*/
+
+  const playSample = (
+    note: number
+    // fadeInTime: number,
+    // fadeOutTime: number
+  ) => {
+    if (audioElementRef.current) {
+      console.log(
+        'refCurrent.src: ' + audioElementRef.current.src + ' og  ' + urlRef
+      );
+
+      const thisVoice = audioElementRef.current.cloneNode(
+        true
+      ) as HTMLAudioElement;
+
+      thisVoice.preservesPitch = false;
+      thisVoice.playbackRate = 2 ** ((note - 60) / 12);
+
+      voicesRef.current.push(thisVoice);
+
+      //thisVoice.volume = 0;
+      thisVoice.play();
+      // $(thisVoice).animate({ volume: 1 }, fadeInTimeRef.current); // ATTACK
+    } // if audioelementref end - gera else { error eikkað }
   };
 
   useEffect(() => {
@@ -95,14 +148,40 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startRecording = async () => {
+  function prepPlayback(sampleUrl: string) {
+    if (audioElementRef.current) {
+      const ref = audioElementRef.current;
+      if (ref.src) {
+        URL.revokeObjectURL(ref.src);
+      }
+      ref.src = sampleUrl;
+      urlRef.current = ref.src;
+      //setAudioElementSrc(sampleUrl);
+
+      ref.addEventListener('pause', onPause);
+
+      // wait for 'duration' metadata to be loaded
+      ref.onloadedmetadata = function () {
+        // const durationMs = (ref.duration * 1000) / currentSample.playbackRate;
+        ref.preservesPitch = false;
+        //const startFadeTime = durationMs / 2;
+        //const endFadeTime = startFadeTime + fadeOutTime;
+
+        //ref.addEventListener('play', onPlay);
+        ref.addEventListener('pause', onPause);
+
+        // fadeOutSample(thisVoice);
+      };
+    }
+  }
+
+  async function startRecording() {
     try {
       // Clear previously recorded audio blobs
       blobsRef.current = [];
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // gera useState eða ref?
-      audioContextRef.current = new AudioContext();
-      const source = audioContextRef.current.createMediaStreamSource(stream);
+      // const source = ctx.createMediaStreamSource(stream); // þarf bara til að processa?
       mediaRecorderRef.current = new MediaRecorder(stream);
 
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -111,9 +190,15 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
         }
       };
 
-      mediaRecorderRef.current.onstop = () => {
-        const recordedBlob = new Blob(blobsRef.current, { type: audioFormat });
-        prepPlayback(recordedBlob);
+      mediaRecorderRef.current.onstop = async () => {
+        const recordedBlob = await new Blob(blobsRef.current, {
+          type: audioFormat,
+        });
+        const recordedUrl = await URL.createObjectURL(recordedBlob);
+        console.log('call prep playback from recorder onstop');
+        prepPlayback(recordedUrl);
+
+        blobsRef.current = []; // best place for it?
       };
 
       setIsRecording(true);
@@ -121,23 +206,9 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
-  };
-
-  function prepPlayback(blob: Blob) {
-    const recordedUrl = URL.createObjectURL(blob);
-    setAudioElementSrc((prevState) => {
-      if (prevState) {
-        URL.revokeObjectURL(prevState);
-      }
-      return recordedUrl;
-    });
-    // const voice = audioElementRef.current?.cloneNode(true) as HTMLAudioElement;
-    if (audioElementRef.current) {
-      audioElementRef.current.preservesPitch = false;
-    }
   }
 
-  const stopRecording = async () => {
+  const stopRecording = () => {
     setIsRecording(false);
 
     const mrStream = mediaRecorderRef.current?.stream;
@@ -146,27 +217,25 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
         track.stop();
       });
     }
-
-    // Close the audio context
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
   };
 
   const chooseSample = (audioUrl: string) => {
     if (audioUrl) {
-      blobsRef.current = [];
-      setAudioElementSrc(audioUrl);
-      setLoopState(false);
+      prepPlayback(audioUrl);
+      // blobsRef.current = [];
+      // setAudioElementSrc(audioUrl);
+      //setLoopState(false);
     }
   };
 
-  useEffect(() => {
-    if (droppedAudioUrl) {
-      chooseSample(droppedAudioUrl);
-    }
-  }, [droppedAudioUrl]);
+  // useEffect(() => {
+  //   if (droppedAudioUrl) {
+  //     // blobsRef.current = [];
+  //     // setAudioElementSrc(droppedAudioUrl);
+  //     // setLoopState(false);
+  //     chooseSample
+  //   }
+  // }, [droppedAudioUrl]);
 
   const countdownAndRecord = async () => {
     const countdownSteps = [3, 2, 1];
@@ -202,11 +271,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
     voicesRef.current = voicesRef.current.filter((c) => c !== sample);
   };
 
-  const [loopState, setLoopState] = useState<boolean>(false);
-
   const toggleLoop = (): void => {
-    console.log(voicesRef.current.toString());
-
     loopEnabledRef.current = !loopEnabledRef.current; // key eða id til að identify-a sampl
     setLoopState(!loopState);
 
@@ -235,7 +300,7 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
         />
         {/* <PitchDetection /> */}
 
-        {audioElementSrc && (
+        {urlRef && (
           <>
             <ConditionClassButton
               condition={loopState}
@@ -244,18 +309,53 @@ const Sampler: React.FC<{ droppedAudioUrl?: string }> = ({
               falseClassName={styles.loopOff}
               trueClick={toggleLoop}
               falseClick={toggleLoop}
-              trueContent="&#x1F501;" // "∞"
-              falseContent="&#x1F502;" // "! ∞"
+              trueContent="∞: on" // "&#x1F501;"
+              falseContent="∞: off" // "&#x1F502;"
             />
-            <audio ref={audioElementRef} src={audioElementSrc}></audio>
+            <audio
+              ref={audioElementRef}
+              // src={audioElementSrc} ætti að vera í audioElementRef.src
+              // preload="auto"
+            ></audio>
           </>
         )}
+
+        {/*
+        <label htmlFor="fadeInRange">Fade In: {fadeInTimeRef.current}</label>
+        <input
+          type="range"
+          id="fadeInRange"
+          name="fadeInRange"
+          min="100"
+          max="5000"
+          step="100"
+          value={fadeInTimeRef.current}
+          onChange={handleFadeInChange}
+        />
+
+       <label htmlFor="fadeOutRange">Fade Out: {fadeOutTimeRef.current}</label>
+        <input
+          type="range"
+          id="fadeOutRange"
+          name="fadeOutRange"
+          min="100"
+          max="5000"
+          step="100"
+          value={fadeOutTimeRef.current}
+          onChange={handleFadeOutChange}
+      /> */}
+
+        {/* <div
+          id="wave-container"
+          className={styles.waveContainer}
+          ref={waveContainerRef}
+        ></div> */}
       </div>
 
       <Samples
         chooseSample={chooseSample}
-        currentSampleBlob={blobsRef.current[0]} // should this be state or ref??
-        currentSampleUrl={audioElementSrc}
+        // currentSampleBlob={blobsRef.current[0]} // henda ef test virka
+        currentSampleUrl={urlRef} // audioElementRef.current.src // currentUrlRef
       />
     </div>
   );

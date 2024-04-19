@@ -1,0 +1,36 @@
+const context = new AudioContext();
+
+const createADSR = (attackTime, decayTime, sustainLevel, releaseTime) => {
+  const gainNode = context.createGain();
+
+  gainNode.gain.value = 0; // Start with zero gain
+
+  // Attack
+  gainNode.gain.linearRampToValueAtTime(1, context.currentTime + attackTime);
+
+  // Decay
+  gainNode.gain.linearRampToValueAtTime(
+    sustainLevel,
+    context.currentTime + attackTime + decayTime
+  );
+
+  return gainNode;
+};
+
+const playWithADSR = (
+  audioBuffer,
+  attackTime,
+  decayTime,
+  sustainLevel,
+  releaseTime
+) => {
+  const source = context.createBufferSource();
+  source.buffer = audioBuffer;
+
+  const adsrNode = createADSR(attackTime, decayTime, sustainLevel, releaseTime);
+
+  source.connect(adsrNode);
+  adsrNode.connect(context.destination);
+
+  source.start();
+};

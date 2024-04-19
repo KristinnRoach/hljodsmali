@@ -1,0 +1,88 @@
+
+// function usePitchDetection(audioContext, audioElement, sampleRate) {
+//     const detectPitchCallback = useCallback(() => {
+//       const analyserNode = audioContext.createAnalyser();
+//       audioContext
+//         .MediaElementAudioSourceNode(audioElement)
+//         .connect(analyserNode);
+//       const detector = PitchDetector.forFloat32Array(analyserNode.fftSize);
+//       detector.minVolumeDecibels = -10;
+//       const input = new Float32Array(detector.inputLength);
+//       updatePitch(analyserNode, detector, input, sampleRate);
+//     }, [audioContext, audioElement, sampleRate]);
+
+//     return detectPitchCallback;
+//   }
+
+//   function detectPitch(audioCtx, audioElement, sampleRate) {
+//     const analyserNode = audioCtx.createAnalyser();
+//     audioCtx.MediaElementAudioSourceNode(audioElement).connect(analyserNode);
+//     const detector = PitchDetector.forFloat32Array(analyserNode.fftSize);
+//     detector.minVolumeDecibels = -10;
+//     const input = new Float32Array(detector.inputLength);
+//     updatePitch(analyserNode, detector, input, sampleRate);
+//   }
+
+//   function updatePitch(analyserNode, detector, input, sampleRate) {
+//     analyserNode.getFloatTimeDomainData(input);
+//     const [pitch, clarity] = detector.findPitch(input, sampleRate);
+
+//     document.getElementById('pitch').textContent = `${
+//       Math.round(pitch * 10) / 10
+//     } Hz`;
+//     document.getElementById('clarity').textContent = `${Math.round(
+//       clarity * 100
+//     )} %`;
+//     window.setTimeout(
+//       () => updatePitch(analyserNode, detector, input, sampleRate),
+//       100
+//     );
+//   }
+
+//   <div id="pitch"></div>
+//   <div id="clarity"></div>
+
+
+
+//   function usePitchDetection(audioContext, audioElement, sampleRate) {
+//     const detectPitchCallback = useCallback(() => {
+//       const analyserNode = audioContext.createAnalyser();
+//       audioContext
+//         .MediaElementAudioSourceNode(audioElement)
+//         .connect(analyserNode);
+//       const detector = PitchDetector.forFloat32Array(analyserNode.fftSize);
+//       detector.minVolumeDecibels = -10;
+//       const input = new Float32Array(detector.inputLength);
+//       updatePitch(analyserNode, detector, input, sampleRate);
+//     }, [audioContext, audioElement, sampleRate]);
+
+//     return detectPitchCallback;
+//   }
+
+//   function detectPitch(audioCtx, audioElement, sampleRate) {
+//     const analyserNode = audioCtx.createAnalyser();
+//     audioCtx.MediaElementAudioSourceNode(audioElement).connect(analyserNode);
+//     const detector = PitchDetector.forFloat32Array(analyserNode.fftSize);
+//     detector.minVolumeDecibels = -10;
+//     const input = new Float32Array(detector.inputLength);
+//     updatePitch(analyserNode, detector, input, sampleRate);
+//   }
+
+//   function updatePitch(analyserNode, detector, input, sampleRate) {
+//     analyserNode.getFloatTimeDomainData(input);
+//     const [pitch, clarity] = detector.findPitch(input, sampleRate);
+
+//     document.getElementById('pitch').textContent = `${
+//       Math.round(pitch * 10) / 10
+//     } Hz`;
+//     document.getElementById('clarity').textContent = `${Math.round(
+//       clarity * 100
+//     )} %`;
+//     window.setTimeout(
+//       () => updatePitch(analyserNode, detector, input, sampleRate),
+//       100
+//     );
+//   }
+
+//   <div id="pitch"></div>
+//   <div id="clarity"></div>

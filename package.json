@@ -11,11 +11,14 @@
   "dependencies": {
     "@react-three/drei": "^9.102.6",
     "@react-three/fiber": "^8.16.0",
+    "@splinetool/react-spline": "^2.2.6",
+    "@splinetool/runtime": "^1.1.1",
     "@types/react-router-dom": "^5.3.3",
     "@types/three": "^0.162.0",
     "axios": "^1.6.8",
     "clsx": "^2.1.0",
     "gsap": "^3.12.5",
+    "jquery": "^3.7.1",
     "next": "14.1.4",
     "node-sass": "^9.0.0",
     "pocketbase": "^0.21.1",
@@ -23,7 +26,7 @@
     "react-dom": "^18",
     "react-router-dom": "^6.22.3",
     "three": "^0.162.0",
-    "tone": "^14.7.77"
+    "wavesurfer.js": "^7.7.10"
   },
   "devDependencies": {
     "@types/node": "^20.12.2",
@@ -32,6 +35,6 @@
     "eslint": "^8",
     "eslint-config-next": "14.1.4",
     "sass": "^1.72.0",
-    "typescript": "^5"
+    "typescript": "^5.4.5"
   }
 }

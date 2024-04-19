@@ -16,17 +16,15 @@
 }
 
 .samplesList {
+  display: none;
   list-style: none;
-  display: flex;
-  justify-content: space-evenly;
 
-  row-gap: 1rem;
-  flex-wrap: wrap;
-  opacity: 0%;
-
-  transition: opacity 0.3s ease;
   &.visible {
-    opacity: 100%; // henda eða nota betur
+    display: flex;
+    justify-content: space-evenly;
+
+    row-gap: 1rem;
+    flex-wrap: wrap;
   }
 
   li {

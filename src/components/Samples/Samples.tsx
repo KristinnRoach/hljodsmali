@@ -12,13 +12,13 @@ import styles from './Samples.module.scss';
 
 interface SamplesProps {
   currentSampleUrl: string;
-  currentSampleBlob: Blob;
+  // currentSampleBlob: Blob; // henda eftir test
   chooseSample: (audioUrl: string) => void;
 }
 
 const Samples: React.FC<SamplesProps> = ({
   currentSampleUrl,
-  currentSampleBlob,
+  // currentSampleBlob,
   chooseSample,
 }) => {
   const pocketBase = getPocketBase();
@@ -40,9 +40,10 @@ const Samples: React.FC<SamplesProps> = ({
   const handleSave = async (): Promise<void> => {
     const name = prompt('Enter a name for the sample:');
     if (name !== null && name.trim() !== '') {
-      if (currentSampleBlob) {
-        await createSample(name, currentSampleBlob);
-      } else if (currentSampleUrl) {
+      // if (currentSampleBlob) {
+      //   await createSample(name, currentSampleBlob);
+      // } else
+      if (currentSampleUrl) {
         const newBlob = await fetchBlobFromUrl(currentSampleUrl);
         await createSample(name, newBlob);
       }
@@ -109,7 +110,7 @@ const Samples: React.FC<SamplesProps> = ({
                 {sample.name}
               </button>
 
-              <audio src={sample.audioUrl}></audio>
+              {/* <audio src={sample.audioUrl}></audio> */}
 
               <button
                 onClick={() => confirmDelete(sample)}

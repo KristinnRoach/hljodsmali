@@ -5,6 +5,15 @@ export type Sample = {
   audioUrl?: string;
 };
 
+export type Voice = {
+  audioEl: HTMLAudioElement;
+  url: audioEl.src;
+  preservesPitch: audioEl.preservesPitch;
+  startTime?: number;
+  pauseTime?: number;
+  isLooping?: boolean;
+};
+
 export type KeyMap = {
   [key: string]: number;
 };

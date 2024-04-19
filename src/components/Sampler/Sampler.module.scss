@@ -30,3 +30,10 @@
   background-color: rgb(255, 0, 0);
   color: white;
 }
+
+.waveContainer {
+  display: flex;
+  flex-direction: column;
+  width: 50vw;
+  height: 25vh;
+}
