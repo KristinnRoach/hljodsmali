@@ -1,6 +1,8 @@
 /* Variables */
 $color-1: green;
 $color-2: yellow;
+$bg-color: rgb(250, 255, 108);
+$max-width: 1600px;
 
 //:root {}
 
@@ -12,23 +14,25 @@ $color-2: yellow;
 
 html,
 body {
-  max-width: 100vw;
+  max-width: $max-width;
   overflow-x: hidden;
 }
 
 body {
-  color: inherit;
-  background-color: rgb(250, 255, 108);
-  // background-color: $color-2;
+  background-color: $bg-color;
 }
 
-a,
-button,
-audio::-webkit-media-controls-panel {
-  display: flex;
+a {
   text-decoration: none;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+}
+
+button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 9999px;
   padding: 0.5rem 0.75rem;
   font-size: 1.2rem;
+  height: 3rem;
+  width: 3rem;
 }

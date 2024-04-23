@@ -1,18 +1,18 @@
-import PocketBase from 'pocketbase';
+// import PocketBase from 'pocketbase';
 
 import pb from './pb';
 import { Sample } from '../types';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-pb.autoCancellation(false);
+// pb.autoCancellation(false);
 
-export function getPocketBase(): PocketBase {
-  if (!pb) {
-    console.error('PocketBase is not initialized.');
-  }
-  return pb;
-}
+// export function getPocketBase(): PocketBase {
+//   if (!pb) {
+//     console.error('PocketBase is not initialized.');
+//   }
+//   return pb;
+// }
 
 export async function fetchSamples(): Promise<Sample[]> {
   const data = await pb.collection('samples').getFullList({

@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-import {
-  createSampleRecord,
-  fetchSamples,
-  deleteSample,
-  getPocketBase,
-} from '../../db/samplesPb';
+import { createSampleRecord, fetchSamples, deleteSample } from '../../lib/db';
 import { fetchBlobFromUrl } from '../../utils/fetch';
 import { Sample } from '../../types';
+
 import styles from './Samples.module.scss';
 
 interface SamplesProps {
@@ -19,8 +15,6 @@ const Samples: React.FC<SamplesProps> = ({
   currentSampleUrl,
   handleChooseSample,
 }) => {
-  const pocketBase = getPocketBase();
-
   const [currentSampleSrc, setCurrentSampleSrc] = useState<string>('');
   const [userSamples, setUserSamples] = useState<Sample[]>([]);
   const [showSampleList, setShowSampleList] = useState<boolean>(false);

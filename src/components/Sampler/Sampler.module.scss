@@ -1,8 +1,10 @@
 .wrapper {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  column-gap: 15%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-bottom: 0rem;
+  margin: 0 auto;
+  //background-color: green;
 }
 
 .controlsBox {
@@ -10,15 +12,6 @@
   justify-content: center;
   gap: 1rem;
   padding: 1rem;
-}
-
-.samplerButton {
-  // laga þegar hendi í flottari takka
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 3rem;
-  width: 3rem;
 }
 
 .recordingOff {

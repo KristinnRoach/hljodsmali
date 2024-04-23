@@ -1,0 +1,29 @@
+.login {
+  display: flex;
+  flex-direction: column;
+  //align-items: center;
+  //justify-content: center;
+
+  .toTheRight {
+    margin-right: 0.5rem;
+  }
+
+  h1 {
+    font-size: 1rem;
+    text-align: center;
+    padding-bottom: 0.5rem;
+  }
+
+  button {
+    font-size: 1rem;
+    padding: 0.35rem;
+    height: initial;
+    width: initial;
+    margin-top: 0.5rem;
+  }
+
+  input {
+    padding: 0 0.1rem 0.1rem 0;
+    margin: 0 0.2rem 0.2rem 0;
+  }
+}

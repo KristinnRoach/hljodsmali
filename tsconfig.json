@@ -28,7 +28,7 @@
     ".next/types/**/*.ts",
     "src/hooks/useLogout.js",
     "src/hooks/useLogin.js",
-    "src/components/Login/Login.jsx"
+    "src/components/Auth/Login.jsx"
   ],
   "exclude": ["node_modules"]
 }

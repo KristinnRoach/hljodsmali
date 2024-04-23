@@ -248,18 +248,18 @@ const Sampler: React.FC<{
             trueClick={countdownAndRecord}
             falseClick={stopRecording}
           />
-        </div>
 
-        <ConditionClassButton
-          condition={loopState}
-          baseClassName={styles.samplerButton}
-          trueClassName={styles.loopOn}
-          falseClassName={styles.loopOff}
-          trueClick={toggleLoop}
-          falseClick={toggleLoop}
-          trueContent="∞: on" // "&#x1F501;"
-          falseContent="∞: off" // "&#x1F502;"
-        />
+          <ConditionClassButton
+            condition={loopState}
+            baseClassName={styles.samplerButton}
+            trueClassName={styles.loopOn}
+            falseClassName={styles.loopOff}
+            trueClick={toggleLoop}
+            falseClick={toggleLoop}
+            trueContent="∞: on" // "&#x1F501;"
+            falseContent="∞: off" // "&#x1F502;"
+          />
+        </div>
 
         <div>
           <Samples

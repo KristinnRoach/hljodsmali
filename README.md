@@ -2,6 +2,9 @@ Appið hýst á Vercel:
 
 https://hljod-smali.vercel.app/
 
+username: kiddi
+password: 123456
+
 Leiðbeiningar:
 
 Taktu upp stutt hljóð, með að ýta á upptökuhnappinn einu sinni til að byrja og svo aftur til að stoppa. Góð byrjun væri til dæmis að syngja eða flauta eina stutta nótu, eða slá í gler glas eða eitthvað sem gefur frá sér tón. Best er að tónninn byrji strax eða sé þegar byrjaður þegar upptaka hefst.

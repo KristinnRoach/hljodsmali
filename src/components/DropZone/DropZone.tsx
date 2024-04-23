@@ -4,12 +4,9 @@ import React, { useState } from 'react';
 import Sampler from '../Sampler/Sampler';
 import Samples from '../Samples/Samples';
 
-// interface DropZoneProps {
-//   children: React.ReactNode;
-// }
+import styles from '../../styles/page.module.scss';
 
 export default function DropZone() {
-  // { children }: DropZoneProps)
   const [audioUrl, setAudioUrl] = useState<string>('');
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -39,7 +36,11 @@ export default function DropZone() {
   };
 
   return (
-    <div onDragOver={handleDragOver} onDrop={handleDrop}>
+    <div
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className={styles.samplerBox}
+    >
       <Sampler droppedAudioUrl={audioUrl} />
     </div>
   );
@@ -57,6 +58,12 @@ export default function DropZone() {
 
 // const handleDragEnd = () => {
 // };
+
+// interface DropZoneProps {
+//   children: React.ReactNode;
+// }
+
+// { children }: DropZoneProps)
 
 // {React.Children.map(children, (child) => {
 //   if (React.isValidElement(child)) {

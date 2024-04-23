@@ -1,18 +1,18 @@
 .wrapper {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  padding-bottom: 4rem;
-  gap: 1rem;
+  padding-bottom: 0rem;
+  margin-bottom: 0rem;
+  //background-color: green;
 }
 
 .controlsBox {
   display: flex;
-  align-items: center;
-  justify-content: space-evenly;
-  width: 100%;
-  padding: 0.75rem;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  //background-color: aqua;
 }
 
 .samplesList {
@@ -21,32 +21,45 @@
 
   &.visible {
     display: flex;
-    justify-content: space-evenly;
+    flex-direction: column;
+    height: 15vh;
+    overflow-y: scroll;
+    background-color: rgba(0, 172, 43, 0.581);
+  }
 
-    row-gap: 1rem;
-    flex-wrap: wrap;
+  //background-color: antiquewhite;
+
+  button {
+    border-radius: 20px;
+    border-style: hidden;
+    width: auto;
+    height: auto;
   }
 
   li {
     display: flex;
-    background-color: rgba(58, 255, 107, 0.196);
-    border-radius: 50%;
+
+    :hover {
+      box-shadow: rgba(0, 0, 0, 0.221);
+      font-size: 1.02rem;
+      cursor: pointer;
+    }
   }
 
   .singleSample {
-    background-color: rgb(245, 255, 99);
+    background-color: rgba(0, 172, 43, 0);
     padding: 0.5rem;
     color: black;
     text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.221);
     text-align: center;
+    font-size: 0.9rem;
   }
 
   .deleteButton {
-    padding: 0 0 0 0.5rem;
+    padding: 0;
     border: none;
-    box-shadow: none;
     background: none;
-    color: grey;
+    color: rgb(190, 0, 0);
     transition: font-size 0.3s ease;
   }
 

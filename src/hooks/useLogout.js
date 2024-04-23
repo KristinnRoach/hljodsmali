@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import pb from '../db/pb';
+import pb from '../lib/pb';
 
 export default function useLogout() {
   const [loggedOut, setLoggedOut] = useState(false); // dummy for triggering rerender

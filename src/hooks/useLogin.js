@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import pb from '../db/pb';
+import pb from '../lib/pb';
 
 export default function useLogin() {
   const [isLoading, setIsLoading] = useState(false);
 
-  async function login({ email, password }) {
+  async function login({ username, password }) {
     setIsLoading(true);
 
     try {
       const authData = await pb
         .collection('users')
-        .authWithPassword(email, password);
+        .authWithPassword(username, password);
     } catch (e) {
       console.log('error', e);
     }

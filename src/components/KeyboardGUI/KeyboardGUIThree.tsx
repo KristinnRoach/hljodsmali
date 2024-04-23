@@ -29,7 +29,7 @@ function Cube(props: { position: Vector3 }) {
   );
 }
 
-export default function KeyboardGUI() {
+export default function KeyboardGUIThree() {
   return (
     <Canvas camera={{ position: [0, 5, 20] }}>
       <ambientLight />

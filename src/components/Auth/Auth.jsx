@@ -1,12 +1,11 @@
 'use client';
 
-import PocketBase from 'pocketbase';
 import { useForm } from 'react-hook-form';
 import useLogout from '../../hooks/useLogout';
 import useLogin from '../../hooks/useLogin';
 
-import pb from '../../db/pb';
-import styles from './Login.module.scss';
+import pb from '../../lib/pb';
+import styles from './Auth.module.scss';
 
 export default function Auth() {
   const logout = useLogout();
@@ -17,7 +16,7 @@ export default function Auth() {
   const isLoggedIn = pb.authStore.isValid;
 
   async function onSubmit(data) {
-    login({ email: data.email, password: data.password });
+    login({ username: data.username, password: data.password });
     reset();
   }
 
@@ -25,12 +24,7 @@ export default function Auth() {
     return (
       <div className={styles.login}>
         <div className={styles.toTheRight}>
-          <h1>
-            {
-              ('Logged In: ', isLoggedIn && pb.authStore.model.username)
-              /*pb.authStore.model.email*/
-            }
-          </h1>
+          <h1>{('Logged In: ', isLoggedIn && pb.authStore.model.username)}</h1>
           <button onClick={logout}>Logout</button>
         </div>
       </div>
@@ -40,11 +34,11 @@ export default function Auth() {
   return (
     <div className={styles.login}>
       <div className={styles.toTheRight}>
-        <h1>Login to save your shit</h1>
+        <h1></h1>
         {isLoading && <p>Loading...</p>}
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <input type="text" placeholder="email" {...register('email')} />
+          <input type="text" placeholder="username" {...register('username')} />
           <input
             type="password"
             placeholder="Password"
