@@ -1,25 +1,20 @@
 'use client';
 import React, { useState } from 'react';
 
-interface DropZoneProps {
-  children: React.ReactNode;
-}
+import Sampler from '../Sampler/Sampler';
+import Samples from '../Samples/Samples';
 
-export default function DropZone({ children }: DropZoneProps) {
+// interface DropZoneProps {
+//   children: React.ReactNode;
+// }
+
+export default function DropZone() {
+  // { children }: DropZoneProps)
   const [audioUrl, setAudioUrl] = useState<string>('');
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
-
-  // const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-  //   e.preventDefault();
-  // };
-
-  // const handleDragLeave = () => {};
-
-  // const handleDragEnd = () => {
-  // };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -44,21 +39,30 @@ export default function DropZone({ children }: DropZoneProps) {
   };
 
   return (
-    <div
-      onDragOver={handleDragOver}
-      // onDragEnter={handleDragEnter} // nota í visual
-      // onDragLeave={handleDragLeave}
-      // onDragEnd={handleDragEnd}
-      onDrop={handleDrop}
-    >
-      {React.Children.map(children, (child) => {
-        if (React.isValidElement(child)) {
-          const ChildComponent = child.type as React.ComponentType<any>;
-          return <ChildComponent {...child.props} droppedAudioUrl={audioUrl} />;
-        }
-        return child;
-      })}
-      {/* {children} */}
+    <div onDragOver={handleDragOver} onDrop={handleDrop}>
+      <Sampler droppedAudioUrl={audioUrl} />
     </div>
   );
 }
+
+// onDragEnter={handleDragEnter} // nota í visual
+// onDragLeave={handleDragLeave}
+// onDragEnd={handleDragEnd}
+
+// const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+//   e.preventDefault();
+// };
+
+// const handleDragLeave = () => {};
+
+// const handleDragEnd = () => {
+// };
+
+// {React.Children.map(children, (child) => {
+//   if (React.isValidElement(child)) {
+//     const ChildComponent = child.type as React.ComponentType<any>;
+//     return <ChildComponent {...child.props} droppedAudioUrl={audioUrl} />;
+//   }
+//   return child;
+// })}
+// {/* {children} */}

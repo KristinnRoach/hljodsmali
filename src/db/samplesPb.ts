@@ -1,12 +1,10 @@
 import PocketBase from 'pocketbase';
 
+import pb from './pb';
 import { Sample } from '../types';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const pb = new PocketBase(
-  process.env.POCKETBASE_URL || 'https://hljodsmali.pockethost.io/'
-);
 pb.autoCancellation(false);
 
 export function getPocketBase(): PocketBase {
@@ -34,7 +32,7 @@ export async function fetchSamples(): Promise<Sample[]> {
   return samplesWithSrcURL || [];
 }
 
-export const createSample = async (
+export const createSampleRecord = async (
   name: string,
   sample_file: Blob
 ): Promise<void> => {
@@ -42,8 +40,8 @@ export const createSample = async (
   formData.append('name', name);
   formData.append('sample_file', sample_file);
   try {
-    const record = await pb.collection('samples').create(formData);
-    console.log('Uploaded audio:', record);
+    const createdSampleRecord = await pb.collection('samples').create(formData);
+    console.log('Uploaded audio:', createdSampleRecord);
   } catch (error) {
     console.error('Error uploading audio:', error);
   }

@@ -1,0 +1,29 @@
+.login {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.25rem;
+  width: 100vw;
+  padding: 0.25rem;
+
+  .toTheRight {
+    align-self: flex-end;
+    padding-right: 1rem;
+  }
+
+  h1 {
+    font-size: 1rem;
+    align-self: flex-start;
+  }
+
+  button {
+    background-color: initial;
+    color: initial;
+    border: initial;
+    padding: initial;
+    font-size: initial;
+    border-style: none;
+    box-shadow: none;
+  }
+}

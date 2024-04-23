@@ -7,9 +7,6 @@ export type Sample = {
 
 export type Voice = {
   audioEl: HTMLAudioElement;
-  url: audioEl.src;
-  preservesPitch: audioEl.preservesPitch;
-  startTime?: number;
   pauseTime?: number;
   isLooping?: boolean;
 };
