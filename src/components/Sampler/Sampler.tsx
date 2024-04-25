@@ -249,7 +249,7 @@ const Sampler: React.FC<{
             falseClick={stopRecording}
           />
 
-          <ConditionClassButton
+          {/* <ConditionClassButton
             condition={loopState}
             baseClassName={styles.samplerButton}
             trueClassName={styles.loopOn}
@@ -258,7 +258,7 @@ const Sampler: React.FC<{
             falseClick={toggleLoop}
             trueContent="∞: on" // "&#x1F501;"
             falseContent="∞: off" // "&#x1F502;"
-          />
+          /> */}
         </div>
 
         <div>

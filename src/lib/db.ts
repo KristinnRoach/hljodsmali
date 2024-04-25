@@ -1,27 +1,49 @@
-// import PocketBase from 'pocketbase';
-
 import pb from './pb';
 import { Sample } from '../types';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// pb.autoCancellation(false);
+export const createSampleRecord = async (
+  // hax, laga eftir próf
+  name: string,
+  sample_file: Blob
+): Promise<void> => {
+  let data;
 
-// export function getPocketBase(): PocketBase {
-//   if (!pb) {
-//     console.error('PocketBase is not initialized.');
-//   }
-//   return pb;
-// }
+  if (pb.authStore.model?.id && pb.authStore.isValid) {
+    data = {
+      name: name,
+      sample_file: sample_file,
+      user: pb.authStore.model.id,
+    };
+  } else {
+    data = {
+      name: name,
+      sample_file: sample_file,
+    };
+  }
 
-export async function fetchSamples(): Promise<Sample[]> {
+  try {
+    const createdSampleRecord = await pb.collection('samples').create(data);
+    console.log('Uploaded audio:', createdSampleRecord);
+  } catch (error) {
+    console.error('Error uploading audio:', error);
+  }
+};
+
+export async function deleteSample(sampleId: string): Promise<void> {
+  await pb.collection('samples').delete(sampleId); // anybody can delete public samples
+}
+
+export async function fetchUserSamples(): Promise<Sample[]> {
   const data = await pb.collection('samples').getFullList({
     sort: '-created',
   });
 
   const samplesWithSrcURL = data?.map((sample: any) => {
-    const audioUrl = pb.files.getUrl(sample, sample.sample_file, {});
-
+    const audioUrl = pb.files.getUrl(sample, sample.sample_file, {
+      // token: fileToken, líklega óþarfi en get notað token
+    });
     // Object with audioUrl for each sample
     return {
       ...sample,
@@ -30,23 +52,4 @@ export async function fetchSamples(): Promise<Sample[]> {
   });
 
   return samplesWithSrcURL || [];
-}
-
-export const createSampleRecord = async (
-  name: string,
-  sample_file: Blob
-): Promise<void> => {
-  const formData = new FormData();
-  formData.append('name', name);
-  formData.append('sample_file', sample_file);
-  try {
-    const createdSampleRecord = await pb.collection('samples').create(formData);
-    console.log('Uploaded audio:', createdSampleRecord);
-  } catch (error) {
-    console.error('Error uploading audio:', error);
-  }
-};
-
-export async function deleteSample(sampleId: string): Promise<void> {
-  await pb.collection('samples').delete(sampleId);
 }

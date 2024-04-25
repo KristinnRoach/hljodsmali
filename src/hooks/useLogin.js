@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import pb from '../lib/pb';
 
@@ -8,9 +10,7 @@ export default function useLogin() {
     setIsLoading(true);
 
     try {
-      const authData = await pb
-        .collection('users')
-        .authWithPassword(username, password);
+      await pb.collection('users').authWithPassword(username, password);
     } catch (e) {
       console.log('error', e);
     }

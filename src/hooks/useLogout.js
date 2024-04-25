@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import pb from '../lib/pb';
 

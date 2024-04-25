@@ -1,9 +1,11 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 /pb
-.pocketbase
+pocketbase
 .env*
 *.kiddi
+*test.puml
+
 
 # dependencies
 /node_modules

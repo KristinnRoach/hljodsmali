@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { createSampleRecord, fetchSamples, deleteSample } from '../../lib/db';
+import {
+  createSampleRecord,
+  fetchUserSamples,
+  deleteSample,
+} from '../../lib/db';
+import pb from '../../lib/pb';
 import { fetchBlobFromUrl } from '../../utils/fetch';
 import { Sample } from '../../types';
 
@@ -20,7 +25,7 @@ const Samples: React.FC<SamplesProps> = ({
   const [showSampleList, setShowSampleList] = useState<boolean>(false);
 
   async function loadUserSamples() {
-    const sampleObjArray = await fetchSamples();
+    const sampleObjArray = await fetchUserSamples();
     setUserSamples(sampleObjArray);
   }
 
@@ -107,8 +112,6 @@ const Samples: React.FC<SamplesProps> = ({
                 >
                   {sample.name}
                 </button>
-
-                {/* <audio src={sample.audioUrl}></audio> */}
 
                 <button
                   onClick={() => handleDelete(sample)}
