@@ -1,13 +1,9 @@
 'use client';
 import React, { useState, useRef } from 'react';
 
-import Sampler from '../Sampler/Sampler';
-import Samples from '../Samples/Samples';
 import Recorder from '../Sampler/Recorder';
 import Player from '../Sampler/Player';
-import { Sample, Voice, KeyMap } from '../../types';
-import { keyMap } from '../../utils/keymap';
-
+import { Voice } from '../../types';
 
 import styles from '../../styles/page.module.scss';
 

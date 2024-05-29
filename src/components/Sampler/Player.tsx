@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import { Sample, Voice, KeyMap } from '../../types';
 import { keyMap } from '../../utils/keymap';
-import Samples from '../Samples/Samples';
 import styles from './Sampler.module.scss';
 
 
