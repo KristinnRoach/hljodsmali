@@ -1,13 +1,16 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 
 import Sampler from '../Sampler/Sampler';
 import Samples from '../Samples/Samples';
 
 import styles from '../../styles/page.module.scss';
+import { AudioSrcCtx } from '@components/contexts/ctx';
+import { set } from 'react-hook-form';
 
 export default function DropZone() {
-  const [audioUrl, setAudioUrl] = useState<string>('');
+  const { audioSrcUrl, setAudioSrcUrl, globalLoopState, setGlobalLoopState } =
+    useContext(AudioSrcCtx);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -16,7 +19,7 @@ export default function DropZone() {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setAudioUrl('');
+    setAudioSrcUrl('');
 
     const files = e.dataTransfer.files;
     handleDroppedFiles(files);
@@ -27,7 +30,7 @@ export default function DropZone() {
       const file = files[i];
       if (file.type.startsWith('audio/')) {
         const audioUrl = URL.createObjectURL(file);
-        setAudioUrl(audioUrl);
+        setAudioSrcUrl(audioUrl);
         console.log('Audio file dropped:', file.name);
       } else {
         console.log('Unsupported file dropped:', file.name);
@@ -41,7 +44,7 @@ export default function DropZone() {
       onDrop={handleDrop}
       className={styles.samplerBox}
     >
-      <Sampler droppedAudioUrl={audioUrl} />
+      <Sampler />
     </div>
   );
 }

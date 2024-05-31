@@ -1,22 +1,15 @@
 'use client';
-
 import { useEffect, useRef, useState, useContext } from 'react';
-
-import { AudioSrcCtx } from '@components/contexts/ctx';
-import { Sample, Voice, KeyMap } from '../../types';
+import { AudioSrcCtx } from '../../contexts/AudioSrcCtx';
+import { Voice } from '../../types';
 import { keyMap } from '../../utils/keymap';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import Samples from '../Samples/Samples';
 import styles from './Sampler.module.scss';
 
-const Sampler: React.FC = ({}) => {
-  const {
-    ogAudioElement,
-    audioSrcUrl,
-    setAudioSrcUrl,
-    globalLoopState,
-    setGlobalLoopState,
-  } = useContext(AudioSrcCtx);
+export const Sampler: React.FC = ({}) => {
+  const { audioSrcUrl, setAudioSrcUrl, globalLoopState, setGlobalLoopState } =
+    useContext(AudioSrcCtx);
 
   const audioFormat = 'audio/ogg';
   const trimStartMs = 200;
@@ -24,6 +17,10 @@ const Sampler: React.FC = ({}) => {
 
   const [isRecording, setIsRecording] = useState<boolean>(false);
 
+  const audioElementRef = useRef<HTMLAudioElement>(null);
+  const [audioUrl, setAudioUrl] = useState<string>('');
+
+  // const {globalLoopState, setGlobalLoop}: boolean = useContext(AudioSrcCtx);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const blobsRef = useRef<Blob[]>([]); // unnecessary? (only for recording)
@@ -98,21 +95,31 @@ const Sampler: React.FC = ({}) => {
   }, []);
 
   function setAudioElSrc(sampleUrl: string): void {
-    // if (audioElementRef.current) {
-    //   if (audioElementRef.current.src) {
-    //     URL.revokeObjectURL(audioElementRef.current.src);
-    //   }
-    //   audioElementRef.current.src = sampleUrl;
-    setAudioSrcUrl(sampleUrl);
-    prepPlayback();
-    // } else {
-    //   console.error('audioElementRef.current is null');
-    // }
+    if (audioElementRef.current) {
+      if (audioElementRef.current.src) {
+        URL.revokeObjectURL(audioElementRef.current.src);
+      }
+      audioElementRef.current.src = sampleUrl;
+      setAudioUrl(sampleUrl);
+      prepPlayback();
+    } else {
+      console.error('audioElementRef.current is null');
+    }
   }
 
+  // useEffect(() => {
+  //   if (droppedAudioUrl && audioElementRef.current) {
+  //     blobsRef.current = [];
+  //     if (audioElementRef.current.src) {
+  //       URL.revokeObjectURL(audioElementRef.current.src);
+  //     }
+  //     audioElementRef.current.src = droppedAudioUrl;
+  //     setAudioUrl(droppedAudioUrl);
+  //   }
+  // }, [droppedAudioUrl]);
   function prepPlayback() {
-    if (ogAudioElement.current) {
-      const clone = ogAudioElement.current.cloneNode(true) as HTMLAudioElement;
+    if (audioElementRef.current) {
+      const clone = audioElementRef.current.cloneNode(true) as HTMLAudioElement;
 
       if (clone) {
         const thisVoice = {
@@ -120,7 +127,7 @@ const Sampler: React.FC = ({}) => {
           pauseTime: 2000, // fallback
           isLooping: false,
         };
-        setGlobalLoopState(false);
+        setLoopState(false);
 
         thisVoice.audioEl.currentTime = trimStartMs / 1000;
         thisVoice.audioEl.preservesPitch = false;
@@ -224,10 +231,10 @@ const Sampler: React.FC = ({}) => {
 
   return (
     <>
-      {/* <audio
-        ref={ogAudioElement}
+      <audio
+        ref={audioElementRef}
         preload='auto' // henda?
-      ></audio> */}
+      ></audio>
       <div className={styles.wrapper}>
         <div className={styles.controlsBox}>
           <ConditionClassButton
@@ -241,28 +248,26 @@ const Sampler: React.FC = ({}) => {
             trueClick={countdownAndRecord}
             falseClick={stopRecording}
           />
+
+          {/* <ConditionClassButton
+              condition={loopState}
+              baseClassName={styles.samplerButton}
+              trueClassName={styles.loopOn}
+              falseClassName={styles.loopOff}
+              trueClick={toggleLoop}
+              falseClick={toggleLoop}
+              trueContent="∞: on" // "&#x1F501;"
+              falseContent="∞: off" // "&#x1F502;"
+            /> */}
         </div>
 
         <div>
           <Samples
             handleChooseSample={chooseSample}
-            currentSampleUrl={ogAudioElement.current?.src || ''}
+            currentSampleUrl={audioElementRef.current?.src || ''}
           />
         </div>
       </div>
     </>
   );
 };
-
-export default Sampler;
-
-// useEffect(() => {
-//   if (droppedAudioUrl && audioElementRef.current) {
-//     blobsRef.current = [];
-//     if (audioElementRef.current.src) {
-//       URL.revokeObjectURL(audioElementRef.current.src);
-//     }
-//     audioElementRef.current.src = droppedAudioUrl;
-//     setAudioUrl(droppedAudioUrl);
-//   }
-// }, [droppedAudioUrl]);

@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   createSampleRecord,
   fetchUserSamples,
   deleteSample,
 } from '../../lib/db';
-import pb from '../../lib/pb';
 import { fetchBlobFromUrl } from '../../utils/fetch';
 import { Sample } from '../../types';
 
