@@ -46,6 +46,8 @@ const Sampler: React.FC = ({}) => {
       // for avoiding retriggers
       keysPressedRef.current.push(key);
       playSample(note);
+      // const pitch = 2 ** ((note - 60) / 12);
+      // playAudio(pitch);
     }
   };
 
@@ -113,7 +115,6 @@ const Sampler: React.FC = ({}) => {
   function prepPlayback() {
     if (ogAudioElement.current) {
       const clone = ogAudioElement.current.cloneNode(true) as HTMLAudioElement;
-
       if (clone) {
         const thisVoice = {
           audioEl: clone,
@@ -121,7 +122,6 @@ const Sampler: React.FC = ({}) => {
           isLooping: false,
         };
         setGlobalLoopState(false);
-
         thisVoice.audioEl.currentTime = trimStartMs / 1000;
         thisVoice.audioEl.preservesPitch = false;
         thisVoice.audioEl.addEventListener('pause', () => {
@@ -131,7 +131,6 @@ const Sampler: React.FC = ({}) => {
         //   onPlay(thisVoice);
         // });
         voicesRef.current.push(thisVoice);
-
         console.log('latest voice:', latestVoice().audioEl);
       } else {
         console.error('Failed to clone audio element');
