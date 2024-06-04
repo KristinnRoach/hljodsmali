@@ -8,6 +8,7 @@ import { keyMap } from '../../utils/keymap';
 import ConditionClassButton from '../Button/ConditionClassButton';
 import Samples from '../Samples/Samples';
 import styles from './Sampler.module.scss';
+import { sliceBlob } from '../../contexts/audioUtils';
 
 const Sampler: React.FC = ({}) => {
   const {
@@ -158,6 +159,7 @@ const Sampler: React.FC = ({}) => {
         const recordedBlob = await new Blob(blobsRef.current, {
           type: audioFormat,
         });
+
         const recordedUrl = await URL.createObjectURL(recordedBlob);
         setAudioElSrc(recordedUrl);
 
