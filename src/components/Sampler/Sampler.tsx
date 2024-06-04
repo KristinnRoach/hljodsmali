@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState, useContext } from 'react';
 
 import { AudioSrcCtx } from '@components/contexts/ctx';
-import { Sample, Voice, KeyMap } from '../../types';
+import { Voice } from '../../types';
 import { keyMap } from '../../utils/keymap';
-import ConditionClassButton from '../Button/ConditionClassButton';
 import Samples from '../Samples/Samples';
 import styles from './Sampler.module.scss';
-import { sliceBlob } from '../../contexts/audioUtils';
 
 const Sampler: React.FC = ({}) => {
   const {
@@ -230,7 +228,7 @@ const Sampler: React.FC = ({}) => {
         preload='auto' // henda?
       ></audio> */}
       <div className={styles.wrapper}>
-        <div className={styles.controlsBox}>
+        {/* <div className={styles.controlsBox}>
           <ConditionClassButton
             id='record-button'
             condition={!isRecording}
@@ -242,7 +240,7 @@ const Sampler: React.FC = ({}) => {
             trueClick={countdownAndRecord}
             falseClick={stopRecording}
           />
-        </div>
+        </div> */}
 
         <div>
           <Samples

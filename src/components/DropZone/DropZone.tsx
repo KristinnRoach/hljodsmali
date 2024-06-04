@@ -7,6 +7,7 @@ import Samples from '../Samples/Samples';
 import styles from '../../styles/page.module.scss';
 import { AudioSrcCtx } from '@components/contexts/ctx';
 import { set } from 'react-hook-form';
+import Recorder from '../Sampler/Recorder';
 
 export default function DropZone() {
   const { audioSrcUrl, setAudioSrcUrl, globalLoopState, setGlobalLoopState } =
@@ -45,6 +46,7 @@ export default function DropZone() {
       className={styles.samplerBox}
     >
       <Sampler />
+      <Recorder />
     </div>
   );
 }

@@ -1,11 +1,16 @@
 'use client'; // gæti virkað á server?
 
-import { useRef, useState, useContext } from 'react';
+import { useState, useContext } from 'react';
 
 import { AudioSrcCtx } from '@components/contexts/ctx';
 import ConditionClassButton from '../Button/ConditionClassButton';
 
 import styles from './Sampler.module.scss';
+import {
+  blobToAudioBuffer,
+  recordAudioBlob,
+} from '@components/contexts/record';
+import { playAudioBuffer } from '@components/contexts/play';
 
 const Recorder: React.FC = ({}) => {
   const {
@@ -16,55 +21,31 @@ const Recorder: React.FC = ({}) => {
     setGlobalLoopState,
   } = useContext(AudioSrcCtx);
 
-  const audioFormat = 'audio/ogg';
-
+  const [blob, setBlob] = useState<Blob>();
   const [isRecording, setIsRecording] = useState<boolean>(false);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-
-  const blobsRef = useRef<Blob[]>([]); // unnecessary? (only for recording)
-
   async function startRecording() {
-    try {
-      // Clear previously recorded audio blobs
-      blobsRef.current = [];
+    const newBlob = await recordAudioBlob();
+    // setBlob(newBlob);
+    const recordedUrl = await URL.createObjectURL(newBlob);
+    setAudioSrcUrl(recordedUrl);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+    console.log('blob: ', newBlob);
+    console.log('recordedUrl: ', recordedUrl);
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          blobsRef.current.push(event.data);
-        }
-      };
+    const audioBuffer = await blobToAudioBuffer(newBlob);
 
-      mediaRecorderRef.current.onstop = async () => {
-        const recordedBlob = await new Blob(blobsRef.current, {
-          type: audioFormat,
-        });
-        const recordedUrl = await URL.createObjectURL(recordedBlob);
-        setSampleUrl(recordedUrl);
-        createNextVoice();
-
-        blobsRef.current = []; // best place for it?
-      };
-
-      setIsRecording(true);
-      mediaRecorderRef.current.start();
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-    }
+    playAudioBuffer(audioBuffer);
   }
 
   const stopRecording = () => {
-    setIsRecording(false);
-
-    const mrStream = mediaRecorderRef.current?.stream;
-    if (mrStream) {
-      mrStream.getTracks().forEach((track) => {
-        track.stop();
-      });
-    }
+    // setIsRecording(false);
+    // const mrStream = mediaRecorderRef.current?.stream;
+    // if (mrStream) {
+    //   mrStream.getTracks().forEach((track) => {
+    //     track.stop();
+    //   });
+    // }
   };
 
   const countdownAndRecord = async () => {
