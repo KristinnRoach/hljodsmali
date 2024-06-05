@@ -1,27 +1,53 @@
 import audioCtx from './webAudioCtx';
 
-const audioFormat = 'audio/ogg'; // 'audio/ogg; codecs=vorbis' vs opus vs annað?
+const audioFormat = 'audio/ogg; codecs=opus'; // 'codecs=vorbis' vs opus vs annað?
+
+let mediaRecorder: MediaRecorder | undefined = undefined;
 
 // try catch + error handling
-export async function recordAudioBlob(): Promise<Blob> {
+export async function startRecordAudioBuffer(
+  durationMs?: number
+): Promise<AudioBuffer | undefined> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const mediaRecorder = new MediaRecorder(stream); // , { mimeType: audioFormat,}
-  // const chunks: Blob[] = []; // Blob or BlobPart?
-
+  if (!stream) {
+    console.error('Could not get audio stream');
+    return;
+  }
+  mediaRecorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
 
   return new Promise((resolve) => {
-    mediaRecorder.ondataavailable = (e) => {
-      chunks.push(e.data);
-    };
+    // bæta við reject?
+    if (mediaRecorder) {
+      mediaRecorder.ondataavailable = (e) => {
+        chunks.push(e.data);
+      };
 
-    mediaRecorder.onstop = () => {
-      resolve(new Blob(chunks, { type: audioFormat }));
-    };
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: audioFormat });
+        const audioBuffer = await blobToAudioBuffer(blob);
+        chunks.length = 0;
 
-    mediaRecorder.start();
-    setTimeout(() => mediaRecorder.stop(), 1000);
+        resolve(audioBuffer);
+      };
+
+      mediaRecorder.start();
+
+      if (durationMs) {
+        setTimeout(() => mediaRecorder?.stop(), durationMs);
+      }
+    } else {
+      console.error('mediaRecorder is undefined');
+    }
   });
+}
+
+export function stopRecordAudioBuffer() {
+  if (mediaRecorder?.state === 'recording') {
+    mediaRecorder.stop();
+  } else {
+    console.error('mediaRecorder is not recording');
+  }
 }
 
 export async function blobToAudioBuffer(blob: Blob): Promise<AudioBuffer> {
@@ -34,6 +60,8 @@ export async function blobToAudioBuffer(blob: Blob): Promise<AudioBuffer> {
 
   return await audioCtx.decodeAudioData(arrayBuffer);
 }
+
+// const chunks: Blob[] = []; // Blob or BlobPart?
 
 // npm install wav-encoder
 

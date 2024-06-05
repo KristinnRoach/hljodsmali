@@ -1,51 +1,33 @@
-'use client'; // gæti virkað á server?
+'use client';
 
-import { useState, useContext } from 'react';
-
+import { useState, useContext, useEffect } from 'react';
 import { AudioSrcCtx } from '@components/contexts/ctx';
 import ConditionClassButton from '../Button/ConditionClassButton';
 
 import styles from './Sampler.module.scss';
-import {
-  blobToAudioBuffer,
-  recordAudioBlob,
-} from '@components/contexts/record';
-import { playAudioBuffer } from '@components/contexts/play';
 
 const Recorder: React.FC = ({}) => {
-  const {
-    ogAudioElement,
-    audioSrcUrl,
-    setAudioSrcUrl,
-    globalLoopState,
-    setGlobalLoopState,
-  } = useContext(AudioSrcCtx);
+  const { startRecording, stopRecording } = useContext(AudioSrcCtx);
 
-  const [blob, setBlob] = useState<Blob>();
   const [isRecording, setIsRecording] = useState<boolean>(false);
 
-  async function startRecording() {
-    const newBlob = await recordAudioBlob();
-    // setBlob(newBlob);
-    const recordedUrl = await URL.createObjectURL(newBlob);
-    setAudioSrcUrl(recordedUrl);
+  /* RECORDING OPTIONS */
 
-    console.log('blob: ', newBlob);
-    console.log('recordedUrl: ', recordedUrl);
+  const [maxDuration, setMaxDuration] = useState<number>(5000); // Default max recording length is 5 seconds
 
-    const audioBuffer = await blobToAudioBuffer(newBlob);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
+  const [audioFormat, setAudioFormat] = useState<string | null>(null);
 
-    playAudioBuffer(audioBuffer);
+  /* RECORDING FUNCTIONS */
+
+  async function start() {
+    setIsRecording(true);
+    startRecording(durationMs || maxDuration);
   }
 
-  const stopRecording = () => {
-    // setIsRecording(false);
-    // const mrStream = mediaRecorderRef.current?.stream;
-    // if (mrStream) {
-    //   mrStream.getTracks().forEach((track) => {
-    //     track.stop();
-    //   });
-    // }
+  const stop = () => {
+    stopRecording();
+    setIsRecording(false);
   };
 
   const countdownAndRecord = async () => {
@@ -65,7 +47,7 @@ const Recorder: React.FC = ({}) => {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
       setIsRecording(true);
-      startRecording(); // await?
+      start(); // await?
     };
     performCountdown();
   };
@@ -80,7 +62,7 @@ const Recorder: React.FC = ({}) => {
       trueContent='&#x23FA;'
       falseContent='&#x23F9;'
       trueClick={countdownAndRecord}
-      falseClick={stopRecording}
+      falseClick={stop}
     />
   );
 };
