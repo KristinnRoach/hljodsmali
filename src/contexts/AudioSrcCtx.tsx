@@ -1,21 +1,40 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useState, ReactNode, useRef } from 'react';
 
 import { AudioSrcCtx } from './ctx';
-// import audioCtx from './webAudioCtx';
-import { startRecordAudioBuffer, stopRecordAudioBuffer } from './record';
+import audioCtx from './webAudioCtx';
+import {
+  blobToAudioBuffer,
+  startRecordAudioBuffer,
+  stopRecordAudioBuffer,
+} from './record';
 
 type AudioSrcCtxProviderProps = {
   children: ReactNode;
 };
 
 export function AudioSrcCtxProvider({ children }: AudioSrcCtxProviderProps) {
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
+  const audioBufferRef = useRef<AudioBuffer | null>(null);
+
+  async function setNewAudioSrc(newAudio: AudioBuffer | Blob): Promise<void> {
+    if (newAudio instanceof AudioBuffer) {
+      audioBufferRef.current = newAudio;
+    } else if (newAudio instanceof Blob) {
+      const buffer = await blobToAudioBuffer(newAudio);
+      audioBufferRef.current = buffer;
+    }
+  }
 
   async function startRecording(duration?: number): Promise<void> {
     const buffer = await startRecordAudioBuffer(duration);
-    setAudioBuffer(buffer);
+    if (!buffer) {
+      console.error('Could not start recording');
+      return;
+    }
+    audioBufferRef.current = buffer;
+
+    console.log('buffer: ', buffer);
   }
 
   function stopRecording(): void {
@@ -25,7 +44,8 @@ export function AudioSrcCtxProvider({ children }: AudioSrcCtxProviderProps) {
   const contextValue = {
     startRecording,
     stopRecording,
-    audioBuffer,
+    audioBufferRef,
+    setNewAudioSrc,
   };
   return (
     <AudioSrcCtx.Provider value={contextValue}>{children}</AudioSrcCtx.Provider>
@@ -38,28 +58,3 @@ export default AudioSrcCtxProvider;
 // const [audioSrcUrl, setAudioSrcUrl] = useState<string>('');
 // const [globalLoopState, setGlobalLoopState] = useState<boolean>(false);
 // const [nrChannels, setNrChannels] = useState<number>(1);
-
-// useEffect(() => {
-//   // Set the src whenever audioSrcUrl changes
-//   ogAudioElement.current.src = audioSrcUrl;
-//   console.log('ogAudioElement.src:', ogAudioElement.current.src);
-// }, [audioSrcUrl]);
-
-// const playAudio = (rate: number = 1.0) => {
-//   console.log('audio src: ', audioSrcUrl, 'playAudio rate:', rate);
-//   if (ogAudioElement.current) {
-//     ogAudioElement.current.playbackRate = rate;
-//     ogAudioElement.current.play();
-//   } else {
-//     console.error('Audio is not loaded yet');
-//   }
-// };
-
-// const contextValue = {
-//   ogAudioElement,
-//   audioSrcUrl,
-//   setAudioSrcUrl,
-//   globalLoopState,
-//   setGlobalLoopState,
-//   playAudio,
-// };

@@ -1,28 +1,31 @@
-import { useContext, useEffect, useRef } from 'react';
+'use client';
+
+import React, { useContext, useEffect, useRef } from 'react';
 
 import audioCtx from '@components/contexts/webAudioCtx';
 import { AudioSrcCtx } from '@components/contexts/ctx';
 import { keyMap } from '../../utils/keymap';
 
 const SamplePlayer: React.FC = ({}) => {
-  const { audioBuffer } = useContext(AudioSrcCtx);
+  const { audioBufferRef } = useContext(AudioSrcCtx);
 
   const keysPressedRef = useRef<string[]>([]);
 
+  function midiToPlaybackRate(midiNote: number): number {
+    return 2 ** ((midiNote - 60) / 12);
+  }
+
   function playAudioBuffer(rate: number): void {
-    const source = audioCtx.createBufferSource();
-    if (audioBuffer) {
-      source.buffer = audioBuffer;
+    const source = audioCtx.createBufferSource(); // create single use audio-buffer-source-node
+
+    if (audioBufferRef.current) {
+      source.buffer = audioBufferRef.current;
       source.connect(audioCtx.destination);
       source.playbackRate.value = rate;
       source.start();
     } else {
-      console.error('No audio buffer available');
+      console.error('Audio buffer not available from playAudioBuffer()');
     }
-  }
-
-  function midiToPlaybackRate(midiNote: number): number {
-    return 2 ** ((midiNote - 60) / 12);
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -32,8 +35,8 @@ const SamplePlayer: React.FC = ({}) => {
     if (!keysPressedRef.current.includes(key) && midiNote) {
       // for avoiding retriggers
       keysPressedRef.current.push(key);
-      const pitch = midiToPlaybackRate(midiNote);
-      playAudioBuffer(pitch);
+      const rate = midiToPlaybackRate(midiNote);
+      playAudioBuffer(rate);
     }
   };
 

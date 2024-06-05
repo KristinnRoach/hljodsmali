@@ -6,20 +6,20 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const createSampleRecord = async (
   // hax, laga eftir próf
   name: string,
-  sample_file: Blob
+  blob: Blob
 ): Promise<void> => {
   let data;
 
   if (pb.authStore.model?.id && pb.authStore.isValid) {
     data = {
       name: name,
-      sample_file: sample_file,
+      sample_file: blob,
       user: pb.authStore.model.id,
     };
   } else {
     data = {
       name: name,
-      sample_file: sample_file,
+      sample_file: blob,
     };
   }
 
@@ -36,6 +36,7 @@ export async function deleteSample(sampleId: string): Promise<void> {
 }
 
 export async function fetchUserSamples(): Promise<Sample[]> {
+  // no need for url since using audiobuffer?
   const data = await pb.collection('samples').getFullList({
     sort: '-created',
   });

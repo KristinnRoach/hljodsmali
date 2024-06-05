@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import { AudioSrcCtx } from '@components/contexts/ctx';
 import ConditionClassButton from '../Button/ConditionClassButton';
 
@@ -22,7 +22,8 @@ const Recorder: React.FC = ({}) => {
 
   async function start() {
     setIsRecording(true);
-    startRecording(durationMs || maxDuration);
+    startRecording(); // durationMs || maxDuration
+    setTimeout(() => stop(), durationMs || maxDuration);
   }
 
   const stop = () => {
@@ -44,7 +45,7 @@ const Recorder: React.FC = ({}) => {
       for (const step of countdownSteps) {
         renderCountdownStep(step);
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
       setIsRecording(true);
       start(); // await?

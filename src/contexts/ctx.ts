@@ -3,7 +3,8 @@ import { createContext } from 'react';
 interface AudioSrcCtxType {
   startRecording: (duration?: number) => void;
   stopRecording: () => void;
-  audioBuffer: AudioBuffer | undefined;
+  audioBufferRef: React.MutableRefObject<AudioBuffer | null>;
+  setNewAudioSrc: (newAudioBuffer: AudioBuffer | Blob) => void;
 }
 
 export const AudioSrcCtx = createContext<AudioSrcCtxType>({
@@ -11,10 +12,19 @@ export const AudioSrcCtx = createContext<AudioSrcCtxType>({
     // possible to provide default behavior here if needed
   },
   stopRecording: () => {},
-  audioBuffer: undefined,
+  audioBufferRef: { current: null },
+  setNewAudioSrc: () => {},
 });
 
 // —————————————————————————————————————————————————————————————————
+
+//const emptyBuffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+
+// audioBuffer: AudioBuffer;
+// setAudioBuffer: (audioBuffer: AudioBuffer) => void;
+
+// audioBuffer: emptyBuffer,
+// setAudioBuffer: () => {},
 
 // import { createContext, Dispatch, SetStateAction } from 'react';
 // interface AudioSrcCtxType {

@@ -1,0 +1,90 @@
+import { useContext, useEffect, useState } from 'react';
+
+import { AudioSrcCtx } from '@components/contexts/ctx';
+import {
+  createSampleRecord,
+  fetchUserSamples,
+  deleteSample,
+} from '../../lib/db';
+// import { fetchBlobFromUrl } from '../../utils/fetch';
+import { Sample } from '../../types';
+
+import styles from './Samples.module.scss';
+
+const Samples: React.FC = ({}) => {
+  const { setBufferFromBlob } = useContext(AudioSrcCtx);
+
+  const [userSamples, setUserSamples] = useState<Sample[]>([]);
+  const [showSampleList, setShowSampleList] = useState<boolean>(false);
+
+  async function loadUserSamples() {
+    const sampleObjArray = await fetchUserSamples();
+    setUserSamples(sampleObjArray);
+  }
+
+  const toggleShowSamples = async (): Promise<void> => {
+    setShowSampleList((prevShowSampleList) => !prevShowSampleList);
+    if (!showSampleList) {
+      await loadUserSamples();
+    }
+  };
+
+  const handleDelete = async (sample: Sample): Promise<void> => {
+    const isConfirmed = window.confirm('Delete this sample?'); // create custom
+    if (isConfirmed && sample.id) {
+      try {
+        await deleteSample(sample.id);
+        await loadUserSamples();
+      } catch {
+        console.error('Delete sample failed');
+        alert('Delete sample failed');
+      }
+    }
+  };
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={styles.controlsBox}>
+        {/* <button onClick={handleSave}>&#x1F4BE;</button>
+        <button className={styles.downloadButton} onClick={downloadAudio}>
+          &#x2B07;
+        </button> */}
+        <button onClick={toggleShowSamples}>🎵</button>
+      </div>
+      {showSampleList && (
+        <ul
+          className={`${styles.samplesList} 
+          ${showSampleList ? styles.visible : ''}
+          `}
+        >
+          {userSamples.map(
+            (
+              sample,
+              index // use index?
+            ) => (
+              <li key={sample.id}>
+                <button
+                  onClick={() => setBufferFromBlob(sample.sample_file!)}
+                  className={styles.singleSample}
+                  data-src={sample.audioUrl}
+                >
+                  {sample.name}
+                </button>
+
+                <button
+                  onClick={() => handleDelete(sample)}
+                  id={sample.id}
+                  className={styles.deleteButton}
+                >
+                  x
+                </button>
+              </li>
+            )
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+export default Samples;

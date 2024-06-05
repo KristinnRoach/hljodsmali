@@ -5,13 +5,11 @@ const audioFormat = 'audio/ogg; codecs=opus'; // 'codecs=vorbis' vs opus vs anna
 let mediaRecorder: MediaRecorder | undefined = undefined;
 
 // try catch + error handling
-export async function startRecordAudioBuffer(
-  durationMs?: number
-): Promise<AudioBuffer | undefined> {
+export async function startRecordAudioBuffer(): Promise<AudioBuffer | null> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   if (!stream) {
     console.error('Could not get audio stream');
-    return;
+    return null;
   }
   mediaRecorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
@@ -33,9 +31,9 @@ export async function startRecordAudioBuffer(
 
       mediaRecorder.start();
 
-      if (durationMs) {
-        setTimeout(() => mediaRecorder?.stop(), durationMs);
-      }
+      // if (durationMs) {
+      //   setTimeout(() => mediaRecorder?.stop(), durationMs);
+      // }
     } else {
       console.error('mediaRecorder is undefined');
     }

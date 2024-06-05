@@ -1,17 +1,14 @@
 'use client';
 import React, { useContext, useState } from 'react';
 
-// import Sampler from '../Sampler/Sampler';
-import Samples from '../Samples/Samples';
-
+//import Samples from '../Samples/Samples';
 import styles from '../../styles/page.module.scss';
 import { AudioSrcCtx } from '@components/contexts/ctx';
 import Recorder from '../Sampler/Recorder';
 import SamplePlayer from '../Sampler/SamplePlayer';
 
 export default function DropZone() {
-  // const { audioSrcUrl, setAudioSrcUrl, globalLoopState, setGlobalLoopState } =
-  //   useContext(AudioSrcCtx);
+  // const { setAudioBuffer, audioBuffer } = useContext(AudioSrcCtx);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -30,7 +27,7 @@ export default function DropZone() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.type.startsWith('audio/')) {
-        const audioUrl = URL.createObjectURL(file);
+        //const audioUrl = URL.createObjectURL(file);
         //setAudioSrcUrl(audioUrl);
         console.log('Audio file dropped:', file.name);
       } else {
@@ -47,6 +44,7 @@ export default function DropZone() {
     >
       <SamplePlayer />
       <Recorder />
+      {/* <Samples /> */}
     </div>
   );
 }
