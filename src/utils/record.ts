@@ -1,12 +1,13 @@
-import audioCtx from './webAudioCtx';
+import { audioCtx } from './audioNodeGraph';
 
 const audioFormat = 'audio/ogg; codecs=opus'; // 'codecs=vorbis' vs opus vs annað?
 
 let mediaRecorder: MediaRecorder | undefined = undefined;
+let stream: MediaStream | undefined = undefined;
 
 // try catch + error handling
 export async function startRecordAudioBuffer(): Promise<AudioBuffer | null> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   if (!stream) {
     console.error('Could not get audio stream');
     return null;
@@ -30,10 +31,6 @@ export async function startRecordAudioBuffer(): Promise<AudioBuffer | null> {
       };
 
       mediaRecorder.start();
-
-      // if (durationMs) {
-      //   setTimeout(() => mediaRecorder?.stop(), durationMs);
-      // }
     } else {
       console.error('mediaRecorder is undefined');
     }
@@ -43,8 +40,17 @@ export async function startRecordAudioBuffer(): Promise<AudioBuffer | null> {
 export function stopRecordAudioBuffer() {
   if (mediaRecorder?.state === 'recording') {
     mediaRecorder.stop();
-  } else {
-    console.error('mediaRecorder is not recording');
+  }
+  stopMediaStream(stream);
+}
+
+function stopMediaStream(stream?: MediaStream) {
+  if (stream) {
+    stream.getTracks().forEach((track) => {
+      if (track.readyState == 'live') {
+        track.stop();
+      }
+    });
   }
 }
 

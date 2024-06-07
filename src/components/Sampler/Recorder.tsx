@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useContext } from 'react';
-import { AudioSrcCtx } from '@components/contexts/ctx';
+import { AudioSrcCtx } from '../../contexts/ctx';
 import ConditionClassButton from '../Button/ConditionClassButton';
 
 import styles from './Sampler.module.scss';

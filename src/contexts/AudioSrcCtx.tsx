@@ -3,12 +3,12 @@
 import { useState, ReactNode, useRef } from 'react';
 
 import { AudioSrcCtx } from './ctx';
-import audioCtx from './webAudioCtx';
+import { audioCtx, initAudioNodeGraph } from '../utils/audioNodeGraph';
 import {
   blobToAudioBuffer,
   startRecordAudioBuffer,
   stopRecordAudioBuffer,
-} from './record';
+} from '../utils/record';
 
 type AudioSrcCtxProviderProps = {
   children: ReactNode;
@@ -26,8 +26,8 @@ export function AudioSrcCtxProvider({ children }: AudioSrcCtxProviderProps) {
     }
   }
 
-  async function startRecording(duration?: number): Promise<void> {
-    const buffer = await startRecordAudioBuffer(duration);
+  async function startRecording(): Promise<void> {
+    const buffer = await startRecordAudioBuffer();
     if (!buffer) {
       console.error('Could not start recording');
       return;

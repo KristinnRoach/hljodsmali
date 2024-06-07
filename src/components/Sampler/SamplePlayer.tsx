@@ -2,8 +2,9 @@
 
 import React, { useContext, useEffect, useRef } from 'react';
 
-import audioCtx from '@components/contexts/webAudioCtx';
-import { AudioSrcCtx } from '@components/contexts/ctx';
+import { audioCtx } from '../../utils/audioNodeGraph';
+import { AudioSrcCtx } from '../../contexts/ctx';
+import { playAudioBuffer } from '../../utils/playback';
 import { keyMap } from '../../utils/keymap';
 
 const SamplePlayer: React.FC = ({}) => {
@@ -15,14 +16,9 @@ const SamplePlayer: React.FC = ({}) => {
     return 2 ** ((midiNote - 60) / 12);
   }
 
-  function playAudioBuffer(rate: number): void {
-    const source = audioCtx.createBufferSource(); // create single use audio-buffer-source-node
-
+  function playSample(rate: number): void {
     if (audioBufferRef.current) {
-      source.buffer = audioBufferRef.current;
-      source.connect(audioCtx.destination);
-      source.playbackRate.value = rate;
-      source.start();
+      playAudioBuffer(audioBufferRef.current, rate);
     } else {
       console.error('Audio buffer not available from playAudioBuffer()');
     }
@@ -36,7 +32,7 @@ const SamplePlayer: React.FC = ({}) => {
       // for avoiding retriggers
       keysPressedRef.current.push(key);
       const rate = midiToPlaybackRate(midiNote);
-      playAudioBuffer(rate);
+      playSample(rate);
     }
   };
 
