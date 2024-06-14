@@ -1,6 +1,18 @@
-import { audioCtx } from './audioNodeGraph';
+import Envelope from 'envelope-generator';
+
+let masterGainNode = audioCtx.createGain();
+
+let env = new Envelope(audioCtx, {
+  attackTime: 0.5,
+  decayTime: 0.5,
+  sustainLevel: 0.3,
+  releaseTime: 0.1,
+});
+
+env.connect(masterGainNode.gain);
 
 export function playAudioBuffer(audioBuffer: AudioBuffer, rate: number): void {
+  masterGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
   const source = audioCtx.createBufferSource();
   source.buffer = audioBuffer;
   source.connect(audioCtx.destination);
@@ -10,6 +22,11 @@ export function playAudioBuffer(audioBuffer: AudioBuffer, rate: number): void {
 
   source.playbackRate.value = rate;
   source.start();
+
+  env.start(audioCtx.currentTime);
+
+  // env.release(releaseAt);
+
   // triggerAttackHoldRelease(gainNode, 1.0, 500, 1000, 500);
   //triggerAttack(gainNode, 1.0, 500);
 

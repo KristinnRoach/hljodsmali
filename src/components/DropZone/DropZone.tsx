@@ -4,7 +4,7 @@ import React, { useContext, useState } from 'react';
 //import Samples from '../Samples/Samples';
 import Recorder from '../Sampler/Recorder';
 import SamplePlayer from '../Sampler/SamplePlayer';
-import SampleSlicer from '../Sampler/SampleSlicer';
+// import SampleSlicer from '../Sampler/SampleSlicer';
 
 import { handleDrop, handleDragOver } from '../../utils/dragNdrop';
 
@@ -19,7 +19,7 @@ export default function DropZone() {
     >
       <SamplePlayer />
       <Recorder />
-      <SampleSlicer />
+      {/* <SampleSlicer /> */}
       {/* <Samples /> */}
     </div>
   );

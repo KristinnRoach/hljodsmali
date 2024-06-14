@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useContext, useRef, useEffect } from 'react';
-import { AudioSrcCtx } from '../../contexts/ctx';
+import { MediaSourceCtx } from '../../contexts/MediaSourceCtx';
 import { sliceAudioBuffer } from '../../utils/audioBuffer';
 import BasicSlider from '../Slider/BasicSlider';
+import reactAudioCtx from '@components/contexts/ReactAudioCtx';
 
 const SampleSlicer: React.FC = ({}) => {
-  const { audioBufferRef, setNewAudioSrc } = useContext(AudioSrcCtx);
+  const { audioBufferRef, setNewAudioSrc } = useContext(MediaSourceCtx);
+  const { audioCtx } = useContext(reactAudioCtx);
 
   function initEndTrimMs(durationMs: number): number {
     return durationMs - durationMs / 6;
@@ -31,8 +33,10 @@ const SampleSlicer: React.FC = ({}) => {
     );
     if (audioBufferRef.current) {
       durationMsRef.current = audioBufferRef.current.duration * 1000;
+      console.log('durationMsRef.current: ', durationMsRef.current);
       // endPointRef.current = audioBufferRef.current?.duration || 0;
       setEndPoint(initEndTrimMs(durationMsRef.current));
+      console.log('endPoint: ', endPoint);
       setStartPoint(0);
     }
   }, [audioBufferRef.current]);
@@ -46,8 +50,9 @@ const SampleSlicer: React.FC = ({}) => {
   }
 
   function slice(): void {
-    if (audioBufferRef.current) {
+    if (audioBufferRef.current && audioCtx) {
       const slicedBuffer = sliceAudioBuffer(
+        audioCtx,
         audioBufferRef.current,
         startPoint * 1000,
         endPoint * 1000

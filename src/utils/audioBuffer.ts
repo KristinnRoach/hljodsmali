@@ -1,6 +1,5 @@
-import { audioCtx } from './audioNodeGraph';
-
 export function sliceAudioBuffer(
+  audioCtx: AudioContext,
   audioBuffer: AudioBuffer,
   startMs: number,
   endMs: number

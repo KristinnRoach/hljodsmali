@@ -3,22 +3,20 @@ import KeyboardGUI from '../components/KeyboardGUI/KeyboardGUISpline';
 import Auth from '../components/Auth/Auth';
 
 import styles from '../styles/page.module.scss';
-import AudioSrcCtxProvider from '@components/contexts/AudioSrcCtx';
+import React from 'react';
 
 export default function Home() {
   return (
     <>
-      <AudioSrcCtxProvider>
-        <main className={styles.main}>
-          <div className={styles.top}>
-            <Auth />
-            <DropZone />
-          </div>
-          <div className={styles.keyboardBox}>
-            <KeyboardGUI />
-          </div>
-        </main>
-      </AudioSrcCtxProvider>
+      <main className={styles.main}>
+        <div className={styles.top}>
+          <Auth />
+          <DropZone />
+        </div>
+        <div className={styles.keyboardBox}>
+          <KeyboardGUI />
+        </div>
+      </main>
     </>
   );
 }
