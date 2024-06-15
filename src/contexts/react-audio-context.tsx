@@ -1,8 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
-// import ReactAudioCtx from './ReactAudioCtx';
-import { assert } from '../lib/assert';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createAudioContext, resumeAudioContext } from '../utils/audioUtils';
 
 type ReactAudioCtxProviderProps = {
   children: React.ReactNode;
@@ -17,13 +16,21 @@ export const ReactAudioCtx = createContext<ReactAudioCtxType | null>(null);
 export default function ReactAudioCtxProvider({
   children,
 }: ReactAudioCtxProviderProps) {
-  // assert(typeof window !== 'undefined', 'window is not defined');
-
-  const [audioCtx] = useState<AudioContext>(
-    new (window.AudioContext || (window as any).webkitAudioContext)()
-  );
+  const [audioCtx] = useState<AudioContext>(createAudioContext(0.0001));
 
   console.log('audioCtx created: ', audioCtx);
+
+  useEffect(() => {
+    const handleStateChange = () => {
+      resumeAudioContext(audioCtx);
+    };
+
+    audioCtx.addEventListener('statechange', handleStateChange);
+
+    return () => {
+      audioCtx.removeEventListener('statechange', handleStateChange);
+    };
+  }, [audioCtx]);
 
   return (
     <ReactAudioCtx.Provider value={{ audioCtx }}>

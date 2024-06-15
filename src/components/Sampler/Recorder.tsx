@@ -29,8 +29,19 @@ const Recorder: React.FC = ({}) => {
 
   /* RECORDING FUNCTIONS */
 
+  const lowLatencyConstraints = {
+    video: false,
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+    },
+  };
+
   async function setMediaRecorderWithStream(): Promise<void> {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia(
+      lowLatencyConstraints
+    );
     if (!stream) {
       throw new Error('Could not get audio stream');
     }
@@ -53,14 +64,12 @@ const Recorder: React.FC = ({}) => {
         const chunks: BlobPart[] = [];
         mediaRecorder.ondataavailable = (e) => {
           chunks.push(e.data);
-          console.log('ondataavailable, mediaRecorder: ', mediaRecorder);
         };
 
         mediaRecorder.onstop = async () => {
           const blob = new Blob(chunks, { type: audioFormat });
           try {
             const newBuffer = await blobToAudioBuffer(blob, audioCtx);
-            console.log('new audioBuffer: ', newBuffer);
             setNewAudioSrc(newBuffer);
           } catch (error) {
             console.error('Failed to convert blob to audio buffer:', error);
@@ -70,7 +79,6 @@ const Recorder: React.FC = ({}) => {
           }
         };
         mediaRecorder.start();
-        console.log('mediaRecorder started: ', mediaRecorder);
       } catch (error) {
         console.error('Error starting audio recording:', error);
       }

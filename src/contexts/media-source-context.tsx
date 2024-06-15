@@ -19,7 +19,7 @@ type MediaSourceCtxProviderProps = {
 
 type MediaSourceCtxType = {
   audioBufferRef: React.MutableRefObject<AudioBuffer | null>;
-  audioBuffer: AudioBuffer;
+  audioBuffer: AudioBuffer | null;
   setNewAudioSrc: (newAudioBuffer: AudioBuffer | Blob) => void;
 };
 
@@ -30,17 +30,14 @@ export default function MediaSourceCtxProvider({
 }: MediaSourceCtxProviderProps) {
   const { audioCtx } = useReactAudioCtx();
 
-  const emptyAudioBuffer = new AudioBuffer({
-    length: 1,
-    numberOfChannels: 1,
-    sampleRate: audioCtx.sampleRate,
-  });
-
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>(emptyAudioBuffer);
+  // is state audio buffer needed?
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
 
   useEffect(() => {
-    audioBufferRef.current = audioBuffer;
+    if (audioBuffer) {
+      audioBufferRef.current = audioBuffer;
+    }
   }, [audioBuffer]);
 
   async function setNewAudioSrc(newAudio: AudioBuffer | Blob): Promise<void> {
@@ -49,8 +46,9 @@ export default function MediaSourceCtxProvider({
     } else if (newAudio instanceof Blob) {
       const buffer = await blobToAudioBuffer(newAudio, audioCtx);
       setAudioBuffer(buffer);
+    } else {
+      throw new Error('Audio source must be an AudioBuffer or a Blob');
     }
-    console.log('setNewAudioSrc: ', audioBuffer);
   }
 
   const contextValue = {
@@ -84,3 +82,9 @@ export function useMediaSourceCtx() {
 // const sampleRate = 44100; // Standard sample rate for audio
 // const length = sampleRate * 1; // 1 second worth of samples
 // const numberOfChannels = 1; // Mono
+
+// const emptyAudioBuffer = new AudioBuffer({
+//   length: 1,
+//   numberOfChannels: 1,
+//   sampleRate: audioCtx.sampleRate,
+// });

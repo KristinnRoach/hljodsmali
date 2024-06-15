@@ -1,74 +1,149 @@
-'use client';
-
 import React, { useEffect, useRef } from 'react';
 
 import { useReactAudioCtx } from '../../contexts/react-audio-context';
 import { useMediaSourceCtx } from '../../contexts/media-source-context';
+import {
+  playSourceNode,
+  midiToPlaybackRate,
+  triggerAttack,
+  triggerRelease,
+} from '../../utils/audioUtils';
 import { keyMap } from '../../utils/keymap';
+import { createBufferSourceNode } from '../../utils/audioUtils';
+import { SingleUseVoice as SingleUseVoice } from '../../types';
+
+// let preppedSourceNode: playableNode[] = [];
+let preppedVoice: SingleUseVoice | null = null;
 
 const SamplePlayer: React.FC = ({}) => {
   const { audioCtx } = useReactAudioCtx();
-  const { audioBuffer } = useMediaSourceCtx();
+  const { audioBufferRef } = useMediaSourceCtx();
 
-  const audioBufferRef = useRef<AudioBuffer | null>(null);
-
-  useEffect(() => {
-    audioBufferRef.current = audioBuffer;
-  }, [audioBuffer]);
-
-  function playAudioBuffer(
-    // audioBuffer: AudioBuffer,
-    // audioCtx: AudioContext,
-    rate: number
-  ): void {
-    if (audioBufferRef.current) {
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioCtx.destination);
-      // console.log('audioCtx.destination: ', audioCtx.destination);
-      source.playbackRate.value = rate;
-      source.start();
-      // console.log('base latency: ', audioCtx.baseLatency);
-      // console.log('output latency: ', audioCtx.outputLatency);
-    } else {
-      console.error('No audio buffer available');
-    }
-  }
-
-  function midiToPlaybackRate(midiNote: number): number {
-    return 2 ** ((midiNote - 60) / 12);
-  }
-
-  async function resumeAudioContext(audioCtx: AudioContext): Promise<void> {
-    if (audioCtx.state === 'suspended') {
-      await audioCtx.resume();
-    }
-  }
+  const currentlyPlayingVoices = useRef<SingleUseVoice[]>([]);
 
   const keysPressedRef = useRef<string[]>([]);
+  const maxKeysPressed = 6;
 
-  function playSample(midiNote: number): void {
-    const rate = midiToPlaybackRate(midiNote);
-    console.log('play audioBuffer: ', audioBufferRef.current);
-    // resumeAudioContext(audioCtx); // unnecessary?
-    playAudioBuffer(rate);
+  const createVoice = (
+    audioCtx: AudioContext,
+    audioBuffer: AudioBuffer
+  ): SingleUseVoice | null => {
+    const newSrc = createBufferSourceNode(audioCtx, audioBuffer);
+    if (!newSrc) return null;
+
+    const newGain = audioCtx.createGain();
+    newSrc.connect(newGain);
+    newGain.connect(audioCtx.destination);
+
+    return { source: newSrc, gain: newGain };
+  };
+
+  if (!preppedVoice && audioBufferRef.current) {
+    preppedVoice = createVoice(audioCtx, audioBufferRef.current);
+  }
+
+  useEffect(() => {
+    if (audioBufferRef.current) {
+      preppedVoice = createVoice(audioCtx, audioBufferRef.current);
+    }
+  }, [audioBufferRef.current]);
+
+  // make state and controls
+  let attackRatio = 0.5;
+  let decayRatio = 0.5;
+  let masterVolume = 0.75;
+
+  function playSample(key: string): void {
+    if (audioBufferRef.current) {
+      const midiNote = keyMap[key];
+      const rate = midiToPlaybackRate(midiNote);
+      let thisVoice: SingleUseVoice | null = null;
+
+      if (!preppedVoice) {
+        thisVoice = createVoice(audioCtx, audioBufferRef.current);
+      } else {
+        thisVoice = preppedVoice;
+        preppedVoice = null;
+      }
+
+      if (!thisVoice) {
+        console.error('No playable node (voice) available');
+        return;
+      }
+
+      let attackTime = 0.07;
+      if (thisVoice.source && thisVoice.source.buffer) {
+        attackTime = thisVoice.source.buffer.duration * attackRatio;
+      }
+
+      triggerAttack(thisVoice, rate, attackTime, masterVolume);
+
+      thisVoice.key = key;
+      thisVoice.triggerTime = audioCtx.currentTime;
+
+      currentlyPlayingVoices.current.push(thisVoice);
+
+      // prep the next voice
+      preppedVoice = createVoice(audioCtx, audioBufferRef.current);
+    } else {
+      console.log('No audio buffer available');
+    }
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
+    if (keysPressedRef.current.length >= maxKeysPressed) {
+      console.log('Max number of keys pressed simultaneously:', maxKeysPressed);
+      return;
+    }
     const key = event.code;
-    const midiNote: number | undefined = keyMap[key];
 
-    if (!keysPressedRef.current.includes(key) && midiNote) {
-      // for avoiding retriggers
+    if (
+      keyMap[key] &&
+      !keysPressedRef.current.includes(key)
+      // keysPressedRef.current.length >= maxKeysPressed - 1 // -1? does not work currently
+    ) {
       keysPressedRef.current.push(key);
-      playSample(midiNote);
+      playSample(key);
     }
   };
 
+  function releaseSample(key: string): void {
+    const index = currentlyPlayingVoices.current.findIndex(
+      (voice) => voice.key === key
+    );
+    if (index !== -1) {
+      const thisVoice = currentlyPlayingVoices.current[index];
+      console.log('thisVoice.key:', thisVoice.key);
+      let decayTime = 0.1;
+      let remainingTime = 0;
+      let bufferDuration = 0;
+      if (
+        thisVoice.source &&
+        thisVoice.source.buffer &&
+        thisVoice.triggerTime
+      ) {
+        bufferDuration = thisVoice.source.buffer.duration;
+        const passedTime = // move passed time to an included function in the voice type
+          bufferDuration - (audioCtx.currentTime - thisVoice.triggerTime);
+        remainingTime = bufferDuration - passedTime;
+
+        decayTime = Math.min(bufferDuration * decayRatio, remainingTime);
+      }
+
+      triggerRelease(thisVoice, decayTime);
+
+      currentlyPlayingVoices.current.splice(index, 1);
+    }
+  }
+
   const handleKeyUp = (event: KeyboardEvent) => {
-    const key = event.code;
-    const note = keyMap[key];
-    keysPressedRef.current = keysPressedRef.current.filter((k) => k !== key);
+    if (keysPressedRef.current.includes(event.code)) {
+      const key = event.code;
+      releaseSample(key);
+      keysPressedRef.current = keysPressedRef.current.filter((k) => k !== key);
+    } else {
+      console.log('handleKeyUp: Key not found in keysPressedRef.current');
+    }
   };
 
   useEffect(() => {
@@ -79,7 +154,7 @@ const SamplePlayer: React.FC = ({}) => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [audioBuffer]);
+  }, []);
 
   return <></>; // Not rendering anything
 };
