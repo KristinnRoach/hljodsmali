@@ -9,9 +9,10 @@ export type SingleUseVoice = {
   source: AudioBufferSourceNode;
   gain: GainNode;
   key?: string;
-  rate?: number;
-  isLooping?: boolean;
   triggerTime?: number;
+  rate?: number;
+  midiNote?: number;
+  isLooping?: boolean;
   startOffset?: number;
   endOffset?: number;
 };

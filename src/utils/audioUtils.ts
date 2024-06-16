@@ -1,4 +1,3 @@
-import { set } from 'react-hook-form';
 import { SingleUseVoice } from '../types';
 
 export function createAudioContext(latencyHint: number = 0.001): AudioContext {
@@ -52,6 +51,22 @@ export function createBufferSourceNode(
   }
 }
 
+export function createVoice(
+  audioCtx: AudioContext,
+  audioBuffer: AudioBuffer
+): SingleUseVoice | null {
+  const newSrc = createBufferSourceNode(audioCtx, audioBuffer);
+  if (!newSrc) return null;
+
+  const newGain = audioCtx.createGain();
+  newSrc.connect(newGain);
+  newGain.connect(audioCtx.destination);
+
+  const voice: SingleUseVoice = { source: newSrc, gain: newGain };
+
+  return voice;
+}
+
 export function playSourceNode(
   source: AudioBufferSourceNode,
   rate: number = 1
@@ -73,7 +88,6 @@ export function triggerAttack(
   if (voice.gain && voice.source) {
     const audioCtx = voice.source.context;
     voice.source.playbackRate.value = rate;
-    // gainNode.gain.cancelScheduledValues(audioCtx.currentTime); // unnecessary?
     voice.gain.gain.setValueAtTime(0, audioCtx.currentTime);
     voice.source.start();
     voice.gain.gain.linearRampToValueAtTime(
@@ -84,6 +98,7 @@ export function triggerAttack(
 
   // const MANDATORY_END_FADE_TIME = 0.1;
   // setTimeout(() => {
+  // gainNode.gain.cancelScheduledValues(audioCtx.currentTime); // unnecessary?
   //   triggerRelease(voice, MANDATORY_END_FADE_TIME);
   // }, voice.source.buffer!.duration! - (voice.source.context.currentTime - voice.triggerTime!) - MANDATORY_END_FADE_TIME * 2);
 }

@@ -2,41 +2,27 @@ import React, { useEffect, useRef } from 'react';
 
 import { useReactAudioCtx } from '../../contexts/react-audio-context';
 import { useMediaSourceCtx } from '../../contexts/media-source-context';
+import { useControlsCtx } from '../../contexts/controls-context';
 import {
-  playSourceNode,
+  createVoice,
   midiToPlaybackRate,
   triggerAttack,
   triggerRelease,
 } from '../../utils/audioUtils';
 import { keyMap } from '../../utils/keymap';
-import { createBufferSourceNode } from '../../utils/audioUtils';
-import { SingleUseVoice as SingleUseVoice } from '../../types';
+import { SingleUseVoice } from '../../types';
 
-// let preppedSourceNode: playableNode[] = [];
 let preppedVoice: SingleUseVoice | null = null;
 
 const SamplePlayer: React.FC = ({}) => {
   const { audioCtx } = useReactAudioCtx();
   const { audioBufferRef } = useMediaSourceCtx();
+  const { attackRatioRef, releaseRatioRef, masterVolumeRef } = useControlsCtx();
 
   const currentlyPlayingVoices = useRef<SingleUseVoice[]>([]);
 
   const keysPressedRef = useRef<string[]>([]);
   const maxKeysPressed = 6;
-
-  const createVoice = (
-    audioCtx: AudioContext,
-    audioBuffer: AudioBuffer
-  ): SingleUseVoice | null => {
-    const newSrc = createBufferSourceNode(audioCtx, audioBuffer);
-    if (!newSrc) return null;
-
-    const newGain = audioCtx.createGain();
-    newSrc.connect(newGain);
-    newGain.connect(audioCtx.destination);
-
-    return { source: newSrc, gain: newGain };
-  };
 
   if (!preppedVoice && audioBufferRef.current) {
     preppedVoice = createVoice(audioCtx, audioBufferRef.current);
@@ -48,35 +34,30 @@ const SamplePlayer: React.FC = ({}) => {
     }
   }, [audioBufferRef.current]);
 
-  // make state and controls
-  let attackRatio = 0.5;
-  let decayRatio = 0.5;
-  let masterVolume = 0.75;
-
   function playSample(key: string): void {
-    if (audioBufferRef.current) {
+    if (!audioBufferRef.current) {
+      console.error('No audio buffer available');
+      return;
+    }
+
+    let thisVoice: SingleUseVoice | null = null;
+
+    if (!preppedVoice) {
+      thisVoice = createVoice(audioCtx, audioBufferRef.current);
+    } else if (preppedVoice) {
+      thisVoice = preppedVoice;
+      preppedVoice = null;
+    }
+
+    if (thisVoice && thisVoice.source.buffer) {
       const midiNote = keyMap[key];
       const rate = midiToPlaybackRate(midiNote);
-      let thisVoice: SingleUseVoice | null = null;
 
-      if (!preppedVoice) {
-        thisVoice = createVoice(audioCtx, audioBufferRef.current);
-      } else {
-        thisVoice = preppedVoice;
-        preppedVoice = null;
-      }
+      const bufferDuration = thisVoice.source.buffer.duration;
+      const attackTime = bufferDuration * attackRatioRef.current;
 
-      if (!thisVoice) {
-        console.error('No playable node (voice) available');
-        return;
-      }
-
-      let attackTime = 0.07;
-      if (thisVoice.source && thisVoice.source.buffer) {
-        attackTime = thisVoice.source.buffer.duration * attackRatio;
-      }
-
-      triggerAttack(thisVoice, rate, attackTime, masterVolume);
+      console.log('attackTime:', attackTime);
+      triggerAttack(thisVoice, rate, attackTime, masterVolumeRef.current);
 
       thisVoice.key = key;
       thisVoice.triggerTime = audioCtx.currentTime;
@@ -87,6 +68,35 @@ const SamplePlayer: React.FC = ({}) => {
       preppedVoice = createVoice(audioCtx, audioBufferRef.current);
     } else {
       console.log('No audio buffer available');
+      console.error('No voice / buffer available');
+    }
+  }
+
+  function releaseSample(key: string): void {
+    const index = currentlyPlayingVoices.current.findIndex(
+      (voice) => voice.key === key
+    );
+    if (index !== -1) {
+      const thisVoice = currentlyPlayingVoices.current[index];
+      let releaseTime = 0.1;
+      if (
+        thisVoice.source &&
+        thisVoice.source.buffer &&
+        thisVoice.triggerTime
+      ) {
+        const bufferDuration = thisVoice.source.buffer.duration;
+        const passedTime = audioCtx.currentTime - thisVoice.triggerTime;
+        const remainingTime = bufferDuration - passedTime;
+
+        releaseTime = Math.min(
+          bufferDuration * releaseRatioRef.current,
+          remainingTime
+        );
+      }
+      console.log('releaseTime:', releaseTime);
+      triggerRelease(thisVoice, releaseTime);
+
+      currentlyPlayingVoices.current.splice(index, 1);
     }
   }
 
@@ -106,35 +116,6 @@ const SamplePlayer: React.FC = ({}) => {
       playSample(key);
     }
   };
-
-  function releaseSample(key: string): void {
-    const index = currentlyPlayingVoices.current.findIndex(
-      (voice) => voice.key === key
-    );
-    if (index !== -1) {
-      const thisVoice = currentlyPlayingVoices.current[index];
-      console.log('thisVoice.key:', thisVoice.key);
-      let decayTime = 0.1;
-      let remainingTime = 0;
-      let bufferDuration = 0;
-      if (
-        thisVoice.source &&
-        thisVoice.source.buffer &&
-        thisVoice.triggerTime
-      ) {
-        bufferDuration = thisVoice.source.buffer.duration;
-        const passedTime = // move passed time to an included function in the voice type
-          bufferDuration - (audioCtx.currentTime - thisVoice.triggerTime);
-        remainingTime = bufferDuration - passedTime;
-
-        decayTime = Math.min(bufferDuration * decayRatio, remainingTime);
-      }
-
-      triggerRelease(thisVoice, decayTime);
-
-      currentlyPlayingVoices.current.splice(index, 1);
-    }
-  }
 
   const handleKeyUp = (event: KeyboardEvent) => {
     if (keysPressedRef.current.includes(event.code)) {
