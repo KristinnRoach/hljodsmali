@@ -17,6 +17,16 @@ const BasicSlider: React.FC<BasicSliderProps> = ({
   step,
   onChange,
 }) => {
+  // const [isDragging, setIsDragging] = useState(false);
+
+  // const handleDragStart = () => {
+  //   setIsDragging(true);
+  // };
+
+  // const handleDragEnd = () => {
+  //   setIsDragging(false);
+  // };
+
   return (
     <div style={{ margin: '20px 0' }}>
       <label>
@@ -29,7 +39,6 @@ const BasicSlider: React.FC<BasicSliderProps> = ({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        style={{ width: '100%' }}
       />
     </div>
   );

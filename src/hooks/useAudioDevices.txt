@@ -1,0 +1,35 @@
+import { useState, useEffect } from 'react';
+
+function useAudioDevices() {
+  const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
+  const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedInputDeviceId, setSelectedInputDeviceId] = useState('');
+  const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState('');
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      const deviceInfos = await navigator.mediaDevices.enumerateDevices();
+      const audioInputDevices = deviceInfos.filter(
+        (device) => device.kind === 'audioinput'
+      );
+      const audioOutputDevices = deviceInfos.filter(
+        (device) => device.kind === 'audiooutput'
+      );
+      setInputDevices(audioInputDevices);
+      setOutputDevices(audioOutputDevices);
+    };
+
+    fetchDevices();
+  }, []);
+
+  return {
+    inputDevices,
+    outputDevices,
+    selectedInputDeviceId,
+    selectedOutputDeviceId,
+    setSelectedInputDeviceId,
+    setSelectedOutputDeviceId,
+  };
+}
+
+export default useAudioDevices;

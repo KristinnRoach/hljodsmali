@@ -6,14 +6,14 @@ import { ContactShadows, Float, Environment } from '@react-three/drei';
 import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 
-import { keyMap } from '../../utils/keymap';
+import { keyMap } from '../../../utils/keymap';
 import styles from './Shapes.module.scss';
 
 export default function Shapes() {
   return (
     <div className={styles.container}>
       <Canvas
-        className="" // z-0
+        className='' // z-0
         shadows
         gl={{ antialias: false }}
         dpr={[1, 1.5]}
@@ -28,7 +28,7 @@ export default function Shapes() {
             blur={1}
             far={9}
           />
-          <Environment preset="studio" />
+          <Environment preset='studio' />
         </Suspense>
       </Canvas>
     </div>

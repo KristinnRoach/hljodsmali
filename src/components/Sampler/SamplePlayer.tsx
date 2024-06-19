@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+'use client';
+import React, { use, useEffect, useRef, useState } from 'react';
 
 import { useReactAudioCtx } from '../../contexts/react-audio-context';
 import { useMediaSourceCtx } from '../../contexts/media-source-context';
 import { useControlsCtx } from '../../contexts/controls-context';
+import { useFxCtx } from '../../contexts/fx-context';
 import {
   createVoice,
   midiToPlaybackRate,
@@ -10,64 +12,71 @@ import {
   triggerRelease,
 } from '../../utils/audioUtils';
 import { keyMap } from '../../utils/keymap';
-import { SingleUseVoice } from '../../types';
+import { Sample, SingleUseVoice } from '../../types';
+import Link from 'next/link';
 
+// useRef for preppedVoice ? What is the difference?
 let preppedVoice: SingleUseVoice | null = null;
 
 const SamplePlayer: React.FC = ({}) => {
   const { audioCtx } = useReactAudioCtx();
-  const { audioBufferRef } = useMediaSourceCtx();
+  const { theSample, theBuffer, sampleSwitch } = useMediaSourceCtx();
+
   const { attackRatioRef, releaseRatioRef, masterVolumeRef } = useControlsCtx();
+  const { reverbEnabledRef } = useFxCtx();
 
   const currentlyPlayingVoices = useRef<SingleUseVoice[]>([]);
 
   const keysPressedRef = useRef<string[]>([]);
   const maxKeysPressed = 6;
 
-  if (!preppedVoice && audioBufferRef.current) {
-    preppedVoice = createVoice(audioCtx, audioBufferRef.current);
+  const reverbConvolverRef = useRef<ConvolverNode | null>(null);
+
+  if (!preppedVoice && theSample.current && theSample.current.buffer) {
+    const voice = createVoice(audioCtx, theSample.current.buffer);
+    preppedVoice = voice;
   }
 
-  useEffect(() => {
-    if (audioBufferRef.current) {
-      preppedVoice = createVoice(audioCtx, audioBufferRef.current);
-    }
-  }, [audioBufferRef.current]);
-
   function playSample(key: string): void {
-    if (!audioBufferRef.current) {
+    console.log('preppedVoice: ', preppedVoice);
+    const buffer = theSample.current?.buffer;
+    if (!buffer) {
       console.error('No audio buffer available');
       return;
     }
 
-    let thisVoice: SingleUseVoice | null = null;
-
     if (!preppedVoice) {
-      thisVoice = createVoice(audioCtx, audioBufferRef.current);
-    } else if (preppedVoice) {
-      thisVoice = preppedVoice;
-      preppedVoice = null;
+      const voice = createVoice(audioCtx, buffer);
+      // setPreppedVoice(voice);
+      preppedVoice = voice;
     }
 
-    if (thisVoice && thisVoice.source.buffer) {
+    if (preppedVoice && preppedVoice.source.buffer) {
       const midiNote = keyMap[key];
       const rate = midiToPlaybackRate(midiNote);
 
-      const bufferDuration = thisVoice.source.buffer.duration;
+      const bufferDuration = preppedVoice.source.buffer.duration;
       const attackTime = bufferDuration * attackRatioRef.current;
 
-      console.log('attackTime:', attackTime);
-      triggerAttack(thisVoice, rate, attackTime, masterVolumeRef.current);
+      triggerAttack(preppedVoice, rate, attackTime, masterVolumeRef.current);
 
-      thisVoice.key = key;
-      thisVoice.triggerTime = audioCtx.currentTime;
+      preppedVoice.key = key;
+      preppedVoice.triggerTime = audioCtx.currentTime;
 
-      currentlyPlayingVoices.current.push(thisVoice);
+      currentlyPlayingVoices.current.push(preppedVoice);
 
-      // prep the next voice
-      preppedVoice = createVoice(audioCtx, audioBufferRef.current);
+      preppedVoice = createVoice(audioCtx, buffer);
+
+      setTimeout(() => {
+        // Release voice 100ms before end of buffer to avoid clicks
+        const index = currentlyPlayingVoices.current.findIndex(
+          (voice) => voice.key === key
+        );
+        if (index !== -1) {
+          releaseSample(key);
+        }
+      }, bufferDuration * 1000 - 100);
     } else {
-      console.log('No audio buffer available');
       console.error('No voice / buffer available');
     }
   }
@@ -93,7 +102,6 @@ const SamplePlayer: React.FC = ({}) => {
           remainingTime
         );
       }
-      console.log('releaseTime:', releaseTime);
       triggerRelease(thisVoice, releaseTime);
 
       currentlyPlayingVoices.current.splice(index, 1);
@@ -118,14 +126,27 @@ const SamplePlayer: React.FC = ({}) => {
   };
 
   const handleKeyUp = (event: KeyboardEvent) => {
-    if (keysPressedRef.current.includes(event.code)) {
-      const key = event.code;
+    const key = event.code;
+
+    if (!keyMap[key]) {
+      return;
+    }
+
+    if (keysPressedRef.current.includes(key)) {
       releaseSample(key);
       keysPressedRef.current = keysPressedRef.current.filter((k) => k !== key);
     } else {
       console.log('handleKeyUp: Key not found in keysPressedRef.current');
     }
   };
+
+  // trigger rerender when sample changes
+  useEffect(() => {
+    if (preppedVoice && theSample.current && theSample.current.buffer) {
+      const voice = createVoice(audioCtx, theSample.current.buffer);
+      preppedVoice = voice;
+    }
+  }, [sampleSwitch]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);

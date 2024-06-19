@@ -1,26 +1,17 @@
 'use client';
 
-import {
-  ReactNode,
-  useContext,
-  createContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-
-import { useReactAudioCtx } from './react-audio-context';
-
-import { blobToAudioBuffer } from '../utils/record';
+import { ReactNode, useContext, createContext, useRef, useState } from 'react';
+import { Sample } from '../types';
 
 type MediaSourceCtxProviderProps = {
   children: ReactNode;
 };
 
 type MediaSourceCtxType = {
-  audioBufferRef: React.MutableRefObject<AudioBuffer | null>;
-  audioBuffer: AudioBuffer | null;
-  setNewAudioSrc: (newAudioBuffer: AudioBuffer | Blob) => void;
+  theBuffer: React.MutableRefObject<AudioBuffer | null>;
+  theSample: React.MutableRefObject<Sample | null>;
+  setNewAudioSrc: (sample: Sample) => void;
+  sampleSwitch: boolean;
 };
 
 export const MediaSourceCtx = createContext<MediaSourceCtxType | null>(null);
@@ -28,34 +19,68 @@ export const MediaSourceCtx = createContext<MediaSourceCtxType | null>(null);
 export default function MediaSourceCtxProvider({
   children,
 }: MediaSourceCtxProviderProps) {
-  const { audioCtx } = useReactAudioCtx();
+  // const { audioCtx } = useReactAudioCtx();
 
-  // is state audio buffer needed?
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  const audioBufferRef = useRef<AudioBuffer | null>(null);
+  /* URL TEST FOR SAMPLE */
 
-  useEffect(() => {
-    if (audioBuffer) {
-      audioBufferRef.current = audioBuffer;
+  const theSample = useRef<Sample | null>(null);
+  const theBuffer = useRef<AudioBuffer | null>(null);
+
+  const [sampleSwitch, setSampleSwitch] = useState<boolean>(false);
+
+  //const sampleId = searchParams.get('sample-id');
+
+  // const [audioURL, setAudioURL] = useState(() => {
+  //   const savedURL = localStorage.getItem('audioURL');
+  //   return savedURL ? JSON.parse(savedURL) : '';
+  // });
+
+  // useEffect(() => {
+  //   audioBufferRef.current = audioBuffer;
+  //   localStorage.setItem('audioURL', JSON.stringify(audioURL));
+  // }, [audioURL]);
+
+  // // Clean up audioURL on unmount
+  // useEffect(() => {
+  //   return () => {
+  //     if (audioURL) {
+  //       URL.revokeObjectURL(audioURL);
+  //     }
+  //   };
+  // }, []);
+
+  // Set audiobuffer and audiobufferref from local storage if it exists
+  // useEffect(() => {
+  //   async function getBufferFromURL(url: string): Promise<AudioBuffer> {
+  //     const res = await fetch(url);
+  //     const blob = await res.blob();
+  //     return await blobToAudioBuffer(blob, audioCtx);
+  //   }
+
+  //   const savedURL: string | null = localStorage.getItem('audioURL') || null;
+  //   if (savedURL) {
+  //     // const url = JSON.parse(savedURL);
+  //     getBufferFromURL(savedURL).then((buffer) => {
+  //       setAudioBuffer(buffer);
+  //       audioBufferRef.current = buffer;
+  //     });
+  //   }
+  // }, []);
+
+  function setNewAudioSrc(newSample: Sample): void {
+    if (!newSample.buffer || !newSample) {
+      throw new Error('No buffer in sample object');
     }
-  }, [audioBuffer]);
-
-  async function setNewAudioSrc(newAudio: AudioBuffer | Blob): Promise<void> {
-    if (newAudio instanceof AudioBuffer) {
-      setAudioBuffer(newAudio);
-    } else if (newAudio instanceof Blob) {
-      const buffer = await blobToAudioBuffer(newAudio, audioCtx);
-      setAudioBuffer(buffer);
-    } else {
-      throw new Error('Audio source must be an AudioBuffer or a Blob');
-    }
+    theSample.current = newSample;
+    theBuffer.current = newSample.buffer;
+    setSampleSwitch((prev) => !prev);
   }
 
   const contextValue = {
-    audioBufferRef,
-    audioBuffer,
+    theBuffer,
+    theSample,
     setNewAudioSrc,
-    setAudioBuffer,
+    sampleSwitch,
   };
   return (
     <MediaSourceCtx.Provider value={contextValue}>

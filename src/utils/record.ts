@@ -17,6 +17,27 @@ export async function blobToAudioBuffer(
   }
 }
 
+export async function getAudioStream(
+  deviceID?: string
+): Promise<MediaStream | null> {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: deviceID ? { exact: deviceID } : undefined,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      },
+    });
+
+    return stream;
+  } catch (error) {
+    console.error('Error getting audio stream:', error);
+    return null;
+  }
+}
+
 // const chunks: Blob[] = []; // Blob or BlobPart?
 
 // npm install wav-encoder

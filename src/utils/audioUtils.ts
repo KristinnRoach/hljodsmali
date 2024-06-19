@@ -1,11 +1,13 @@
 import { SingleUseVoice } from '../types';
 
-export function createAudioContext(latencyHint: number = 0.001): AudioContext {
-  if (!typeof window) {
-    throw new Error('window is not defined');
-  }
+export function createAudioContext(
+  latencyHint: number = 0.001,
+  outputID?: string
+): AudioContext {
   return new (window.AudioContext || (window as any).webkitAudioContext)({
     latencyHint: latencyHint,
+    // sinkId: outputID,
+    // sampleRate: 44100, // henda ef gerir ekkert gott (defaultar í devices preferred sample rate)
   });
 }
 
@@ -82,47 +84,41 @@ export function playSourceNode(
 export function triggerAttack(
   voice: SingleUseVoice,
   rate: number = 1,
-  attackDuration: number = 0.07,
+  attackDuration: number = 0.03,
   volume: number = 0.75
 ) {
   if (voice.gain && voice.source) {
-    const audioCtx = voice.source.context;
+    const ctx = voice.source.context;
     voice.source.playbackRate.value = rate;
-    voice.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    voice.gain.gain.setValueAtTime(0, ctx.currentTime);
+    voice.source.onended = () => {
+      voice.source?.disconnect();
+      voice.gain?.disconnect();
+      voice.source.stop(ctx.currentTime);
+    };
     voice.source.start();
     voice.gain.gain.linearRampToValueAtTime(
       volume,
-      audioCtx.currentTime + attackDuration
+      ctx.currentTime + attackDuration
     );
   }
-
-  // const MANDATORY_END_FADE_TIME = 0.1;
-  // setTimeout(() => {
-  // gainNode.gain.cancelScheduledValues(audioCtx.currentTime); // unnecessary?
-  //   triggerRelease(voice, MANDATORY_END_FADE_TIME);
-  // }, voice.source.buffer!.duration! - (voice.source.context.currentTime - voice.triggerTime!) - MANDATORY_END_FADE_TIME * 2);
 }
 
 export function triggerRelease(
   voice: SingleUseVoice,
-  decayDuration: number = 0.1
+  releaseDuration: number = 0.05
 ) {
-  console.log('release voice:', voice);
   if (voice && voice.gain && voice.source) {
-    console.log('triggerRelease: decayDuration:', decayDuration);
-
     const ctx = voice.source.context;
     const gain = voice.gain.gain;
-
-    console.log('gain.value before fade:', gain.value);
 
     gain.cancelScheduledValues(ctx.currentTime); // necessary for release to work, kinda
 
     gain.setValueAtTime(gain.value, ctx.currentTime);
-    gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + decayDuration);
-
-    console.log('gain.value after fade:', gain.value);
-    //voice.source.stop(ctx.currentTime + decayDuration);
+    gain.exponentialRampToValueAtTime(
+      0.0001,
+      ctx.currentTime + releaseDuration
+    );
   } else {
     console.error('triggerRelease: GainNode is falsy');
   }

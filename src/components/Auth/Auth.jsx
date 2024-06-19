@@ -8,6 +8,9 @@ import useLogin from '../../hooks/useLogin';
 import pb from '../../lib/pb';
 import styles from './Auth.module.scss';
 
+/* TODO: REFACTOR TO USE SERVER ACTIONS */ // 'use client' only for button?
+/* TODO: ADD SIGN UP */
+
 export default function Auth() {
   const logout = useLogout();
   const { login, isLoading } = useLogin();
@@ -37,13 +40,19 @@ export default function Auth() {
       </button> */}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <input type="text" placeholder="username" {...register('username')} />
         <input
-          type="password"
-          placeholder="password"
-          {...register('password')}
+          type='text'
+          placeholder='username'
+          {...register('username')}
+          required
         />
-        <button type="submit" disabled={isLoading}>
+        <input
+          type='password'
+          placeholder='password'
+          {...register('password')}
+          required
+        />
+        <button type='submit' disabled={isLoading}>
           {isLoading ? 'Loading.. ' : 'Login'}
           {/* {isNewUser ? 'Sign Up' : 'Login'} */}
         </button>

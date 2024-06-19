@@ -16,11 +16,15 @@ export const ReactAudioCtx = createContext<ReactAudioCtxType | null>(null);
 export default function ReactAudioCtxProvider({
   children,
 }: ReactAudioCtxProviderProps) {
-  const [audioCtx] = useState<AudioContext>(createAudioContext(0.0001));
-
-  console.log('audioCtx created: ', audioCtx);
+  const [audioCtx, setAudioCtx] = useState<AudioContext>(
+    createAudioContext(0.0001)
+  );
 
   useEffect(() => {
+    if (!audioCtx) {
+      throw new Error('Failed to create audio context');
+    }
+
     const handleStateChange = () => {
       resumeAudioContext(audioCtx);
     };
@@ -29,6 +33,8 @@ export default function ReactAudioCtxProvider({
 
     return () => {
       audioCtx.removeEventListener('statechange', handleStateChange);
+      // audioCtx.close();
+      // console.warn('audioCtx closed from ReactAudioCtxProvider');
     };
   }, [audioCtx]);
 

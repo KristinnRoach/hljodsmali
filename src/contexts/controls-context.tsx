@@ -30,8 +30,8 @@ export const ControlsCxt = createContext<ControlsCxtProps | null>(null);
 export default function ControlsCtxProvider({
   children,
 }: ControlsCxtProviderProps) {
-  const [attackRatio, setAttackRatio] = useState(0.05);
-  const [releaseRatio, setReleaseRatio] = useState(0.1);
+  const [attackRatio, setAttackRatio] = useState(0.025);
+  const [releaseRatio, setReleaseRatio] = useState(0.075);
   const [masterVolume, setMasterVolume] = useState(0.75);
 
   const attackRatioRef = useRef(attackRatio);

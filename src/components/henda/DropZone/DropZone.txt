@@ -1,5 +1,4 @@
-'use client';
-import React, { useContext, useState } from 'react';
+import React from 'react';
 
 //import Samples from '../Samples/Samples';
 import Recorder from '../Sampler/Recorder';
