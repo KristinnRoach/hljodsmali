@@ -9,6 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@nextui-org/accordion": "^2.0.35",
+    "@nextui-org/slider": "^2.2.12",
+    "@nextui-org/system": "^2.2.2",
+    "@nextui-org/theme": "^2.2.6",
     "@react-three/drei": "^9.102.6",
     "@react-three/fiber": "^8.16.0",
     "@splinetool/react-spline": "^2.2.6",
@@ -17,20 +21,17 @@
     "@types/three": "^0.162.0",
     "axios": "^1.6.8",
     "clsx": "^2.1.0",
-    "envelope-generator": "^3.0.0",
+    "framer-motion": "^11.2.11",
     "gsap": "^3.12.5",
-    "jquery": "^3.7.1",
-    "next": "14.1.4",
+    "next": "^14.2.4",
     "node-sass": "^9.0.0",
     "pocketbase": "^0.21.1",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-router-dom": "^6.22.3",
-    "three": "^0.162.0",
-    "wavesurfer.js": "^7.7.10"
+    "three": "^0.162.0"
   },
   "devDependencies": {
-    "@types/jquery": "^3.5.29",
     "@types/node": "^20.12.2",
     "@types/react": "^18.2.73",
     "@types/react-dom": "^18",
@@ -39,6 +40,6 @@
     "plantuml": "^0.0.2",
     "react-hook-form": "^7.51.3",
     "sass": "^1.72.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.5.3"
   }
 }

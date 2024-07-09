@@ -1,0 +1,94 @@
+import PocketBase, { RecordModel } from 'pocketbase';
+import { Sample } from '../../types';
+import { urlToAudioBuffer } from '../recording';
+
+const pb = new PocketBase(
+  process.env.POCKETBASE_URL || 'https://hljodsmali.pockethost.io/'
+);
+pb.autoCancellation(false);
+
+export default pb;
+
+export const createSampleRecord = async (
+  name: string,
+  blob: Blob
+): Promise<void> => {
+  let data;
+
+  if (pb.authStore.model?.id && pb.authStore.isValid) {
+    data = {
+      name: name,
+      sample_file: blob,
+      user: pb.authStore.model.id,
+    };
+  } else {
+    data = {
+      name: name,
+      sample_file: blob,
+    };
+  }
+
+  try {
+    const createdSampleRecord = await pb.collection('samples').create(data);
+    console.log('Uploaded audio:', createdSampleRecord);
+  } catch (error) {
+    console.error('Error uploading audio:', error);
+  }
+};
+
+export async function deleteSample(sampleId: string): Promise<void> {
+  await pb.collection('samples').delete(sampleId); // anybody can delete public samples
+}
+
+export async function fetchSampleRecords(): Promise<RecordModel[]> {
+  const records = await pb.collection('samples').getFullList({
+    sort: '-created',
+  });
+
+  if (!records) {
+    console.error('No data returned from fetchUserSamples');
+    return [];
+  }
+
+  return records;
+}
+
+/**
+ * Converts database samples to Sample objects with audio buffers.
+ * @param data - Array of samples from the database.
+ * @param audioCtx - The AudioContext instance to use for decoding audio data.
+ * @returns Promise resolving to an array of Sample objects.
+ */
+export async function dbSamplesToSampleObjects(
+  data: RecordModel[],
+  audioCtx: AudioContext
+): Promise<Sample[]> {
+  try {
+    const samplePromises = data.map(async (sample: any): Promise<Sample> => {
+      const url = pb.files.getUrl(sample, sample.binary);
+      const createdBuffer = await urlToAudioBuffer(url, audioCtx);
+
+      if (!createdBuffer) {
+        throw new Error('No buffer created from URL');
+      }
+
+      return {
+        id: sample.id,
+        name: sample.name,
+        binary: sample.binary,
+        user: sample.user || null,
+        buffer: createdBuffer,
+        loop: sample.isLooping || false,
+      };
+    });
+
+    // Wait for all Sample objects to be created and resolved
+    return Promise.all(samplePromises);
+  } catch (error) {
+    console.error(
+      'Error converting database samples to Sample objects:',
+      error
+    );
+    throw error;
+  }
+}

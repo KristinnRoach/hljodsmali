@@ -1,3 +1,6 @@
+// server or client?
+'use client';
+
 import React from 'react';
 
 interface Props {
@@ -30,7 +33,7 @@ const ConditionClassButton: React.FC<Props> = ({
         condition ? trueClassName : falseClassName
       }`}
       onClick={condition ? trueClick : falseClick}
-      type="button"
+      type='button'
     >
       {condition ? trueContent : falseContent}
     </button>

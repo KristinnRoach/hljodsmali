@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import pb from '../lib/pb';
+import pb from '../lib/db/pocketbase';
 
 export default function useLogin() {
   const [isLoading, setIsLoading] = useState(false);

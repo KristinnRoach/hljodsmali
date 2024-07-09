@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createAudioContext, resumeAudioContext } from '../utils/audioUtils';
+import { resumeAudioContext } from '../lib/audioUtils';
 
 type ReactAudioCtxProviderProps = {
   children: React.ReactNode;
@@ -17,7 +17,9 @@ export default function ReactAudioCtxProvider({
   children,
 }: ReactAudioCtxProviderProps) {
   const [audioCtx, setAudioCtx] = useState<AudioContext>(
-    createAudioContext(0.0001)
+    new (window.AudioContext || (window as any).webkitAudioContext)({
+      latencyHint: 0.0001,
+    })
   );
 
   useEffect(() => {
@@ -54,22 +56,3 @@ export function useReactAudioCtx() {
   }
   return context;
 }
-
-// let audioCtx: AudioContext | null = null;
-
-// if (typeof window !== 'undefined') {
-//   if (!audioCtx) {
-//     audioCtx = new (window.AudioContext ||
-//       (window as any).webkitAudioContext)();
-//   }
-// }
-
-// if (audioCtx.state === 'suspended') {
-//   audioCtx.resume();
-// }
-
-// type AudioContextState = {
-//   audioCtx: AudioContext;
-// };
-
-// export const ReactAudioCtx = createContext<AudioContextType | null>(null);

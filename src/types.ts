@@ -1,30 +1,19 @@
 export type Sample = {
   id: string;
   name: string;
-  sample_file: Blob;
+  slug: string;
+  sample_file: string;
+  user?: string | null;
+  created: string;
+  updated: string;
+
   buffer?: AudioBuffer;
-  isLooping?: boolean;
-  // audioUrl?: string;
-  addBufferToSample?: (buffer: AudioBuffer) => void;
-};
 
-export type SingleUseVoice = {
-  source: AudioBufferSourceNode;
-  gain: GainNode;
-  key?: string;
-  triggerTime?: number;
-  rate?: number;
-  midiNote?: number;
-  isLooping?: boolean;
-  startOffset?: number;
-  endOffset?: number;
+  startPoint: number;
+  endPoint?: number;
+  attackTime: number;
+  releaseTime: number;
 };
-
-// export type Voice = {
-//   audioEl: HTMLAudioElement;
-//   pauseTime?: number;
-//   isLooping?: boolean;
-// };
 
 export type KeyMap = {
   [key: string]: number;

@@ -5,6 +5,7 @@ pocketbase
 .env*
 *.kiddi
 *test.puml
+/CLEANUP
 
 
 # dependencies

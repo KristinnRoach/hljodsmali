@@ -5,7 +5,7 @@ import useLogout from '../../hooks/useLogout';
 import useLogin from '../../hooks/useLogin';
 // import { signup, isLoggedIn } from '../../lib/user';
 
-import pb from '../../lib/pb';
+import pb from '../../lib/db/pocketbase';
 import styles from './Auth.module.scss';
 
 /* TODO: REFACTOR TO USE SERVER ACTIONS */ // 'use client' only for button?
