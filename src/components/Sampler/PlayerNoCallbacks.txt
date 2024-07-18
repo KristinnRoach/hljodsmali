@@ -1,0 +1,89 @@
+// src/components/Sampler/Player.tsx
+
+'use client';
+
+import React, { useEffect, useRef } from 'react';
+import { keyMap } from '../../lib/keymap';
+import SamplerEngine from '../../lib/SamplerEngine';
+
+export default function Player() {
+  const isLooping = useRef(false);
+  const isSpacebarDown = useRef(false);
+  const pressedKeys = useRef(new Set<string>());
+  const engine = useRef<SamplerEngine | null>(null);
+
+  useEffect(() => {
+    engine.current = SamplerEngine.getInstance();
+
+    const handleCapsLock = (event: KeyboardEvent) => {
+      if (event.code !== 'CapsLock') return;
+      isLooping.current = event.getModifierState('CapsLock');
+      if (!isLooping.current && engine.current) {
+        engine.current.releaseAllLoops();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || pressedKeys.current.has(event.code)) return;
+      pressedKeys.current.add(event.code);
+
+      if (event.code === 'Space') {
+        event.preventDefault();
+        isSpacebarDown.current = true;
+        if (isLooping.current && engine.current) {
+          engine.current.releaseAllLoops();
+        }
+        return;
+      }
+
+      const midiNote = keyMap[event.code];
+      if (midiNote && engine.current) {
+        event.preventDefault();
+        const shouldLoop = isLooping.current || isSpacebarDown.current;
+        engine.current.playNote(midiNote, shouldLoop);
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      pressedKeys.current.delete(event.code);
+
+      if (event.code === 'Space') {
+        isSpacebarDown.current = false;
+        if (!isLooping.current && engine.current) {
+          engine.current.releaseAllLoops();
+        }
+        return;
+      }
+
+      const midiNote = keyMap[event.code];
+      if (midiNote && engine.current) {
+        const shouldLoop = isLooping.current || isSpacebarDown.current;
+        engine.current.releaseNote(midiNote, shouldLoop);
+      }
+    };
+
+    const handleBlur = () => {
+      if (engine.current) {
+        engine.current.releaseAllLoops();
+      }
+      isSpacebarDown.current = false;
+      pressedKeys.current.clear();
+    };
+
+    window.addEventListener('keyup', handleCapsLock);
+    window.addEventListener('keydown', handleCapsLock);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('keyup', handleCapsLock);
+      window.removeEventListener('keydown', handleCapsLock);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
+  return null;
+}

@@ -15,7 +15,7 @@ $max-width: 1600px;
 html,
 body {
   max-width: $max-width;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body {
@@ -34,5 +34,5 @@ button {
   padding: 0.5rem 0.75rem;
   font-size: 1.2rem;
   height: 3rem;
-  width: 3rem;
+  width: fit-content;
 }

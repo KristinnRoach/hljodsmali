@@ -1,4 +1,6 @@
-import { KeyMap } from '../types';
+export type KeyMap = {
+  [key: string]: number;
+};
 
 export const keyMap: KeyMap = {
   KeyZ: 48,

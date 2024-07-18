@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import '../styles/globals.scss';
 import ReactAudioCtxProvider from '../contexts/react-audio-context';
 import AudioDeviceProvider from '../contexts/audio-device-context';
-import MediaSourceCtxProvider from '../contexts/media-source-context';
-// import ControlsCtxProvider from '../contexts/controls-context';
 import SamplerProvider from '../contexts/sampler-context';
 
 export const metadata: Metadata = {
@@ -22,11 +20,7 @@ export default function RootLayout({
       <AudioDeviceProvider>
         <ReactAudioCtxProvider>
           <SamplerProvider>
-            {/* <MediaSourceCtxProvider> */}
-            {/* <ControlsCtxProvider> */}
             <body>{children}</body>
-            {/* </ControlsCtxProvider> */}
-            {/* </MediaSourceCtxProvider> */}
           </SamplerProvider>
         </ReactAudioCtxProvider>
       </AudioDeviceProvider>

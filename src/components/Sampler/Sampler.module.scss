@@ -1,17 +1,40 @@
-.wrapper {
+.samplerContainer {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding-bottom: 0rem;
+  flex-direction: row;
+  justify-content: center;
+  // align-items: center;
+  padding: 1rem;
   margin: 0 auto;
+  width: 100%;
   //background-color: green;
 }
 
-.controlsBox {
+.sliderContainer {
   display: flex;
+  flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: 1rem;
-  padding: 1rem;
+  width: 200px;
+
+  h1 {
+    text-align: center;
+    padding: 0.2rem;
+    font-size: 1rem;
+    border-style: ridge;
+    border-radius: 20%;
+  }
+  .slider {
+    display: flex;
+    flex-direction: row;
+
+    input {
+      width: 100px;
+    }
+    label {
+      width: 50px;
+    }
+  }
 }
 
 .recordingOff {

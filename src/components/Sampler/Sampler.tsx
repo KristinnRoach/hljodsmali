@@ -1,26 +1,33 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
-import { fetchSampleAudio, fetchSamples } from '../../app/server-actions';
-import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
-import { useSamplerCtx } from '../../contexts/sampler-context';
+import useKeyboard from '../../hooks/useKeyboard';
+import { useDragAndDrop } from '../../hooks/useDragNDrop';
+import Recorder_CSR from './Recorder';
+import SamplerControls from './SamplerControls';
+import Library_cli from './Library';
 
-// import { useAudioDecoder } from '../../hooks/useAudioDecoder';
-// import Recorder_CSR from './Recorder_CSR';
-import Player_CSR from './Player_CSR';
+import styles from './Sampler.module.scss';
 
-export default function Sampler_CSR() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { samples, selectedSampleIds } = useSamplerCtx();
+export default function Sampler_cli() {
+  useKeyboard();
+  const { handleDragOver, handleDrop, handleDragLeave } = useDragAndDrop(
+    (file) => {
+      console.log('Dropped file:', file);
+    }
+  );
 
   return (
-    <div>
-      <Player_CSR />
-      {/* buffers={chosenBuffers} */}
-      {/* <Recorder_CSR /> */}
+    <div
+      className={styles.samplerContainer}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragLeave={handleDragLeave}
+    >
+      <Recorder_CSR />
+      <SamplerControls />
+      <Library_cli />
     </div>
   );
 }

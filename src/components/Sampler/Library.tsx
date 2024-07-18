@@ -3,12 +3,12 @@
 'use client';
 
 import React from 'react';
-import LinkList_CSR from '../UI/LinkList_CSR';
+import LinkList from '../UI/LinkList';
 import { useSamplerCtx } from '../../contexts/sampler-context';
 
 // async
-function Library_CSR() {
-  const { samples, isLoading } = useSamplerCtx();
+function Library_cli() {
+  const { allSamples, isLoading } = useSamplerCtx();
 
   if (isLoading) {
     return <div>Loading samples...</div>;
@@ -16,14 +16,14 @@ function Library_CSR() {
 
   return (
     <div>
-      {samples.length > 0 && (
-        <LinkList_CSR items={samples} title='Samples' paramName='samples' />
+      {allSamples.length > 0 && (
+        <LinkList items={allSamples} title='Samples' paramName='samples' />
       )}
     </div>
   );
 }
 
-export default Library_CSR;
+export default Library_cli;
 
 // 'use server';
 

@@ -1,25 +1,28 @@
-// src/components/UI/LinkList.module.scss
+// // src/components/UI/LinkList.module.scss
 
-.linkList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+// .accordion {
+//   display: flex;
+//   flex-direction: column;
+//   gap: 8px;
+//   max-height: 100px;
+//   overflow-y: visible;
+// }
 
-.linkListItem {
-  padding: 8px;
-  border-radius: 4px;
-  text-decoration: none;
-  color: #333;
-  background-color: #f0f0f0;
-  transition: background-color 0.3s ease;
+// .linkListItem {
+//   display: block;
+//   padding: 8px;
+//   border-radius: 4px;
+//   text-decoration: none;
+//   color: #333;
+//   background-color: #f0f0f0;
+//   transition: background-color 0.3s ease;
 
-  &:hover {
-    background-color: #e0e0e0;
-  }
+//   &:hover {
+//     background-color: #e0e0e0;
+//   }
 
-  &.selected {
-    background-color: #d0d0d0;
-    font-weight: bold;
-  }
-}
+//   &.selected {
+//     background-color: #d0d0d0;
+//     font-weight: bold;
+//   }
+// }

@@ -1,8 +1,8 @@
-// src/components/UI/LinkList_CSR.tsx
+// src/components/UI/LinkList.tsx
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Accordion, AccordionItem } from '@nextui-org/accordion';
@@ -20,7 +20,7 @@ type ListProps<T> = {
   paramName: string;
 };
 
-export default function LinkList_CSR<T extends Item>({
+export default function LinkList<T extends Item>({
   items,
   title,
   paramName,
@@ -29,15 +29,9 @@ export default function LinkList_CSR<T extends Item>({
   const searchParams = useSearchParams();
   const [isShiftDown, setIsShiftDown] = useState(false);
 
+  // Memoize items optimal ?
+  const memoizedItems = useMemo(() => items, [items]);
   const selectedItems = searchParams.getAll(paramName);
-
-  // function getUpdatedHref(itemId: string): string {
-  //   const newSelectedItems = isShiftDown
-  //     ? [...selectedItems, itemId]
-  //     : [itemId];
-
-  //   return `?${newSelectedItems.map((id) => `${paramName}=${id}`).join('&')}`;
-  // }
 
   function getUpdatedHref(itemSlug: string): string {
     const newSelectedSlugs = isShiftDown
@@ -81,25 +75,29 @@ export default function LinkList_CSR<T extends Item>({
   };
 
   return (
-    <div>
-      <Accordion isCompact={true}>
-        <AccordionItem title={title}>
-          <div className={styles.linkList}>
-            {items.map((item) => (
-              <Link
-                href={getUpdatedHref(item.slug)}
-                key={item.id}
-                className={`${styles.linkListItem} ${
-                  selectedItems.includes(item.slug) ? styles.selected : ''
-                }`}
-                onClick={(event) => handleClick(event, item.slug)}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
-        </AccordionItem>
-      </Accordion>
-    </div>
+    <Accordion isCompact={true}>
+      <AccordionItem title={title}>
+        {memoizedItems.map((item) => (
+          <Link
+            href={getUpdatedHref(item.slug)}
+            key={item.id}
+            // className={`${styles.linkListItem} ${
+            //   selectedItems.includes(item.slug) ? styles.selected : ''
+            // }`}
+            onClick={(event) => handleClick(event, item.slug)}
+          >
+            {item.name}
+          </Link>
+        ))}
+      </AccordionItem>
+    </Accordion>
   );
 }
+
+// function getUpdatedHref(itemId: string): string {
+//   const newSelectedItems = isShiftDown
+//     ? [...selectedItems, itemId]
+//     : [itemId];
+
+//   return `?${newSelectedItems.map((id) => `${paramName}=${id}`).join('&')}`;
+// }

@@ -1,5 +1,5 @@
 import PocketBase from 'pocketbase';
-import { Sample } from '../../types';
+import { Sample_db, SampleSettings } from '../../types/sample';
 
 const pb = new PocketBase(
   process.env.POCKETBASE_URL || 'https://hljodsmali.pockethost.io/'
@@ -8,59 +8,73 @@ pb.autoCancellation(false);
 
 export default pb;
 
-export function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-{2,}/g, '-');
-}
-
-// async function updateSampleSlugs() { // only run if needed
-//   try {
-//     // // Authenticate as an admin (replace with your admin email and password)
-//     // await pb.admins.authWithPassword('YOUR_ADMIN_EMAIL', 'YOUR_ADMIN_PASSWORD');
-
-//     const samples = await pb.collection('samples').getFullList();
-
-//     for (const sample of samples) {
-//       const slug = generateSlug(sample.name);
-//       await pb.collection('samples').update(sample.id, { slug });
-//       console.log(`Updated ${sample.name} with slug: ${slug}`);
-//     }
-
-//     console.log('All samples updated with slugs');
-//   } catch (error) {
-//     console.error('Error updating samples:', error);
-//   }
-// }
-
-// updateSampleSlugs();
-
 export const createSampleRecord = async (
   name: string,
-  blob: Blob
-): Promise<Sample> => {
-  const file = new File([blob], name + '.webm', { type: 'audio/webm' });
+  file: File
+): Promise<Sample_db> => {
+  // const file = new File([blob], name + '.webm', { type: 'audio/webm' });
   const slug = generateSlug(name);
   const formData = new FormData();
   formData.append('name', name);
   formData.append('slug', slug);
   formData.append('sample_file', file);
-  formData.append('isLooping', 'false');
 
   if (pb.authStore.model?.id && pb.authStore.isValid) {
     formData.append('user', pb.authStore.model.id);
   }
 
   try {
-    const record = await pb.collection('samples').create<Sample>(formData);
+    const record = await pb.collection('samples').create<Sample_db>(formData);
     return record;
   } catch (error) {
     console.error('Error uploading audio:', error);
     throw error;
   }
 };
+
+export async function saveNewSample(
+  sample: Partial<Sample_db>
+): Promise<Sample_db> {
+  const formData = new FormData();
+  formData.append('name', sample.name);
+  formData.append('slug', sample.slug);
+  formData.append('sample_file', sample.sample_file as File); // as File ??
+  formData.append('bufferDuration', sample.bufferDuration.toString());
+  formData.append('sample_settings', JSON.stringify(sample.sample_settings));
+
+  if (pb.authStore.model?.id) {
+    formData.append('user', pb.authStore.model.id);
+  }
+
+  console.log(
+    'formData:',
+    formData.get('name'),
+    formData.get('slug'),
+    formData.get('sample_file'),
+    formData.get('bufferDuration'),
+    formData.get('sample_settings')
+  );
+
+  try {
+    const record = await pb.collection('samples').create<Sample_db>(formData);
+    return record;
+  } catch (error) {
+    console.error('Error saving new sample:', error);
+    throw error;
+  }
+}
+
+export async function updateSampleRecord(
+  sampleId: string,
+  data: Partial<Sample_db>
+): Promise<Sample_db> {
+  try {
+    return await pb.collection('samples').update<Sample_db>(sampleId, data);
+  } catch (error) {
+    console.error('Error updating sample:', error);
+    throw error;
+  }
+}
 
 export async function deleteSample(sampleId: string): Promise<void> {
   try {
@@ -71,9 +85,9 @@ export async function deleteSample(sampleId: string): Promise<void> {
   }
 }
 
-export async function fetchSamples(): Promise<Sample[]> {
+export async function fetchSamples(): Promise<Sample_db[]> {
   try {
-    const samples = await pb.collection('samples').getFullList<Sample>({
+    const samples = await pb.collection('samples').getFullList<Sample_db>({
       sort: '-created',
     });
     console.log('Fetched samples:', samples);
@@ -88,9 +102,9 @@ export async function fetchSamples(): Promise<Sample[]> {
   }
 }
 
-export async function fetchSampleByID(sampleId: string): Promise<Sample> {
+export async function fetchSampleByID(sampleId: string): Promise<Sample_db> {
   try {
-    return await pb.collection('samples').getOne<Sample>(sampleId);
+    return await pb.collection('samples').getOne<Sample_db>(sampleId);
   } catch (error) {
     console.error('Error fetching sample record by id:', error);
     throw error;
@@ -98,7 +112,7 @@ export async function fetchSampleByID(sampleId: string): Promise<Sample> {
 }
 
 export async function getSampleAudioBuffer(
-  sample: Sample,
+  sample: Sample_db,
   audioCtx: AudioContext
 ): Promise<AudioBuffer> {
   'use client'; // ?
@@ -112,4 +126,12 @@ export async function getSampleAudioBuffer(
     console.error('Error loading audio buffer:', error);
     throw error;
   }
+}
+
+export function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
 }

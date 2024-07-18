@@ -23,7 +23,10 @@ export async function resumeAudioContext(
       console.error('Failed to resume audio context:', error);
     }
   }
-  console.log('Audio context output latency: ', audioCtx.outputLatency);
+  console.log(
+    'Audio context resumed. Output latency: ',
+    audioCtx.outputLatency
+  );
 }
 
 export function midiToPlaybackRate(midiNote: number): number {

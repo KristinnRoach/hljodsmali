@@ -1,0 +1,71 @@
+/* CAN BE CALLED IN SAMPLER CONTEXT IF NEEDED */
+
+/*
+import pb from '../lib/db/pocketbase';
+
+async function updatePbSample(
+  sample: Sample,
+  audioCtx: AudioContext
+): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(async () => {
+      try {
+        const buffer = await getSampleAudioBuffer(sample, audioCtx!);
+        await samplerEngine.loadSample(sample, buffer);
+        
+        const loadedSample = samplerEngine.getLoadedSamples().find(s => s.sample.id === sample.id);
+        if (loadedSample) {
+          await pb.collection('samples').update(sample.id, {
+            bufferDuration: loadedSample.buffer.duration,
+            sample_settings: loadedSample.sample.sample_settings,
+          });
+          console.log('updated sample:', sample.name);
+        } else {
+          console.log('Sample not found in loaded samples:', sample.name);
+        }
+        resolve();
+      } catch (error) {
+        console.error('Error updating sample:', error);
+        resolve();
+      }
+    }, 3000);
+  });
+}
+*/
+
+// useEffect(() => {
+//   samples.forEach((sample) => {
+//     if (sample && !samplerEngine.isSampleLoaded(sample.id)) {
+//       getSampleAudioBuffer(sample, audioCtx!)
+//         .then((buffer) => samplerEngine.loadSample(sample, buffer))
+//         .then(() =>
+//           console.log(
+//             'loaded sample:',
+//             sample.name,
+//             'loadedSamples: ',
+//             samplerEngine.getLoadedSamples()
+//           )
+//         )
+//         .then(async () => {
+//           await updatePbSample(sample, audioCtx!);
+//         })
+//         .catch((error) => console.error('Error loading sample:', error));
+//     }
+//   });
+// }, [samples]);
+
+//   async function update(): Promise<void> {
+//     const updatePromises = samplerEngine.getLoadedSamples().map(async (s) => {
+//       if (
+//         s.sample.sample_settings ||
+//         s.sample.bufferDuration
+//         // &&
+//         // samplerEngine.isSampleLoaded(s.sample.id)
+//       ) {
+//         console.log('updating sample:', s.sample.name);
+//         await updatePbSample(s.sample, audioCtx!);
+//       }
+//     });
+
+//     await Promise.all(updatePromises);
+//   }

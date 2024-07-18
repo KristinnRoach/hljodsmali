@@ -8,38 +8,38 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
+  useMemo,
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sample } from '../types';
+import { Sample_db, SampleSettings } from '../types/sample';
+
 import SamplerEngine from '../lib/SamplerEngine';
 
 import {
   fetchSamples,
-  createSampleRecord,
+  updateSampleRecord,
   deleteSample,
   getSampleAudioBuffer,
+  saveNewSample,
 } from '../lib/db/pocketbase';
 
 import { useReactAudioCtx } from './react-audio-context';
 
 type SamplerCtxType = {
-  samples: Sample[];
-  selectedSampleIds: string[];
-  selectSample: (slug: string) => void;
-  addSample: (name: string, file: File) => Promise<void>;
-  removeSample: (id: string) => Promise<void>;
-  updateSampleSettings: (id: string, settings: Partial<Sample>) => void;
-  playNote: (midiNote: number) => void;
-  releaseNote: (midiNote: number) => void;
-  getSampleInfo: (
-    sampleId: string
-  ) => { duration: number; buffer: AudioBuffer } | null;
+  masterVolume: number;
+  setMasterVolume: (value: number) => void;
+  allSamples: Sample_db[];
+  getSelectedSamples: () => Sample_db[];
+  saveAll: () => void;
+  // handleDelete: (id: string) => Promise<void>;
+  updateSampleSettings: (id: string, settings: Partial<SampleSettings>) => void;
+  startRecording: () => void;
+  stopRecording: () => void;
   isLoading: boolean;
 };
 
 const SamplerCtx = createContext<SamplerCtxType | null>(null);
-
-let samplerEngine: SamplerEngine;
 
 export default function SamplerProvider({
   children,
@@ -49,153 +49,211 @@ export default function SamplerProvider({
   const { audioCtx } = useReactAudioCtx();
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Initialize SamplerEngine
-  if (audioCtx && !samplerEngine) {
-    samplerEngine = SamplerEngine.getInstance(audioCtx);
-  }
+  const samplerEngine = SamplerEngine.getInstance(audioCtx);
 
   // State
-  const [samples, setSamples] = useState<Sample[]>([]);
-  const [selectedSampleIds, setSelectedSampleIds] = useState<string[]>([]);
-  const [slugToId, setSlugToId] = useState<Map<string, string>>(new Map());
+  const [allSamples, setAllSamples] = useState<Sample_db[]>([]);
+  // const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [masterVolume, setMasterVolume] = useState(0.75);
+
+  const selectedSlugsMemo = useMemo(
+    () => searchParams.getAll('samples'),
+    [searchParams]
+  );
+
+  const unsavedSampleIds = useRef<Set<string>>(new Set());
 
   // Fetch samples
   useEffect(() => {
     setIsLoading(true);
     fetchSamples()
-      .then(setSamples)
+      .then(setAllSamples)
       .catch((error) => console.error('Error fetching samples:', error))
       .finally(() => setIsLoading(false));
   }, []);
 
-  useEffect(() => {
-    const newMap = new Map(samples.map((s) => [s.slug, s.id]));
-    setSlugToId(newMap);
-  }, [samples]);
-
   // Sample selection and loading to sampler engine
   useEffect(() => {
-    const slugs = searchParams.getAll('samples');
-    const selectedIds = slugs
-      .map((slug) => slugToId.get(slug))
-      .filter(Boolean) as string[];
+    if (!samplerEngine || !audioCtx) return;
 
-    setSelectedSampleIds(selectedIds);
-    samplerEngine.setSelectedSamples(selectedIds);
+    console.log('selectedSlugsMemo: ', selectedSlugsMemo);
 
-    selectedIds.forEach((id) => {
-      const sample = samples.find((s) => s.id === id);
-      if (sample && !samplerEngine.isSampleLoaded(id)) {
-        getSampleAudioBuffer(sample, audioCtx!)
-          .then((buffer) => samplerEngine.loadSample(sample, buffer))
-          .catch((error) => console.error('Error loading sample:', error));
-      }
-    });
-  }, [searchParams, slugToId, samples, audioCtx]);
+    const loadSamples = async () => {
+      // TODO: fix edge case where slug is not unique (e.g. slug to id map) ?
 
-  useEffect(() => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    newSearchParams.delete('samples');
-    selectedSampleIds.forEach((id) => {
-      const sample = samples.find((s) => s.id === id);
-      if (sample) newSearchParams.append('samples', sample.slug);
-    });
-    router.push(`?${newSearchParams.toString()}`, { scroll: false });
-  }, [selectedSampleIds, samples, router, searchParams]);
+      const ids = [];
+      const loadPromises = selectedSlugsMemo.map(async (slug) => {
+        const sample = allSamples.find((s) => s.slug === slug);
+        if (sample && sample.id) {
+          console.log('loading sample:', sample.id);
+          ids.push(sample.id);
+          if (!samplerEngine.isSampleLoaded(sample.id)) {
+            try {
+              const buffer = await getSampleAudioBuffer(sample, audioCtx);
+              samplerEngine.loadSample(sample, buffer);
+            } catch (error) {
+              console.error(`Error loading sample ${sample.id}:`, error);
+            }
+          }
+        }
+      });
 
-  const selectSample = useCallback(
-    (slug: string) => {
-      if (!slug) return;
-      const id = slugToId.get(slug);
-      if (id) {
-        setSelectedSampleIds((prev) => {
-          const newIds = new Set(prev);
-          newIds.has(id) ? newIds.delete(id) : newIds.add(id);
-          const newSelectedIds = Array.from(newIds);
-          samplerEngine.setSelectedSamples(newSelectedIds);
-          return newSelectedIds;
-        });
-      }
-    },
-    [slugToId]
-  );
+      await Promise.all(loadPromises);
+      samplerEngine.setSelectedSampleIds(ids);
 
-  const saveSample = useCallback(
-    async (name: string, file: File) => {
-      try {
-        const newSample = await createSampleRecord(name, file);
-        setSamples((prev) => [...prev, newSample]);
-        const buffer = await getSampleAudioBuffer(newSample, audioCtx!);
-        await samplerEngine.loadSample(newSample, buffer);
-        selectSample(newSample.slug);
-      } catch (error) {
-        console.error('Error adding sample:', error);
-      }
-    },
-    [audioCtx, selectSample]
-  );
+      console.log('ids:', ids);
+    };
 
-  const removeSample = useCallback(async (id: string) => {
-    try {
-      await deleteSample(id);
-      setSamples((prev) => prev.filter((s) => s.id !== id));
-      setSelectedSampleIds((prev) => prev.filter((sId) => sId !== id));
-      samplerEngine.removeSample(id);
-    } catch (error) {
-      console.error('Error removing sample:', error);
-    }
-  }, []);
+    loadSamples();
 
-  const getSampleInfo = useCallback((sampleId: string) => {
-    return samplerEngine.getSampleInfo(sampleId);
-  }, []);
+    return () => {
+      samplerEngine.setSelectedSampleIds([]);
+    };
+  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine]);
 
-  /* PLAYBACK */
+  // allSamples ?
 
-  const playNote = useCallback((midiNote: number) => {
-    try {
-      samplerEngine.playNote(midiNote);
-    } catch (error) {
-      console.error('Error playing note:', error);
-    }
-  }, []);
+  // // Todo: fix this ugly code
+  // if (
+  //   allSamples[allSamples.length - 1]?.slug === selectedSlugsMemo[0] &&
+  //   samplerEngine.isSampleLoaded(allSamples[allSamples.length - 1].slug)
+  // ) {
+  //   console.log('single sample already loaded:', allSamples[0].name);
+  //   return;
+  // }
 
-  const releaseNote = useCallback((rate: number) => {
-    try {
-      samplerEngine.releaseNote(rate);
-    } catch (error) {
-      console.error('Error releasing note:', error);
-    }
-  }, []);
+  const getSelectedSampleIds = useCallback(() => {
+    if (!samplerEngine) return [];
+    return samplerEngine.getSelectedSampleIds();
+  }, [samplerEngine]);
+
+  const getSelectedSamples = useCallback(() => {
+    // const selectedIds = searchParams.getAll('samples');
+    return allSamples.filter((sample) =>
+      selectedSlugsMemo.includes(sample.slug)
+    );
+  }, [selectedSlugsMemo, allSamples]);
+
+  /* SAMPLE SETTINGS */
 
   const updateSampleSettings = useCallback(
-    (id: string, settings: Partial<Sample>) => {
+    (id: string, settings: Partial<SampleSettings>) => {
+      if (!samplerEngine) throw new Error('Sampler engine not initialized');
+
       try {
         samplerEngine.updateSampleSettings(id, settings);
-        setSamples((prev) =>
+        setAllSamples((prev) =>
           prev.map((sample) =>
-            sample.id === id ? { ...sample, ...settings } : sample
+            sample.id === id
+              ? {
+                  ...sample,
+                  sample_settings: { ...sample.sample_settings, ...settings },
+                }
+              : sample
           )
         );
+        unsavedSampleIds.current.add(id);
       } catch (error) {
         console.error(`Error updating sample ${id}:`, error);
       }
     },
-    []
+    [samplerEngine]
   );
 
+  /* SAVE SAMPLES */
+
+  function saveAll() {
+    if (!samplerEngine) throw new Error('Sampler engine not initialized');
+    if (!unsavedSampleIds.current.size) {
+      alert('No unsaved samples');
+      console.warn('No unsaved samples');
+      return;
+    }
+
+    unsavedSampleIds.current.forEach((id) => {
+      const sample = allSamples.find((s) => s.id === id);
+      if (!sample) return;
+
+      if (id.includes('new-sample')) {
+        const newName = promptUserForSampleName();
+        if (!newName) return;
+
+        const newSample = {
+          ...sample,
+          name: newName,
+          slug: newName.toLowerCase().replace(/\s+/g, '-'),
+        };
+
+        saveNewSample(newSample)
+          .then((savedSample) => {
+            setAllSamples((prev) =>
+              prev.map((s) => (s.id === id ? savedSample : s))
+            );
+            unsavedSampleIds.current.delete(id);
+            router.replace(`?samples=${savedSample.slug}`);
+          })
+          .catch((error) => console.error('Error saving sample:', error));
+      } else {
+        updateSampleRecord(id, { ...sample })
+          .then(() => {
+            unsavedSampleIds.current.delete(id);
+          })
+          .catch((error) => console.error('Error saving sample:', error));
+      }
+    });
+  }
+
+  function promptUserForSampleName() {
+    const sampleName = prompt('Enter a name for the sample:');
+    if (sampleName) {
+      return sampleName;
+    } else {
+      alert('Save cancelled. Please provide a name to save the sample.');
+    }
+  }
+
+  /* MASTER VOLUME */
+
+  useEffect(() => {
+    if (samplerEngine) {
+      samplerEngine.setMasterVolume(masterVolume);
+    }
+  }, [masterVolume, samplerEngine]);
+
+  const getEngineMasterVolume = useCallback(() => {
+    if (!samplerEngine) throw new Error('Sampler engine not initialized');
+    return samplerEngine.getMasterVolume();
+  }, [samplerEngine]);
+
+  /* RECORDING */
+
+  const startRecording = useCallback(() => {
+    if (!samplerEngine) throw new Error('Sampler engine not initialized');
+    samplerEngine.startRecording();
+  }, [samplerEngine]);
+
+  const stopRecording = useCallback(async () => {
+    if (!samplerEngine) throw new Error('Sampler engine not initialized');
+    const { sample, buffer } = await samplerEngine.stopRecording();
+    if (sample && buffer) {
+      samplerEngine.loadSample(sample, buffer);
+      unsavedSampleIds.current.add(sample.id);
+      setAllSamples((prev) => [...prev, sample]);
+      router.replace(`?samples=${sample.slug}`); // , { scroll: false }
+    }
+  }, [samplerEngine, router]);
+
   const value = {
-    samples,
-    selectedSampleIds,
-    selectSample,
-    addSample: saveSample,
-    removeSample,
+    masterVolume,
+    setMasterVolume,
+    allSamples,
+    getSelectedSamples,
+    saveAll,
+    // handleDelete,
     updateSampleSettings,
-    playNote,
-    releaseNote,
-    getSampleInfo,
+    startRecording,
+    stopRecording,
     isLoading,
   };
 
@@ -210,191 +268,41 @@ export function useSamplerCtx() {
   return context;
 }
 
-// const [buffers, setBuffers] = useState<Map<string, AudioBuffer>>(new Map());
+// useEffect(() => {
+//   if (!samplerEngine) return;
 
-// const updateSample = useCallback(async (id: string, newName: string) => {
-//   try {
-//     const updatedSample = await updateSampleName(id, newName);
-//     setSamples((prev) =>
-//       prev.map((sample) => (sample.id === id ? updatedSample : sample))
+//   samplerEngine.setSelectedSampleIds(selectedIds);
+
+//   const loadedSamples = samplerEngine.getLoadedSamples();
+//   const selected = samplerEngine.getSelectedSampleIds();
+
+//   console.log(
+//     'From sampler engine / context useEffect: ',
+//     'unsaved:',
+//     unsavedSampleIds.current,
+//     'loadedSamples:',
+//     loadedSamples,
+//     'engine selected:',
+//     selected,
+//     'context selected:',
+//     selectedIds
+//   );
+// }, [selectedIds, samplerEngine]);
+
+// async function saveUpdatedSamples() {
+//   const ids = unsavedSampleIds.current;
+//   if (!ids.size) return;
+//   const promises = Array.from(ids).map((id) => {
+//     const sample = allSamples.find((s) => s.id === id);
+//     if (!sample) return Promise.resolve();
+//     return updateSampleRecord(id, { ...sample }).catch((error) =>
+//       console.error(`Error updating sample ${id} settings:`, error)
 //     );
-//   } catch (error) {
-//     console.error('Error updating sample:', error);
-//   }
-// }, []);
-
-// useEffect(() => {
-//   fetchSamples()
-//     .then((samples) => {
-//       setSamples(samples);
-//     })
-//     .catch((error) => {
-//       console.error('Error fetching samples:', error);
-//     });
-// }, []);
-
-// useEffect(() => {
-//   if (!audioCtx) {
-//     return;
-//   }
-//   try {
-//     SamplerEngine.getInstance(audioCtx);
-//   } catch (e) {
-//     console.error('Error initializing engine in SamplerProvider: ', e);
-//   }
-// }, [audioCtx]);
-
-// useEffect(() => {
-//   const sampleName = searchParams.get('sample');
-//   setCurrentSample(samples.find((s) => s.name === sampleName) || null);
-// }, [searchParams, samples]);
-
-// useEffect(() => {
-//   if (!currentSample) {
-//     return;
-//   }
-//   // const samplerEngine = SamplerEngine.getInstance();
-//   getSampleAudioBuffer(currentSample, audioCtx!).then((buffer) => {
-//     samplerEngine.loadSample(currentSample, buffer);
 //   });
-// }, [currentSample]);
-
-// const selectSample = (name: string) => {
-//   if (!name) {
-//     return;
-//   }
-//   router.push(`?sample=${name}`);
-//   const sample = samples.find((s) => s.name === name);
-//   if (sample) {
-//     setSelectedSampleIds([sample.id]);
-//   }
-// };
-
-// const selectSample = (name: string) => {
-//   if (!name) return;
-
-//   const sample = samples.find((s) => s.name === name);
-//   if (sample) {
-//     setSelectedSampleIds((prev) => {
-//       const newIds = new Set(prev);
-//       if (newIds.has(sample.id)) {
-//         newIds.delete(sample.id);
-//       } else {
-//         newIds.add(sample.id);
-//       }
-//       return Array.from(newIds);
-//     });
-
-//     const searchParams = new URLSearchParams(window.location.search);
-//     searchParams.delete('sample');
-//     selectedSampleIds.forEach((id) => searchParams.append('sample', id));
-//     router.push(`?${searchParams.toString()}`);
-//   }
-// };
-
-// const loadSample = useCallback(
-//   async (id: string) => {
-//     if (!buffers.has(id)) {
-//       try {
-//         const sample = await fetchSampleByID(id);
-//         const buffer = await getSampleAudioBuffer(sample, audioCtx);
-//         setBuffers((prev) => new Map(prev).set(id, buffer));
-//         setSamples((prev) => new Map(prev).set(id, sample));
-//         // Update SamplerEngine if necessary
-//       } catch (error) {
-//         console.error(`Failed to load sample ${id}:`, error);
-//       }
-//     }
-//   },
-//   [audioCtx, buffers]
-// );
-// useEffect(() => {
-//   const sampleNames = searchParams.getAll('sample');
-//   const selectedSamples = samples.filter((s) => sampleNames.includes(s.name));
-//   setSelectedSampleIds(selectedSamples.map((s) => s.id));
-
-//   selectedSamples.forEach((sample) => {
-//     getSampleAudioBuffer(sample, audioCtx!).then((buffer) => {
-//       samplerEngine.loadSample(sample, buffer);
-//     });
-//   });
-// }, [searchParams, samples, audioCtx]);
-
-// useEffect(() => {
-//   // const samplerEngine = SamplerEngine.getInstance();
-//   samplerEngine.setSelectedSamples(selectedSampleIds);
-// }, [selectedSampleIds]);
-
-// const selectSample = (slug: string) => {
-//   if (!slug) return;
-//   const id = slugToId.get(slug);
-//   if (id) {
-//     let newIds: Set<string>;
-//     setSelectedSampleIds((prev) => {
-//       newIds = new Set(prev);
-//       if (newIds.has(id)) {
-//         newIds.delete(id);
-//       } else {
-//         newIds.add(id);
-//       }
-//       return Array.from(newIds);
-//     });
-
-//     const searchParams = new URLSearchParams(window.location.search);
-//     searchParams.delete('sample');
-//     Array.from(newIds).forEach((id) => {
-//       const sample = samples.find((s) => s.id === id);
-//       if (sample) searchParams.append('sample', sample.slug);
-//     });
-//     router.push(`?${searchParams.toString()}`);
-//   }
-// };
-
-// const loadSampleToEngine = async (sample: Sample) => {
 //   try {
-//     // const samplerEngine = SamplerEngine.getInstance();
-//     getSampleAudioBuffer(sample, audioCtx!).then((buffer) => {
-//       samplerEngine.loadSample(sample, buffer);
-//     });
+//     await Promise.all(promises);
+//     unsavedSampleIds.current = new Set();
 //   } catch (error) {
-//     console.error(`Error loading sample ${sample.id}:`, error);
+//     console.error('Error updating sample settings:', error);
 //   }
-// };
-
-// const addSample = async (name: string, file: File) => {
-//   const newSample = await createSampleRecord(name, file);
-//   setSamples((prev) => [...prev, newSample]);
-//   await loadSampleToEngine(newSample);
-//   selectSample(newSample.name);
-// };
-
-// const addSample = async (name: string, file: File) => {
-//   try {
-//     const newSample = await createSampleRecord(name, file);
-//     setSamples((prev) => [...prev, newSample]);
-//     await loadSampleToEngine(newSample);
-//     selectSample(newSample.slug); // Note: changed from name to slug
-//   } catch (error) {
-//     if (error.data?.data?.slug?.code === 'validation_invalid_regex') {
-//       console.error('Invalid slug format');
-//       // Handle the error (e.g., show a user-friendly message)
-//     }
-//     // Handle other errors
-//   }
-// };
-
-// const removeSample = async (id: string) => {
-//   await deleteSample(id);
-//   setSamples((prev) => prev.filter((s) => s.id !== id));
-//   setSelectedSampleIds((prev) => prev.filter((sId) => sId !== id));
-//   if (currentSample?.id === id) {
-//     router.push('/samples');
-//   }
-// };
-// import {
-//   fetchSampleByID,
-//   fetchSamples,
-//   createSampleRecord,
-//   deleteSample,
-//   getSampleAudioBuffer,
-// } from '../lib/db/pocketbase';
+// }

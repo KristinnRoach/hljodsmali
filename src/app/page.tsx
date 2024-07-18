@@ -1,23 +1,21 @@
 import React from 'react';
 // import 'server-only';
 
-import Sampler_CSR from '../components/Sampler/Sampler_CSR';
+import Sampler_cli from '../components/Sampler/Sampler';
 import KeyboardGUI from '../components/UI/KeyboardGUI/KeyboardGUISpline';
 import Auth from '../components/Auth/Auth';
 
 import styles from '../styles/page.module.scss';
-import Library_CSR from '../components/Sampler/Library_CSR';
 
 export default function Home() {
   // async?
   return (
     <>
       <main className={styles.main}>
-        <div className={styles.top}>
-          <Auth />
-          <Sampler_CSR />
-          <Library_CSR />
-        </div>
+        {/* <div className={styles.top}> */}
+        <Auth />
+        <Sampler_cli />
+        {/* </div> */}
         <div className={styles.keyboardBox}>
           <KeyboardGUI />
         </div>

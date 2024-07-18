@@ -1,0 +1,281 @@
+// src/components/Sampler/Player_CSR.tsx
+
+'use client';
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { keyMap } from '../../lib/keymap';
+import { useSamplerCtx } from '../../contexts/sampler-context';
+
+export default function Player_CSR() {
+  const { playNote, releaseNote, releaseAllLoops } = useSamplerCtx();
+  const [isLooping, setIsLooping] = useState(false);
+  const [isSpacebarDown, setIsSpacebarDown] = useState(false);
+  const pressedKeys = useRef(new Set<string>()); // in case we might need them
+
+  // FIGURE OUT HOW THE DEPENDENCIES WORK
+
+  const handleCapsLock = useCallback(
+    (event: KeyboardEvent) => {
+      const key = event.code;
+
+      if (key !== 'CapsLock') {
+        return;
+      }
+      // event.preventDefault();
+
+      const capsDown = event.getModifierState('CapsLock');
+      setIsLooping(capsDown);
+
+      if (!capsDown) {
+        releaseAllLoops();
+        // pressedKeys.current.clear();
+      }
+    },
+    [] // releaseAllLoops ?
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const key = event.code;
+
+      if (event.repeat || pressedKeys.current.has(key)) return;
+
+      if (keyMap[key] || key === 'Space') {
+        event.preventDefault();
+      }
+      pressedKeys.current.add(key);
+
+      if (key === 'Space') {
+        setIsSpacebarDown(true);
+        if (isLooping) {
+          releaseAllLoops();
+          // releaseAlNotes();
+        }
+        return;
+      }
+
+      if (keyMap[key]) {
+        const midiNote = keyMap[key];
+        const shouldLoop = isLooping || isSpacebarDown;
+        playNote(midiNote, shouldLoop);
+      }
+    },
+    [isLooping, isSpacebarDown, playNote] // releaseAllLoops ?
+  );
+
+  const handleKeyUp = useCallback(
+    (event: KeyboardEvent) => {
+      const key = event.code;
+
+      pressedKeys.current.delete(key);
+
+      if (key === 'Space') {
+        setIsSpacebarDown(false);
+        if (!isLooping) {
+          releaseAllLoops();
+          // releaseAllNotes();
+        }
+        return;
+      }
+
+      if (keyMap[key]) {
+        // && !isLooping && !isSpacebarDown
+        const midiNote = keyMap[key];
+        const shouldLoop = isLooping || isSpacebarDown;
+        releaseNote(midiNote, shouldLoop);
+      }
+    },
+    [isLooping, isSpacebarDown, releaseNote] // releaseAllLoops ?
+  );
+
+  const handleBlur = useCallback(() => {
+    releaseAllLoops();
+    setIsSpacebarDown(false);
+    pressedKeys.current.clear();
+  }, []); // releaseAllLoops
+
+  useEffect(() => {
+    window.addEventListener('keyup', handleCapsLock);
+    window.addEventListener('keydown', handleCapsLock);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('keyup', handleCapsLock);
+      window.removeEventListener('keydown', handleCapsLock);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [handleCapsLock, handleKeyDown, handleKeyUp, handleBlur]);
+
+  return <>{/* Any UI elements */}</>;
+}
+
+//       if (event.repeat) {
+//         return;
+//       }
+
+//       if (key === 'Space') {
+//         event.preventDefault();
+//         setIsSpacebarDown(true);
+//         if (isLooping) {
+//           releaseAllLoops();
+//         }
+//         event.preventDefault();
+//         return;
+//       }
+
+//       if (keyMap[key]) {
+//         event.preventDefault();
+//         const midiNote = keyMap[key];
+//         const shouldLoop = isLooping || isSpacebarDown;
+//         console.log('isLooping: ', shouldLoop);
+//         playNote(midiNote, shouldLoop);
+//         keysPressedRef.current.add(key);
+//       }
+
+//       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+//         event.preventDefault();
+//       }
+//     },
+//     [isLooping, isSpacebarDown, playNote, releaseAllLoops]
+//   );
+
+//   const handleKeyUp = useCallback(
+//     (event: KeyboardEvent) => {
+//       const key = event.code;
+
+//       if (key === 'Space') {
+//         setIsSpacebarDown(false);
+//         if (!isLooping) {
+//           releaseAllLoops();
+//         }
+//         event.preventDefault();
+//         return;
+//       }
+
+//       if (keyMap[key]) {
+//         if (!isLooping && !isSpacebarDown) {
+//           const midiNote = keyMap[key];
+//           releaseNote(midiNote);
+//         }
+//       }
+//       keysPressedRef.current.delete(key);
+//     },
+//     [isLooping, isSpacebarDown, releaseNote, releaseAllLoops]
+//   );
+
+//   const handleBlur = useCallback(() => {
+//     releaseAllLoops();
+//     keysPressedRef.current.clear();
+//     setIsSpacebarDown(false);
+//     console.log('handleBlur clear keys: ', keysPressedRef.current);
+//   }, [releaseAllLoops]);
+
+//   useEffect(() => {
+//     window.addEventListener('keyup', handleCapsLock);
+//     window.addEventListener('keydown', handleCapsLock);
+//     window.addEventListener('keydown', handleKeyDown);
+//     window.addEventListener('keyup', handleKeyUp);
+//     window.addEventListener('blur', handleBlur);
+
+//     return () => {
+//       window.removeEventListener('keyup', handleCapsLock);
+//       window.removeEventListener('keydown', handleCapsLock);
+//       window.removeEventListener('keydown', handleKeyDown);
+//       window.removeEventListener('keyup', handleKeyUp);
+//       window.removeEventListener('blur', handleBlur);
+//     };
+//   }, [handleCapsLock, handleKeyDown, handleKeyUp, handleBlur]);
+
+//   return <>{/* Any UI elements */}</>;
+// }
+
+// 'use client';
+
+// import React, { useCallback, useEffect, useRef, useState } from 'react';
+// import { keyMap } from '../../lib/keymap';
+// import { useSamplerCtx } from '../../contexts/sampler-context';
+
+// export default function Player_CSR() {
+//   const { playNote, releaseNote, releaseAllLoops } = useSamplerCtx();
+
+//   const keysPressedRef = useRef(new Set<string>());
+//   // const isLoopingRef = useRef(false);
+//   const [isLooping, setIsLooping] = useState(false);
+
+//   const handleCapsLock = useCallback(
+//     (e: KeyboardEvent) => {
+//       const newIsLooping = e.getModifierState('CapsLock');
+//       setIsLooping(newIsLooping);
+
+//       if (!newIsLooping) {
+//         releaseAllLoops();
+//         keysPressedRef.current.clear();
+//       }
+//     },
+//     [releaseAllLoops]
+//   );
+
+//   const handleKeyDown = useCallback(
+//     (event: KeyboardEvent) => {
+//       const key = event.code;
+//       if (keyMap[key] && !keysPressedRef.current.has(key)) {
+//         const midiNote = keyMap[key];
+//         console.log('isLooping: ', isLooping);
+//         playNote(midiNote, isLooping);
+//         keysPressedRef.current.add(key);
+//       }
+//       if (
+//         ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(
+//           key
+//         )
+//       ) {
+//         event.preventDefault();
+//       }
+//     },
+//     [isLooping, playNote]
+//   );
+
+//   const handleKeyUp = useCallback(
+//     (event: KeyboardEvent) => {
+//       const key = event.code;
+//       if (isLooping) {
+//         keysPressedRef.current.delete(key);
+//         return;
+//       }
+//       if (keyMap[key] && keysPressedRef.current.has(key)) {
+//         const midiNote = keyMap[key];
+//         releaseNote(midiNote);
+//         keysPressedRef.current.delete(key);
+//       }
+//     },
+//     [isLooping, releaseNote]
+//   );
+
+//   const handleBlur = useCallback(() => {
+//     releaseAllLoops();
+//     keysPressedRef.current.clear();
+//     console.log('handleBlur clear keys: ', keysPressedRef.current);
+//   }, [releaseAllLoops]);
+
+//   useEffect(() => {
+//     window.addEventListener('keyup', handleCapsLock);
+//     window.addEventListener('keydown', handleCapsLock);
+//     window.addEventListener('keydown', handleKeyDown);
+//     window.addEventListener('keyup', handleKeyUp);
+//     window.addEventListener('blur', handleBlur);
+
+//     return () => {
+//       window.removeEventListener('keyup', handleCapsLock);
+//       window.removeEventListener('keydown', handleCapsLock);
+//       window.removeEventListener('keydown', handleKeyDown);
+//       window.removeEventListener('keyup', handleKeyUp);
+//       window.removeEventListener('blur', handleBlur);
+//     };
+//   }, [handleCapsLock, handleKeyDown, handleKeyUp, handleBlur]);
+
+//   return <>{/* Any UI elements */}</>;
+// }

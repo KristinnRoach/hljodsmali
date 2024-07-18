@@ -1,0 +1,24 @@
+// src/hooks/useSamplerEngine.ts
+import { useEffect, useRef } from 'react';
+import { useReactAudioCtx } from '../contexts/react-audio-context';
+import SamplerEngine from '../lib/SamplerEngine';
+
+export default function useSamplerEngine() {
+  const { audioCtx } = useReactAudioCtx();
+  const samplerEngine = useRef<SamplerEngine | null>(null);
+
+  useEffect(() => {
+    if (audioCtx && !samplerEngine.current) {
+      SamplerEngine.initializeSamplerEngine(audioCtx);
+      samplerEngine.current = SamplerEngine.getInstance();
+    } else if (samplerEngine.current) {
+      console.log('SamplerEngine already initialized', samplerEngine.current);
+    } else {
+      console.warn(
+        'No audioCtx in useSamplerEngine initialization (useEffect)'
+      );
+    }
+  }, [audioCtx]);
+
+  return samplerEngine.current;
+}

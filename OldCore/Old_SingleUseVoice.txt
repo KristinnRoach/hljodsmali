@@ -1,0 +1,231 @@
+// THIS IS THE OLD VERSION
+
+import { Sample, SampleSettings } from '../types';
+
+// type staticVoiceSettings = {
+//   startPoint: number;
+//   endPoint: number;
+//   attackTime: number;
+//   releaseTime: number;
+//   sampleVolume: number;
+//   initialLoopVolume?: number;
+// };
+
+// type dynamicVoiceSettings = {
+//   loopStart: number;
+//   loopEnd: number;
+//   loopVolume: number;
+// };
+
+export default class SingleUseVoice {
+  private static activeVoices: Map<string, SingleUseVoice> = new Map();
+
+  // readonly sampleVolume: number;
+  readonly startPoint: number;
+  readonly endPoint: number;
+  readonly attackTime: number; // make dynamic ?
+  readonly releaseTime: number; // make dynamic ?
+
+  private source: AudioBufferSourceNode;
+  public voiceGain: GainNode;
+  readonly sampleVolume: number;
+  public loopVolume: number;
+  playDuration: number;
+  loopDuration: number;
+  triggered: number = -1;
+
+  public midiNote: number;
+
+  constructor(
+    private audioCtx: AudioContext,
+    isLoopOn: boolean = false,
+    sampleVolume: number,
+    readonly buffer: AudioBuffer,
+    readonly sampleSettings: SampleSettings
+  ) {
+    this.source = this.audioCtx.createBufferSource();
+    this.source.buffer = buffer;
+
+    this.voiceGain = this.audioCtx.createGain();
+    this.source.connect(this.voiceGain);
+    this.voiceGain.gain.value = 0;
+    this.sampleVolume = sampleVolume; // ensure initial sampleGain value is set when sample is loaded
+    if (isLoopOn) {
+      this.loopVolume = sampleSettings.loopVolume ?? this.sampleVolume;
+      this.initializeLoop(
+        sampleSettings.loopStart,
+        sampleSettings.loopEnd,
+        sampleSettings.loopVolume
+      );
+    }
+
+    this.startPoint = sampleSettings.startPoint ?? 0;
+    this.endPoint = sampleSettings.endPoint ?? buffer.duration;
+    this.attackTime = sampleSettings.attackTime ?? 0.02;
+    this.releaseTime = sampleSettings.releaseTime ?? 0.02;
+    this.playDuration = this.endPoint - this.startPoint;
+  }
+
+  initializeLoop(loopStart: number, loopEnd: number, loopVolume: number) {
+    this.source.loop = true;
+    this.source.loopStart = loopStart ?? 0;
+    this.source.loopEnd = loopEnd ?? this.buffer.duration;
+    this.loopDuration = loopEnd - loopStart;
+  }
+
+  start(
+    midiNote: number,
+    volume: number = this.sampleVolume,
+    attackTime: number = this.attackTime,
+    wait: number = 0
+  ) {
+    // Convert MIDI note to playback rate, make more efficient with a map ?
+    const rate = 2 ** ((midiNote - 60) / 12) ?? 1;
+
+    this.source.playbackRate.value = rate;
+
+    this.source.start(
+      this.audioCtx.currentTime + wait,
+      this.startPoint,
+      this.playDuration
+    );
+
+    this.triggerAttack(attackTime, volume, wait); // test if linear sounds better
+    this.triggered = this.audioCtx.currentTime + wait;
+
+    this.source.onended = () => {
+      // stop() should also fire cleanup / onended
+      if (!this.source.loop) {
+        this.cleanUp();
+      }
+    };
+    this.midiNote = midiNote;
+    SingleUseVoice.activeVoices.set(this.getId(), this);
+  }
+
+  cleanUp() {
+    this.source.stop();
+    this.source.disconnect();
+    this.voiceGain.disconnect();
+
+    SingleUseVoice.activeVoices.delete(this.getId());
+    console.log(
+      'Voice cleaned up. SingleUseVoice static nr of activeVoices: ',
+      SingleUseVoice.activeVoices.size
+    );
+  }
+
+  triggerAttack(
+    attackTime: number = this.attackTime,
+    volume: number = this.sampleVolume,
+    wait: number = 0
+  ) {
+    const start = this.audioCtx.currentTime + wait;
+    this.voiceGain.gain.cancelScheduledValues(start); // test if this is necessary // maybe if looping?
+    this.voiceGain.gain.setValueAtTime(0, start);
+    this.voiceGain.gain.linearRampToValueAtTime(
+      // test if exponential sounds better
+      volume,
+      start + attackTime
+    );
+  }
+
+  release(releaseTime: number = this.releaseTime) {
+    // isLooping: boolean = false , wait: number = 0 // potential future features
+    // this.setLoop(false); // for testing until hanging notes are fixed
+
+    console.log('voiceGain.gain: ', this.voiceGain.gain.value);
+
+    const now = this.audioCtx.currentTime;
+    this.voiceGain.gain.cancelScheduledValues(now); // PRÓFA AÐ SLEPPA
+    this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value, now);
+    this.voiceGain.gain.linearRampToValueAtTime(0, now + releaseTime);
+
+    // add check for if release time is > remaining duration
+
+    if (!this.source.loop) {
+      this.source.stop(now + (releaseTime ?? 0.02)); // stop() should fire cleanup / onended
+    } else {
+      // skoða examples frá web audio api - synchronize volume envelope with loop
+      this.triggerLoopingEnvelope(
+        releaseTime,
+        this.source.loopEnd - this.source.loopStart
+      );
+    }
+
+    // else if (this.sampleVolume !== this.loopVolume) {
+    //   this.sampleGain.gain.linearRampToValueAtTime(
+    //     this.loopVolume,
+    //     now + releaseTime
+    //   );
+    // }
+  }
+
+  triggerLoopingEnvelope(releaseTime: number, sustainTime: number) {
+    if (!this.source.loop) {
+      return;
+    }
+    const start = this.audioCtx.currentTime + releaseTime;
+    this.voiceGain.gain.cancelScheduledValues(start);
+    // Attack
+    this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value, start);
+    this.voiceGain.gain.linearRampToValueAtTime(
+      this.loopVolume,
+      start + this.attackTime
+    );
+    // Release
+    sustainTime = this.source.loopEnd - this.source.loopStart; // dummy test - replace with actual time previus note was held
+
+    this.voiceGain.gain.setValueAtTime(
+      this.voiceGain.gain.value,
+      start + this.attackTime + sustainTime
+    );
+    this.voiceGain.gain.linearRampToValueAtTime(0, releaseTime);
+    if (this.source.loop) {
+      this.triggerLoopingEnvelope(
+        releaseTime,
+        this.source.loopEnd - this.source.loopStart
+      );
+    }
+  }
+
+  setLoop(shouldLoop: boolean) {
+    this.source.loop = shouldLoop;
+  }
+
+  getLoop() {
+    return this.source.loop;
+  }
+
+  updateLoop(
+    newLoopStart: number | undefined,
+    newLoopEnd: number | undefined,
+    newLoopVolume: number | undefined
+  ) {
+    console.log('Updating loop:', newLoopStart, newLoopEnd, newLoopVolume);
+    if (newLoopStart !== undefined) {
+      this.source.loopStart = newLoopStart;
+    }
+    if (newLoopEnd !== undefined) {
+      this.source.loopEnd = newLoopEnd;
+    }
+    if (newLoopVolume !== undefined) {
+      this.updateLoopingVolume(newLoopVolume);
+    }
+  }
+
+  /* Implement initial loop volume, that kicks in after first playthrough */
+
+  updateLoopingVolume(volume: number) {
+    const now = this.audioCtx.currentTime;
+    this.voiceGain.gain.cancelScheduledValues(now);
+    this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value, now);
+    this.voiceGain.gain.linearRampToValueAtTime(volume, now + 0.01);
+
+    this.loopVolume = volume;
+  }
+
+  private getId(): string {
+    return `${this.buffer.duration}-${this.startPoint}-${this.endPoint}-${this.source.loop}`;
+  }
+}
