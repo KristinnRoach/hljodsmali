@@ -1,24 +1,25 @@
-import { SampleSettings } from '../types/sample';
+import { Sample_settings } from '../types/sample';
 
 export default class SingleUseVoice {
   private static allVoices: Set<SingleUseVoice> = new Set();
-  private static globalLoop: boolean = false;
 
-  private static loopHold: boolean = false;
+  // Loop & Hoild: should be able to save for each sample or global? // global makes sense with CapsLock
+  private static globalLoop: boolean = false;
+  private static hold: boolean = false;
   // private static sampleGainNodesMap: Map<string, GainNode> = new Map();
 
   private source: AudioBufferSourceNode;
   private sampleId: string;
   private midiNote: number;
   private voiceGain: GainNode;
-  private settings: SampleSettings;
+  private settings: Sample_settings;
   private trigger: number | null = null;
   private held: number | null = null;
 
   constructor(
     private audioCtx: AudioContext,
     readonly buffer: AudioBuffer,
-    readonly sample_settings: SampleSettings, // býr til copy?
+    readonly sample_settings: Sample_settings, // býr til copy?
     sampleId: string,
     sampleGainNode: GainNode
   ) {
@@ -70,7 +71,8 @@ export default class SingleUseVoice {
   static releaseNote(midiNote: number) {
     SingleUseVoice.allVoices.forEach((voice) => {
       if (voice.midiNote === midiNote) {
-        if (!voice.source.loop) {
+        if (!SingleUseVoice.hold) {
+          // (!voice.source.loop) {
           console.log('releaseNote static :', voice);
           voice.triggerRelease();
         }
@@ -133,13 +135,16 @@ export default class SingleUseVoice {
 
   triggerRelease() {
     if (this.trigger <= 0) return;
-    if (this.source.loop) return;
+    // if (this.source.loop) return;
+    if (SingleUseVoice.hold) return;
 
     this.voiceGain.gain.linearRampToValueAtTime(
       0.0001,
       this.now() + this.settings.releaseTime
     );
     this.held = this.now() - this.trigger; // round
+
+    console.log('held:', this.held);
 
     this.source.stop(this.now() + this.settings.releaseTime + 0.1);
 
@@ -166,7 +171,7 @@ export default class SingleUseVoice {
 
   static updateActiveVoices(
     sampleId: string,
-    settings: Partial<SampleSettings>
+    settings: Partial<Sample_settings>
   ) {
     SingleUseVoice.allVoices.forEach((voice) => {
       if (voice.sampleId === sampleId) {
@@ -176,7 +181,7 @@ export default class SingleUseVoice {
     });
   }
 
-  updateLoopPoints(settings: Partial<SampleSettings> = this.settings) {
+  updateLoopPoints(settings: Partial<Sample_settings> = this.settings) {
     if (settings.loopStart) {
       this.source.loopStart = settings.loopStart;
     }

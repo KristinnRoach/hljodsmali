@@ -1,0 +1,26 @@
+.menuToggle {
+  position: relative;
+
+  .content {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: fit-content;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    opacity: 0;
+    z-index: 10;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    text-align: left;
+
+    &.open {
+      max-height: 100vh;
+      opacity: 1;
+    }
+  }
+}

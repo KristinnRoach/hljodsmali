@@ -3,34 +3,58 @@
 import React from 'react';
 
 import useKeyboard from '../../hooks/useKeyboard';
-import { useDragAndDrop } from '../../hooks/useDragNDrop';
 import Recorder_CSR from './Recorder';
-import SamplerControls from './SamplerControls';
-import Library_cli from './Library';
+import SampleSettings from './SampleSettings';
+import LinkList from '../UI/LinkList';
+import { notes } from '../UI/Keyboard/basic/note';
+import Octave from '../UI/Keyboard/basic/Octave';
 
 import styles from './Sampler.module.scss';
+import { useSamplerCtx } from '../../contexts/sampler-context';
+import Toggle from '../UI/Basic/Toggle';
+import MenuToggle from '../UI/Basic/MenuToggle';
 
 export default function Sampler_cli() {
   useKeyboard();
-  const { handleDragOver, handleDrop, handleDragLeave } = useDragAndDrop(
-    (file) => {
-      console.log('Dropped file:', file);
-    }
-  );
+  const {
+    allSamples,
+    isLoading,
+    saveAll,
+    hasUnsavedSamples,
+    masterVolume,
+    setMasterVolume,
+  } = useSamplerCtx();
 
   return (
-    <div
-      className={styles.samplerContainer}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      onDragLeave={handleDragLeave}
-    >
+    <div className={styles.sampler}>
+      {/* <section className={styles.buttons}> */}
+      <button onClick={saveAll} disabled={!hasUnsavedSamples}>
+        Save All
+      </button>
+      {/* change to save selected ? */}
       <Recorder_CSR />
-      <SamplerControls />
-      <Library_cli />
+      {/* </section> */}
+      <section className={styles.samples}>
+        <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
+          {!isLoading && allSamples.length > 0 && (
+            <LinkList items={allSamples} title='Samples' paramName='samples' />
+          )}
+          <MenuToggle label='Settings'>
+            <SampleSettings />
+          </MenuToggle>
+        </MenuToggle>
+      </section>
     </div>
   );
 }
+
+// const onPianoClick = (e) => {
+//   console.log('Piano key clicked:', e.target.value);
+//   console.log(notes);
+// };
+
+/* <Octave notes={notes} clickHandler={onPianoClick} />
+      <Octave notes={notes} clickHandler={onPianoClick} /> */
 
 // import { handleDrop, handleDragOver } from '../../utils/dragNdrop';
 

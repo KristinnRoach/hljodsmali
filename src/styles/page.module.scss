@@ -1,16 +1,23 @@
 @import 'mixins';
 
 .main {
-  display: flex;
-  flex-direction: column;
-  //justify-content: center;
-  align-items: space-evenly;
-  padding: 0.5rem;
+  // display: flex;
+  // flex-direction: column;
+  // justify-content: center;
+  // align-items: space-evenly;
   min-height: 100vh;
   margin: 0 auto;
 }
 
-.top {
+.horizontal {
   display: flex;
+  flex-direction: row;
   justify-content: space-evenly;
+}
+
+.position_fixed {
+  position: fixed;
+  top: 10vh;
+  right: 10vw;
+  z-index: -1;
 }

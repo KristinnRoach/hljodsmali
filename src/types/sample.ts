@@ -1,6 +1,6 @@
 // src/types/sample.ts
 
-export type SampleSettings = {
+export type Sample_settings = {
   startPoint: number;
   endPoint: number;
   loopStart: number;
@@ -19,18 +19,18 @@ export type Sample_db = {
   name: string;
   slug: string;
   user?: string | null;
-  sample_file: File;
+  sample_file: File | string; // is this ok?
   bufferDuration: number;
   created: string;
   updated: string;
-  sample_settings: SampleSettings;
+  sample_settings: Sample_settings;
 };
 
 // export type newSample = Omit<Sample_db, 'id' | 'created' | 'updated'>;
 
 export function getDefaultSampleSettings(
   bufferDuration: number
-): SampleSettings {
+): Sample_settings {
   return {
     startPoint: 0,
     endPoint: bufferDuration,
@@ -50,7 +50,8 @@ export function createNewSampleObject(
   tempId: string,
   name: string,
   blob: Blob,
-  duration: number
+  duration: number = 0,
+  user: string = ''
 ): Sample_db {
   const file = new File([blob], name + '.webm', { type: 'audio/webm' }); // check for consistency
   const slug = name.toLowerCase().replace(/ /g, '-');
@@ -61,7 +62,7 @@ export function createNewSampleObject(
     id: tempId,
     name: name,
     slug: slug,
-    user: '', // Add user ID
+    user: user, // Add user ID
     sample_file: file,
     created: new Date().toISOString(),
     updated: new Date().toISOString(),

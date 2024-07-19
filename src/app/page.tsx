@@ -2,7 +2,7 @@ import React from 'react';
 // import 'server-only';
 
 import Sampler_cli from '../components/Sampler/Sampler';
-import KeyboardGUI from '../components/UI/KeyboardGUI/KeyboardGUISpline';
+import KeyboardGUI from '../components/UI/Keyboard/spline/KeyboardGUISpline';
 import Auth from '../components/Auth/Auth';
 
 import styles from '../styles/page.module.scss';
@@ -11,12 +11,10 @@ export default function Home() {
   // async?
   return (
     <>
-      <main className={styles.main}>
-        {/* <div className={styles.top}> */}
+      <main>
         <Auth />
         <Sampler_cli />
-        {/* </div> */}
-        <div className={styles.keyboardBox}>
+        <div className={styles.position_fixed}>
           <KeyboardGUI />
         </div>
       </main>

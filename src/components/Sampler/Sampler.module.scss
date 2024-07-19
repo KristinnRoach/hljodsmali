@@ -1,55 +1,68 @@
-.samplerContainer {
+.sampler {
   display: flex;
   flex-direction: row;
-  justify-content: center;
-  // align-items: center;
-  padding: 1rem;
+  justify-content: space-evenly;
+  gap: calc(0.1 * 100vw);
+
   margin: 0 auto;
-  width: 100%;
-  //background-color: green;
+  width: 100vw;
+
+  &.buttons {
+    h2 {
+      text-align: center;
+      padding: 0.2rem;
+      font-size: 1rem;
+    }
+  }
+
+  .samples {
+    max-width: 20vw;
+    // position: absolute; // position: sticky;
+    // top: 2rem;
+    // right: 2rem;
+  }
+}
+
+.slider {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+
+  label {
+    width: 50px;
+  }
+
+  input {
+    width: 100px;
+  }
 }
 
 .sliderContainer {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  width: 200px;
+  // display: flex;
+  // flex-direction: column;
+  // justify-content: center;
+  // align-items: center;
+  // gap: 1rem;
+  // width: 200px;
 
-  h1 {
-    text-align: center;
-    padding: 0.2rem;
-    font-size: 1rem;
-    border-style: ridge;
-    border-radius: 20%;
-  }
-  .slider {
-    display: flex;
-    flex-direction: row;
+  // h1 {
+  //   text-align: center;
+  //   padding: 0.2rem;
+  //   font-size: 1rem;
+  //   border-style: ridge;
+  //   border-radius: 20%;
+  // }
+  // .slider {
+  //   display: flex;
+  //   flex-direction: row;
 
-    input {
-      width: 100px;
-    }
-    label {
-      width: 50px;
-    }
-  }
-}
-
-.recordingOff {
-  background-color: rgba(190, 0, 0, 0.753);
-  color: white;
-}
-
-.recordingOn {
-  background-color: rgb(255, 0, 0);
-  color: white;
-}
-
-.waveContainer {
-  display: flex;
-  flex-direction: column;
-  width: 50vw;
-  height: 25vh;
+  //   input {
+  //     width: 100px;
+  //   }
+  //   label {
+  //     width: 50px;
+  //   }
+  // }
 }

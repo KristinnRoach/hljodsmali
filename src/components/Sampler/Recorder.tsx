@@ -4,6 +4,7 @@
 import React, { useState, useCallback } from 'react';
 import { useSamplerCtx } from '../../contexts/sampler-context';
 // import SamplerEngine from '../../lib/SamplerEngine';
+import Toggle from '../UI/Basic/Toggle';
 
 export default function Recorder() {
   // const samplerEngine = SamplerEngine.getInstance();
@@ -24,9 +25,12 @@ export default function Recorder() {
 
   return (
     <div className='recorder'>
-      <button onClick={toggleRecording}>
-        {isRecording ? 'Stop Recording' : 'Start Recording'}
-      </button>
+      <Toggle
+        isOn={isRecording}
+        onToggle={toggleRecording}
+        label={isRecording ? 'Stop' : 'Record'}
+        type='record'
+      />
     </div>
   );
 }

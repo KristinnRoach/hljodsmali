@@ -1,5 +1,5 @@
 import PocketBase from 'pocketbase';
-import { Sample_db, SampleSettings } from '../../types/sample';
+import { Sample_db, Sample_settings } from '../../types/sample';
 
 const pb = new PocketBase(
   process.env.POCKETBASE_URL || 'https://hljodsmali.pockethost.io/'
@@ -118,7 +118,7 @@ export async function getSampleAudioBuffer(
   'use client'; // ?
 
   try {
-    const url = pb.files.getUrl(sample, sample.sample_file);
+    const url = pb.files.getUrl(sample, sample.sample_file as string);
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
     return await audioCtx.decodeAudioData(arrayBuffer);

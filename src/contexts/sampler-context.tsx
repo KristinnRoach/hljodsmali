@@ -12,7 +12,11 @@ import React, {
   useMemo,
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sample_db, SampleSettings } from '../types/sample';
+import {
+  Sample_db,
+  Sample_settings,
+  createNewSampleObject,
+} from '../types/sample';
 
 import SamplerEngine from '../lib/SamplerEngine';
 
@@ -32,8 +36,12 @@ type SamplerCtxType = {
   allSamples: Sample_db[];
   getSelectedSamples: () => Sample_db[];
   saveAll: () => void;
+  hasUnsavedSamples: boolean;
   // handleDelete: (id: string) => Promise<void>;
-  updateSampleSettings: (id: string, settings: Partial<SampleSettings>) => void;
+  updateSampleSettings: (
+    id: string,
+    settings: Partial<Sample_settings>
+  ) => void;
   startRecording: () => void;
   stopRecording: () => void;
   isLoading: boolean;
@@ -55,6 +63,7 @@ export default function SamplerProvider({
   const [allSamples, setAllSamples] = useState<Sample_db[]>([]);
   // const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   const [masterVolume, setMasterVolume] = useState(0.75);
 
   const selectedSlugsMemo = useMemo(
@@ -72,6 +81,59 @@ export default function SamplerProvider({
       .catch((error) => console.error('Error fetching samples:', error))
       .finally(() => setIsLoading(false));
   }, []);
+
+  // DRAG N DROP
+
+  const handleDroppedFile = useCallback(
+    async (file: File) => {
+      if (!audioCtx) return;
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        const sample = createNewSampleObject(
+          `dropped-${Date.now()}`,
+          file.name,
+          file,
+          audioBuffer.duration
+        );
+        if (!sample) console.error('Error creating new sample object');
+
+        samplerEngine.loadSample(sample, audioBuffer);
+        unsavedSampleIds.current.add(sample.id);
+        setAllSamples((prev) => [...prev, sample]);
+        router.replace(`?samples=${sample.slug}`);
+      } catch (error) {
+        console.error('Error decoding dropped audio file:', error);
+      }
+    },
+    [audioCtx, samplerEngine, router]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleGlobalDrag = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleGlobalDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer?.files[0];
+      if (file && file.type.startsWith('audio/')) {
+        await handleDroppedFile(file);
+      }
+    };
+
+    window.addEventListener('dragover', handleGlobalDrag);
+    window.addEventListener('drop', handleGlobalDrop);
+
+    return () => {
+      window.removeEventListener('dragover', handleGlobalDrag);
+      window.removeEventListener('drop', handleGlobalDrop);
+    };
+  }, [handleDroppedFile]);
 
   // Sample selection and loading to sampler engine
   useEffect(() => {
@@ -138,7 +200,7 @@ export default function SamplerProvider({
   /* SAMPLE SETTINGS */
 
   const updateSampleSettings = useCallback(
-    (id: string, settings: Partial<SampleSettings>) => {
+    (id: string, settings: Partial<Sample_settings>) => {
       if (!samplerEngine) throw new Error('Sampler engine not initialized');
 
       try {
@@ -164,6 +226,7 @@ export default function SamplerProvider({
   /* SAVE SAMPLES */
 
   function saveAll() {
+    console.log(unsavedSampleIds.current);
     if (!samplerEngine) throw new Error('Sampler engine not initialized');
     if (!unsavedSampleIds.current.size) {
       alert('No unsaved samples');
@@ -172,10 +235,14 @@ export default function SamplerProvider({
     }
 
     unsavedSampleIds.current.forEach((id) => {
-      const sample = allSamples.find((s) => s.id === id);
+      const loadedSample = samplerEngine
+        .getLoadedSamples()
+        .find((isLoaded) => isLoaded.sample.id === id);
+      const sample = loadedSample?.sample;
+      // const sample = allSamples.find((s) => s.id === id);
       if (!sample) return;
 
-      if (id.includes('new-sample')) {
+      if (id.includes('new-sample') || id.includes('dropped')) {
         const newName = promptUserForSampleName();
         if (!newName) return;
 
@@ -195,6 +262,7 @@ export default function SamplerProvider({
           })
           .catch((error) => console.error('Error saving sample:', error));
       } else {
+        // } if (id.includes('recording')) {
         updateSampleRecord(id, { ...sample })
           .then(() => {
             unsavedSampleIds.current.delete(id);
@@ -202,6 +270,7 @@ export default function SamplerProvider({
           .catch((error) => console.error('Error saving sample:', error));
       }
     });
+    // unsavedSampleIds.current.clear(); // should not be necessary
   }
 
   function promptUserForSampleName() {
@@ -224,7 +293,7 @@ export default function SamplerProvider({
   const getEngineMasterVolume = useCallback(() => {
     if (!samplerEngine) throw new Error('Sampler engine not initialized');
     return samplerEngine.getMasterVolume();
-  }, [samplerEngine]);
+  }, [samplerEngine]); // masterVolume
 
   /* RECORDING */
 
@@ -250,6 +319,7 @@ export default function SamplerProvider({
     allSamples,
     getSelectedSamples,
     saveAll,
+    hasUnsavedSamples: unsavedSampleIds.current.size > 0,
     // handleDelete,
     updateSampleSettings,
     startRecording,

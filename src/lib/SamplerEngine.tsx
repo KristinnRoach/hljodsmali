@@ -2,7 +2,7 @@
 import SingleUseVoice from './SingleUseVoice';
 import {
   Sample_db,
-  SampleSettings,
+  Sample_settings,
   getDefaultSampleSettings,
   createNewSampleObject,
 } from '../types/sample';
@@ -85,7 +85,7 @@ export default class SamplerEngine {
   loadSample(sample: Sample_db, buffer: AudioBuffer): LoadedSample {
     const defaultSettings = getDefaultSampleSettings(buffer.duration);
 
-    const updatedSampleSettings: SampleSettings = {
+    const updatedSampleSettings: Sample_settings = {
       ...defaultSettings,
       ...sample.sample_settings,
     };
@@ -181,7 +181,7 @@ export default class SamplerEngine {
     );
   }
 
-  updateSampleSettings(id: string, settings: Partial<SampleSettings>) {
+  updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
     try {
       this.updateSelectedSampleSettings(id, settings);
     } catch (error) {
@@ -191,7 +191,7 @@ export default class SamplerEngine {
 
   private updateSelectedSampleSettings(
     id: string,
-    settings: Partial<SampleSettings>
+    settings: Partial<Sample_settings>
   ) {
     const loadedSample = this.loadedSamples.get(id);
 

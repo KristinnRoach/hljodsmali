@@ -1,0 +1,92 @@
+.toggleButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 44px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  text-transform: uppercase;
+  outline: none;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &.default {
+    background-color: #808080;
+    color: white;
+    &.on {
+      background-color: #4caf50;
+    }
+    &.off {
+      background-color: #f44336;
+    }
+  }
+
+  &.menu {
+    background-color: transparent;
+    color: #333;
+    text-align: left;
+    width: 100%;
+    padding: 10px;
+    text-transform: none;
+
+    &.on {
+      font-weight: bold;
+      background-color: #f0f0f0;
+    }
+  }
+
+  &.record {
+    background-color: #ff4136;
+    color: white;
+    &.on {
+      animation: pulse 1s infinite;
+    }
+  }
+
+  &.loop {
+    background-color: #0074d9;
+    color: white;
+    &.on {
+      background-color: #7fdbff;
+      color: #001f3f;
+    }
+  }
+
+  &.hold {
+    background-color: #ff851b;
+    color: white;
+    &.on {
+      box-shadow: 0 0 10px #ff851b;
+    }
+  }
+
+  &.lock {
+    background-color: #b10dc9;
+    color: white;
+    &.on {
+      background-color: #85144b;
+    }
+  }
+
+  &.link {
+    background-color: #3d9970;
+    color: white;
+    &.on {
+      text-decoration: underline;
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
