@@ -65,6 +65,9 @@ export default function SamplerProvider({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  if (typeof window === 'undefined')
+    throw new Error('No window object in sampler context'); // not necessary in a 'use client' context?
+
   const { audioCtx } = useReactAudioCtx();
 
   const samplerEngine = SamplerEngine.getInstance(audioCtx);
