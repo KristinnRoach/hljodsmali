@@ -1,0 +1,17 @@
+'use client';
+
+import { useReactAudioCtx } from '../contexts/react-audio-context';
+
+export function useAudioDecoder(): (
+  arrayBuffer: ArrayBuffer
+) => Promise<AudioBuffer | null> {
+  const { audioCtx } = useReactAudioCtx();
+
+  return async (arrayBuffer: ArrayBuffer): Promise<AudioBuffer | null> => {
+    if (!audioCtx) {
+      console.error('Audio context not available');
+      return null;
+    }
+    return await audioCtx.decodeAudioData(arrayBuffer);
+  };
+}

@@ -184,7 +184,7 @@ export default function SamplerProvider({
         console.error('Error decoding dropped audio file:', error);
       }
     },
-    [audioCtx, samplerEngine, router]
+    [audioCtx, samplerEngine, router, audioCtx]
   );
 
   useEffect(() => {
@@ -212,7 +212,7 @@ export default function SamplerProvider({
       window.removeEventListener('dragover', handleGlobalDrag);
       window.removeEventListener('drop', handleGlobalDrop);
     };
-  }, [handleDroppedFile]);
+  }, [handleDroppedFile, samplerEngine, audioCtx]);
 
   // Sample selection and loading to sampler engine
   useEffect(() => {
@@ -251,7 +251,7 @@ export default function SamplerProvider({
     return () => {
       samplerEngine.setSelectedSampleIds([]);
     };
-  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine]); // allSamples ?
+  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine, audioCtx]); // allSamples ?
 
   const getSelectedSamples = useCallback(() => {
     // const selectedIds = searchParams.getAll('samples');
@@ -283,7 +283,7 @@ export default function SamplerProvider({
         console.error(`Error updating sample ${id}:`, error);
       }
     },
-    [samplerEngine]
+    [samplerEngine, audioCtx]
   );
 
   /* SAVE SAMPLES */
@@ -393,7 +393,7 @@ export default function SamplerProvider({
       setAllSamples((prev) => [...prev, sample]);
       router.replace(`?samples=${sample.slug}`, { scroll: false });
     }
-  }, [samplerEngine, router]);
+  }, [samplerEngine, router, audioCtx]);
 
   const value = {
     samplerEngine,
