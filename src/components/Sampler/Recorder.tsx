@@ -1,27 +1,23 @@
-// src/components/Recorder.tsx
+// src/components/Sampler/Recorder.tsx
 'use client';
 
 import React, { useState, useCallback } from 'react';
 import { useSamplerCtx } from '../../contexts/sampler-context';
-// import SamplerEngine from '../../lib/SamplerEngine';
 import Toggle from '../UI/Basic/Toggle';
 
 export default function Recorder() {
-  // const samplerEngine = SamplerEngine.getInstance();
   const { startRecording, stopRecording } = useSamplerCtx();
   const [isRecording, setIsRecording] = useState(false);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) {
-      // samplerEngine.stopRecording();
       stopRecording();
       setIsRecording(false);
     } else {
       startRecording();
-      // samplerEngine.startRecording();
       setIsRecording(true);
     }
-  }, [isRecording, startRecording, stopRecording]); // samplerEngine
+  }, [isRecording, startRecording, stopRecording]);
 
   return (
     <div className='recorder'>

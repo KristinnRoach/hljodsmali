@@ -1,14 +1,26 @@
 import { useEffect, useRef } from 'react';
 import { keyMap } from '../lib/utils/keymap';
 
-import SamplerEngine from '../lib/SamplerEngine';
+// import SamplerEngine from '../lib/SamplerEngine';
+import { useSamplerCtx } from '../contexts/sampler-context';
 
 export default function useKeyboard() {
   const isSpacebarDown = useRef(false); // ?
+  const isTabActive = useRef(false);
   const pressedKeys = useRef(new Set<string>());
   const isEnabled = useRef(true);
 
-  const samplerEngine = SamplerEngine.getInstance();
+  // const samplerEngine = SamplerEngine.getInstance();
+  const {
+    samplerEngine,
+    handleLoopKeys,
+    handleHoldKey,
+    toggleHold,
+    // mainLoopToggle,
+    // mainHoldToggle,
+    // momentaryLoopToggle,
+    // momentaryHoldToggle,
+  } = useSamplerCtx();
 
   if (!samplerEngine) {
     console.error('SamplerEngine not initialized in useKeyboard hook');
@@ -44,18 +56,26 @@ export default function useKeyboard() {
           if (isSpacebarDown.current && event.getModifierState('CapsLock')) {
             return;
           }
-          samplerEngine?.setGlobalLoop(
+          handleLoopKeys(
             event.getModifierState('CapsLock'),
             isSpacebarDown.current
           );
+          // samplerEngine.mainLoopToggle(event.getModifierState('CapsLock'));
           break;
         case 'Space':
           event.preventDefault();
           isSpacebarDown.current = true;
-          samplerEngine?.setGlobalLoop(
-            event.getModifierState('CapsLock'),
-            true
-          );
+          handleLoopKeys(event.getModifierState('CapsLock'), true);
+          // momentaryLoopToggle(true);
+          // momentaryHoldToggle(true);
+          break;
+        case 'Tab':
+          event.preventDefault();
+          event.stopPropagation();
+          // isTabActive.current = !isTabActive.current;
+          // handleHoldKey(isTabActive.current);
+          toggleHold();
+          // samplerEngine.mainHoldToggle(event.getModifierState('Tab'));
           break;
         default:
           const midiNote = keyMap[event.code];
@@ -71,24 +91,35 @@ export default function useKeyboard() {
       pressedKeys.current.delete(event.code);
 
       switch (event.code) {
-        case 'CapsLock':
-          event.preventDefault();
-          if (isSpacebarDown.current && event.getModifierState('CapsLock')) {
-            return;
-          }
-          samplerEngine?.setGlobalLoop(
-            event.getModifierState('CapsLock'),
-            isSpacebarDown.current
-          );
-          break;
+        // case 'CapsLock':
+        //   event.preventDefault();
+        //   if (isSpacebarDown.current && event.getModifierState('CapsLock')) {
+        //     return;
+        //   }
+        //   handleLoopKeys(
+        //     event.getModifierState('CapsLock'),
+        //     isSpacebarDown.current
+        //   );
+
+        //   break;
         case 'Space':
           event.preventDefault();
           isSpacebarDown.current = false;
-          samplerEngine?.setGlobalLoop(
-            event.getModifierState('CapsLock'),
-            false
-          );
+          if (event.getModifierState('CapsLock')) {
+            toggleHold();
+          } else {
+            handleLoopKeys(event.getModifierState('CapsLock'), false);
+          }
+
+          // samplerEngine.momentaryLoopToggle(false);
+          // samplerEngine.momentaryHoldToggle(false);
           break;
+        // case 'Tab':
+        //   event.preventDefault();
+        //   // event.stopPropagation();
+        //   isTabDown.current = false;
+        //   handleHoldKey(false);
+        //   break;
         default:
           const midiNote = keyMap[event.code];
           if (midiNote) {
@@ -100,8 +131,9 @@ export default function useKeyboard() {
 
     const handleBlur = () => {
       if (isEnabled.current) {
-        // samplerEngine?.setGlobalLoop(false, false);
-        // isSpacebarDown.current = false;
+        // handleLoopKeys(false, false);
+        isSpacebarDown.current = false;
+        isTabActive.current = false;
         pressedKeys.current.clear();
         console.log('blur occured');
       }
@@ -122,7 +154,7 @@ export default function useKeyboard() {
     setEnabled: (enabled: boolean) => {
       isEnabled.current = enabled;
       if (!enabled) {
-        samplerEngine?.setGlobalLoop(false, false);
+        handleLoopKeys(false, false);
         isSpacebarDown.current = false;
         pressedKeys.current.clear();
       }

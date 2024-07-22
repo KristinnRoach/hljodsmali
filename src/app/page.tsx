@@ -6,6 +6,7 @@ import KeyboardGUI from '../components/UI/Keyboard/spline/KeyboardGUISpline';
 import Auth from '../components/Auth/Auth';
 
 import styles from '../styles/page.module.scss';
+import Shapes from '../components/UI/Shapes/Shapes';
 
 export default function Home() {
   // async?
@@ -14,9 +15,10 @@ export default function Home() {
       <main>
         <Auth />
         <Sampler_cli />
-        <div className={styles.position_fixed}>
+        {/* <div className={styles.position_fixed}>
           <KeyboardGUI />
-        </div>
+        </div> */}
+        <Shapes />
       </main>
     </>
   );

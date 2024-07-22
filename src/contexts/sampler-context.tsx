@@ -23,20 +23,28 @@ import SamplerEngine from '../lib/SamplerEngine';
 import {
   fetchSamples,
   updateSampleRecord,
-  deleteSample,
+  deleteSampleRecord,
   getSampleAudioBuffer,
-  saveNewSample,
+  createSampleRecord,
+  renameSampleRecord,
 } from '../lib/db/pocketbase';
 
 import { useReactAudioCtx } from './react-audio-context';
 
 type SamplerCtxType = {
-  masterVolume: number;
-  setMasterVolume: (value: number) => void;
+  samplerEngine: SamplerEngine;
   allSamples: Sample_db[];
   getSelectedSamples: () => Sample_db[];
   saveAll: () => void;
+  updateSample: (id: string) => void;
+  deleteSample: (id: string) => void;
   hasUnsavedSamples: boolean;
+  handleLoopKeys: (capsLock: boolean, spacebar: boolean) => void;
+  isLooping: boolean;
+  toggleLoop: () => void;
+  handleHoldKey: (tabActive: boolean, spaceDown: boolean) => void;
+  isHolding: boolean;
+  toggleHold: () => void;
   // handleDelete: (id: string) => Promise<void>;
   updateSampleSettings: (
     id: string,
@@ -64,14 +72,72 @@ export default function SamplerProvider({
   // const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [masterVolume, setMasterVolume] = useState(0.75);
-
   const selectedSlugsMemo = useMemo(
     () => searchParams.getAll('samples'),
     [searchParams]
   );
 
   const unsavedSampleIds = useRef<Set<string>>(new Set());
+
+  /* LOOPING and HOLDING */
+
+  const [isLooping, setIsLooping] = useState(
+    samplerEngine?.getGlobalLoop() ?? false
+  );
+  const [isHolding, setIsHolding] = useState(
+    samplerEngine?.isHolding() ?? false
+  );
+
+  const toggleLoop = () => {
+    samplerEngine?.toggleGlobalLoop();
+    setIsLooping(samplerEngine?.getGlobalLoop());
+    // isLoopingRef.current = samplerEngine.getGlobalLoop();
+  };
+
+  /* Do it this way for clarity! */
+
+  // const mainLoopToggle(active: boolean) { // caps / button
+
+  // const momentaryLoopToggle(down: boolean) { // space
+
+  // const mainHoldToggle(active: boolean) { // tab / button
+
+  // const momentaryHoldToggle(down: boolean) { // space
+
+  // if isHolding && isLooping -> space releases hold
+  // if !isHolding && isLooping -> space holds
+  // if isHolding && !isLooping -> space starts looping
+  // if !isHolding && !isLooping -> space does nothing
+
+  /* this is a bit messy - implement the above */
+  const handleLoopKeys = (capsActive: boolean, spaceDown: boolean) => {
+    // if (isLooping && isHolding && spaceDown) {
+    //   toggleHold(); // space should release hold when looping, why does it not?
+    //   return;
+    // }
+
+    console.log('handleLoopKeys:', capsActive, spaceDown, isHolding);
+
+    samplerEngine.handleLoopKeys(capsActive, spaceDown);
+    setIsLooping(samplerEngine.getGlobalLoop());
+  };
+
+  const toggleHold = () => {
+    // on which end is the truth? singleusevoice or usekeyboard?
+    samplerEngine.toggleHold();
+    setIsHolding(samplerEngine.isHolding());
+    console.log('isHolding:', samplerEngine.isHolding());
+  };
+
+  const handleHoldKey = (tabActive: boolean, spaceDown: boolean) => {
+    const newHoldState = tabActive !== spaceDown;
+    if (newHoldState !== isHolding) {
+      setIsHolding(newHoldState);
+      samplerEngine.toggleHold();
+
+      // toggleHold();
+    }
+  };
 
   // Fetch samples
   useEffect(() => {
@@ -101,7 +167,7 @@ export default function SamplerProvider({
         samplerEngine.loadSample(sample, audioBuffer);
         unsavedSampleIds.current.add(sample.id);
         setAllSamples((prev) => [...prev, sample]);
-        router.replace(`?samples=${sample.slug}`);
+        router.replace(`?samples=${sample.slug}`, { scroll: false });
       } catch (error) {
         console.error('Error decoding dropped audio file:', error);
       }
@@ -172,23 +238,7 @@ export default function SamplerProvider({
     return () => {
       samplerEngine.setSelectedSampleIds([]);
     };
-  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine]);
-
-  // allSamples ?
-
-  // // Todo: fix this ugly code
-  // if (
-  //   allSamples[allSamples.length - 1]?.slug === selectedSlugsMemo[0] &&
-  //   samplerEngine.isSampleLoaded(allSamples[allSamples.length - 1].slug)
-  // ) {
-  //   console.log('single sample already loaded:', allSamples[0].name);
-  //   return;
-  // }
-
-  const getSelectedSampleIds = useCallback(() => {
-    if (!samplerEngine) return [];
-    return samplerEngine.getSelectedSampleIds();
-  }, [samplerEngine]);
+  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine]); // allSamples ?
 
   const getSelectedSamples = useCallback(() => {
     // const selectedIds = searchParams.getAll('samples');
@@ -252,7 +302,7 @@ export default function SamplerProvider({
           slug: newName.toLowerCase().replace(/\s+/g, '-'),
         };
 
-        saveNewSample(newSample)
+        createSampleRecord(newSample)
           .then((savedSample) => {
             setAllSamples((prev) =>
               prev.map((s) => (s.id === id ? savedSample : s))
@@ -273,6 +323,24 @@ export default function SamplerProvider({
     // unsavedSampleIds.current.clear(); // should not be necessary
   }
 
+  async function updateSample(id: string) {
+    const sample = allSamples.find((s) => s.id === id);
+    if (!sample) return;
+    await updateSampleRecord(id, { ...sample }).catch((error) =>
+      console.error(`Error updating sample ${id} settings:`, error)
+    );
+  }
+
+  async function deleteSample(id: string) {
+    await deleteSampleRecord(id).catch((error) =>
+      console.error(`Error deleting sample ${id}:`, error)
+    );
+    samplerEngine.unloadSample(id);
+    setAllSamples((prev) => prev.filter((s) => s.id !== id));
+    unsavedSampleIds.current.delete(id);
+    router.replace(`?samples=${selectedSlugsMemo[0]}`, { scroll: false });
+  }
+
   function promptUserForSampleName() {
     const sampleName = prompt('Enter a name for the sample:');
     if (sampleName) {
@@ -282,24 +350,20 @@ export default function SamplerProvider({
     }
   }
 
-  /* MASTER VOLUME */
-
-  useEffect(() => {
-    if (samplerEngine) {
-      samplerEngine.setMasterVolume(masterVolume);
-    }
-  }, [masterVolume, samplerEngine]);
-
-  const getEngineMasterVolume = useCallback(() => {
-    if (!samplerEngine) throw new Error('Sampler engine not initialized');
-    return samplerEngine.getMasterVolume();
-  }, [samplerEngine]); // masterVolume
+  async function renameSample(id: string, name: string) {
+    await renameSampleRecord(id, name).catch((error) =>
+      console.error(`Error renaming sample ${id}:`, error)
+    );
+    setAllSamples((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, name } : s))
+    );
+  }
 
   /* RECORDING */
 
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     if (!samplerEngine) throw new Error('Sampler engine not initialized');
-    samplerEngine.startRecording();
+    await samplerEngine.startRecording();
   }, [samplerEngine]);
 
   const stopRecording = useCallback(async () => {
@@ -309,18 +373,25 @@ export default function SamplerProvider({
       samplerEngine.loadSample(sample, buffer);
       unsavedSampleIds.current.add(sample.id);
       setAllSamples((prev) => [...prev, sample]);
-      router.replace(`?samples=${sample.slug}`); // , { scroll: false }
+      router.replace(`?samples=${sample.slug}`, { scroll: false }); // , { scroll: false }
     }
   }, [samplerEngine, router]);
 
   const value = {
-    masterVolume,
-    setMasterVolume,
+    samplerEngine,
     allSamples,
     getSelectedSamples,
     saveAll,
+    updateSample,
+    deleteSample,
     hasUnsavedSamples: unsavedSampleIds.current.size > 0,
     // handleDelete,
+    handleLoopKeys,
+    isLooping,
+    toggleLoop,
+    handleHoldKey,
+    isHolding,
+    toggleHold,
     updateSampleSettings,
     startRecording,
     stopRecording,
@@ -337,6 +408,24 @@ export function useSamplerCtx() {
   }
   return context;
 }
+
+/* LOOPING */
+
+// const [isLooping, setIsLooping] = useState(false);
+
+// const toggleLoop = useCallback(() => {
+//   samplerEngine.toggleGlobalLoop(true);
+//   setIsLooping(samplerEngine.getGlobalLoop());
+// }, [isLooping, samplerEngine]);
+
+// // Todo: fix this ugly code
+// if (
+//   allSamples[allSamples.length - 1]?.slug === selectedSlugsMemo[0] &&
+//   samplerEngine.isSampleLoaded(allSamples[allSamples.length - 1].slug)
+// ) {
+//   console.log('single sample already loaded:', allSamples[0].name);
+//   return;
+// }
 
 // useEffect(() => {
 //   if (!samplerEngine) return;

@@ -8,31 +8,7 @@ pb.autoCancellation(false);
 
 export default pb;
 
-export const createSampleRecord = async (
-  name: string,
-  file: File
-): Promise<Sample_db> => {
-  // const file = new File([blob], name + '.webm', { type: 'audio/webm' });
-  const slug = generateSlug(name);
-  const formData = new FormData();
-  formData.append('name', name);
-  formData.append('slug', slug);
-  formData.append('sample_file', file);
-
-  if (pb.authStore.model?.id && pb.authStore.isValid) {
-    formData.append('user', pb.authStore.model.id);
-  }
-
-  try {
-    const record = await pb.collection('samples').create<Sample_db>(formData);
-    return record;
-  } catch (error) {
-    console.error('Error uploading audio:', error);
-    throw error;
-  }
-};
-
-export async function saveNewSample(
+export async function createSampleRecord( // check compatibility with older version (below)
   sample: Partial<Sample_db>
 ): Promise<Sample_db> {
   const formData = new FormData();
@@ -76,11 +52,23 @@ export async function updateSampleRecord(
   }
 }
 
-export async function deleteSample(sampleId: string): Promise<void> {
+export async function deleteSampleRecord(sampleId: string): Promise<void> {
   try {
     await pb.collection('samples').delete(sampleId);
   } catch (error) {
     console.error('Error deleting sample:', error);
+    throw error;
+  }
+}
+
+export async function renameSampleRecord(
+  sampleId: string,
+  name: string
+): Promise<Sample_db> {
+  try {
+    return await pb.collection('samples').update<Sample_db>(sampleId, { name });
+  } catch (error) {
+    console.error('Error renaming sample:', error);
     throw error;
   }
 }
@@ -135,3 +123,27 @@ export function generateSlug(name: string): string {
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-');
 }
+
+// export const createSampleRecord = async (
+//   name: string,
+//   file: File
+// ): Promise<Sample_db> => {
+//   // const file = new File([blob], name + '.webm', { type: 'audio/webm' });
+//   const slug = generateSlug(name);
+//   const formData = new FormData();
+//   formData.append('name', name);
+//   formData.append('slug', slug);
+//   formData.append('sample_file', file);
+
+//   if (pb.authStore.model?.id && pb.authStore.isValid) {
+//     formData.append('user', pb.authStore.model.id);
+//   }
+
+//   try {
+//     const record = await pb.collection('samples').create<Sample_db>(formData);
+//     return record;
+//   } catch (error) {
+//     console.error('Error uploading audio:', error);
+//     throw error;
+//   }
+// };

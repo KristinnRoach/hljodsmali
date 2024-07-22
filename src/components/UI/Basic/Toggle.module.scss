@@ -24,7 +24,7 @@
   }
 
   &.menu {
-    background-color: transparent;
+    background-color: rgb(102, 253, 107);
     color: #333;
     text-align: left;
     width: 100%;
@@ -33,7 +33,8 @@
 
     &.on {
       font-weight: bold;
-      background-color: #f0f0f0;
+      background-color: #61ffe5;
+      box-shadow: #001f3f 0px 0px 10px;
     }
   }
 
@@ -58,6 +59,7 @@
     background-color: #ff851b;
     color: white;
     &.on {
+      background-color: #f475ff;
       box-shadow: 0 0 10px #ff851b;
     }
   }

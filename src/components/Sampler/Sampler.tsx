@@ -6,8 +6,6 @@ import useKeyboard from '../../hooks/useKeyboard';
 import Recorder_CSR from './Recorder';
 import SampleSettings from './SampleSettings';
 import LinkList from '../UI/LinkList';
-import { notes } from '../UI/Keyboard/basic/note';
-import Octave from '../UI/Keyboard/basic/Octave';
 
 import styles from './Sampler.module.scss';
 import { useSamplerCtx } from '../../contexts/sampler-context';
@@ -17,12 +15,17 @@ import MenuToggle from '../UI/Basic/MenuToggle';
 export default function Sampler_cli() {
   useKeyboard();
   const {
+    samplerEngine,
     allSamples,
     isLoading,
     saveAll,
+    updateSample,
+    deleteSample,
     hasUnsavedSamples,
-    masterVolume,
-    setMasterVolume,
+    isLooping,
+    toggleLoop,
+    isHolding,
+    toggleHold,
   } = useSamplerCtx();
 
   return (
@@ -31,13 +34,21 @@ export default function Sampler_cli() {
       <button onClick={saveAll} disabled={!hasUnsavedSamples}>
         Save All
       </button>
-      {/* change to save selected ? */}
+      <Toggle label='Loop' isOn={isLooping} onToggle={toggleLoop} type='loop' />
+      <Toggle label='Hold' isOn={isHolding} onToggle={toggleHold} type='hold' />
+
       <Recorder_CSR />
-      {/* </section> */}
       <section className={styles.samples}>
         <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
           {!isLoading && allSamples.length > 0 && (
-            <LinkList items={allSamples} title='Samples' paramName='samples' />
+            <LinkList
+              items={allSamples}
+              title='Samples'
+              paramName='samples'
+              itemsPerPage={10}
+              onDelete={(id) => deleteSample(id)}
+              onSave={(id) => updateSample(id)}
+            />
           )}
           <MenuToggle label='Settings'>
             <SampleSettings />
@@ -48,12 +59,16 @@ export default function Sampler_cli() {
   );
 }
 
+// import { notes } from '../UI/Keyboard/basic/note';
+// import Octave from '../UI/Keyboard/basic/Octave';
+
 // const onPianoClick = (e) => {
 //   console.log('Piano key clicked:', e.target.value);
 //   console.log(notes);
 // };
 
-/* <Octave notes={notes} clickHandler={onPianoClick} />
+/*       <section className={styles.piano}>
+<Octave notes={notes} clickHandler={onPianoClick} />
       <Octave notes={notes} clickHandler={onPianoClick} /> */
 
 // import { handleDrop, handleDragOver } from '../../utils/dragNdrop';

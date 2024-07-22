@@ -62,14 +62,31 @@ export default class SamplerEngine {
     return SamplerEngine.instance;
   }
 
-  /* Loop state manager */
+  /* Loop and Hold state manager */
 
-  public setGlobalLoop(loopToggle: boolean, loopMomentary: boolean): void {
-    this.globalLoop = loopToggle !== loopMomentary;
-    // console.log(
-    //   `caps: ${loopToggle}, space: ${loopMomentary}. Global looping state: ${this.globalLoop}`
-    // );
+  // move handleLoopKeys to samplerCtx, only toggle loop neccessary
+  handleLoopKeys(loopToggle: boolean, loopMomentary: boolean): void {
+    const newLoopState = loopToggle !== loopMomentary;
+    if (newLoopState !== this.globalLoop) {
+      this.toggleGlobalLoop();
+    }
+  }
+
+  toggleGlobalLoop(): void {
+    this.globalLoop = !this.globalLoop;
     SingleUseVoice.setGlobalLooping(this.globalLoop);
+  }
+
+  public getGlobalLoop(): boolean {
+    return this.globalLoop;
+  }
+
+  toggleHold(): void {
+    SingleUseVoice.toggleHold();
+  }
+
+  isHolding(): boolean {
+    return SingleUseVoice.isHolding();
   }
 
   setSampleLoopLocked(sampleId: string, lock: boolean): void {
@@ -109,6 +126,10 @@ export default class SamplerEngine {
     this.loadedSamples.set(sample.id, loadedSample);
 
     return loadedSample;
+  }
+
+  unloadSample(id: string): void {
+    this.loadedSamples.delete(id);
   }
 
   // getUpdatedSamples(): Sample_db[] {
@@ -263,25 +284,27 @@ export default class SamplerEngine {
 
   /* Recording */
 
-  async setupRecording() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    this.mediaRecorder = new MediaRecorder(stream);
-
-    this.mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        this.recordedChunks.push(event.data);
-      }
-    };
+  async setupRecording(): Promise<void> {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.recordedChunks.push(event.data);
+        }
+      };
+    } catch (error) {
+      console.error('Failed to setup recording:', error);
+      throw error;
+    }
   }
 
-  startRecording() {
+  async startRecording(): Promise<void> {
     if (!this.mediaRecorder) {
-      console.error('Media Recorder not set up');
-      this.setupRecording();
-      return;
+      await this.setupRecording();
     }
     this.recordedChunks = [];
-    this.mediaRecorder!.start();
+    this.mediaRecorder?.start();
   }
 
   async stopRecording(): Promise<{ sample: Sample_db; buffer: AudioBuffer }> {

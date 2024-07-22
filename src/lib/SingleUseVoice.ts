@@ -68,6 +68,19 @@ export default class SingleUseVoice {
     return SingleUseVoice.globalLoop;
   }
 
+  static toggleHold() {
+    SingleUseVoice.hold = !SingleUseVoice.hold;
+    if (!SingleUseVoice.hold) {
+      SingleUseVoice.allVoices.forEach((voice) => {
+        voice.triggerRelease();
+      });
+    }
+  }
+
+  static isHolding() {
+    return SingleUseVoice.hold;
+  }
+
   static releaseNote(midiNote: number) {
     SingleUseVoice.allVoices.forEach((voice) => {
       if (voice.midiNote === midiNote) {
