@@ -1,7 +1,7 @@
 // src/contexts/react-audio-context.tsx
 'use client';
 
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { resumeAudioContext } from '../lib/utils/audioUtils';
 
 type ReactAudioCtxProviderProps = {
@@ -9,26 +9,30 @@ type ReactAudioCtxProviderProps = {
 };
 
 type ReactAudioCtxType = {
-  audioCtx: AudioContext;
+  audioCtx: AudioContext | null;
 };
 
 export const ReactAudioCtx = createContext<ReactAudioCtxType | null>(null);
 
-let audioCtx: AudioContext | null = null;
-
 export default function ReactAudioCtxProvider({
   children,
 }: ReactAudioCtxProviderProps) {
-  if (typeof window !== 'undefined' && !audioCtx) {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
-      latencyHint: 0.0001,
-    });
-  }
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
 
-  if (!audioCtx) {
-    console.warn('Failed to create audio context');
-    throw new Error('Failed to create audio context');
-  }
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !audioCtx) {
+      const newAudioCtx = new (window.AudioContext ||
+        (window as any).webkitAudioContext)({
+        latencyHint: 0.0001,
+      });
+      setAudioCtx(newAudioCtx);
+    }
+  }, []);
+
+  // if (!audioCtx) {
+  //   console.warn('Failed to create audio context');
+  //   throw new Error('Failed to create audio context');
+  // }
 
   useEffect(() => {
     if (audioCtx) {
@@ -44,7 +48,7 @@ export default function ReactAudioCtxProvider({
         // console.warn('audioCtx closed from ReactAudioCtxProvider');
       };
     }
-  }, []);
+  }, [audioCtx]);
 
   return (
     <ReactAudioCtx.Provider value={{ audioCtx }}>

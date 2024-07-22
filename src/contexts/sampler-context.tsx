@@ -70,7 +70,7 @@ export default function SamplerProvider({
 
   const { audioCtx } = useReactAudioCtx();
 
-  const samplerEngine = SamplerEngine.getInstance(audioCtx);
+  const samplerEngine = audioCtx ? SamplerEngine.getInstance(audioCtx) : null;
 
   // State
   const [allSamples, setAllSamples] = useState<Sample_db[]>([]);
@@ -94,6 +94,7 @@ export default function SamplerProvider({
   );
 
   const toggleLoop = () => {
+    if (!(samplerEngine && audioCtx)) return;
     samplerEngine?.toggleGlobalLoop();
     setIsLooping(samplerEngine?.getGlobalLoop());
     // isLoopingRef.current = samplerEngine.getGlobalLoop();
@@ -116,6 +117,8 @@ export default function SamplerProvider({
 
   /* this is a bit messy - implement the above */
   const handleLoopKeys = (capsActive: boolean, spaceDown: boolean) => {
+    if (!(samplerEngine && audioCtx)) return;
+
     // if (isLooping && isHolding && spaceDown) {
     //   toggleHold(); // space should release hold when looping, why does it not?
     //   return;
@@ -128,6 +131,8 @@ export default function SamplerProvider({
   };
 
   const toggleHold = () => {
+    if (!(samplerEngine && audioCtx)) return;
+
     // on which end is the truth? singleusevoice or usekeyboard?
     samplerEngine.toggleHold();
     setIsHolding(samplerEngine.isHolding());
@@ -135,6 +140,8 @@ export default function SamplerProvider({
   };
 
   const handleHoldKey = (tabActive: boolean, spaceDown: boolean) => {
+    if (!(samplerEngine && audioCtx)) return;
+
     const newHoldState = tabActive !== spaceDown;
     if (newHoldState !== isHolding) {
       setIsHolding(newHoldState);
@@ -157,7 +164,7 @@ export default function SamplerProvider({
 
   const handleDroppedFile = useCallback(
     async (file: File) => {
-      if (!audioCtx) return;
+      if (!(samplerEngine && audioCtx)) return;
       try {
         const arrayBuffer = await file.arrayBuffer();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
@@ -182,6 +189,7 @@ export default function SamplerProvider({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!(samplerEngine && audioCtx)) return;
 
     const handleGlobalDrag = (e: DragEvent) => {
       e.preventDefault();
@@ -208,7 +216,7 @@ export default function SamplerProvider({
 
   // Sample selection and loading to sampler engine
   useEffect(() => {
-    if (!samplerEngine || !audioCtx) return;
+    if (!(samplerEngine && audioCtx)) return;
 
     console.log('selectedSlugsMemo: ', selectedSlugsMemo);
 
@@ -256,7 +264,7 @@ export default function SamplerProvider({
 
   const updateSampleSettings = useCallback(
     (id: string, settings: Partial<Sample_settings>) => {
-      if (!samplerEngine) throw new Error('Sampler engine not initialized');
+      if (!(samplerEngine && audioCtx)) return;
 
       try {
         samplerEngine.updateSampleSettings(id, settings);
@@ -282,7 +290,8 @@ export default function SamplerProvider({
 
   function saveAll() {
     console.log(unsavedSampleIds.current);
-    if (!samplerEngine) throw new Error('Sampler engine not initialized');
+    if (!(samplerEngine && audioCtx)) return;
+
     if (!unsavedSampleIds.current.size) {
       alert('No unsaved samples');
       console.warn('No unsaved samples');
@@ -337,6 +346,8 @@ export default function SamplerProvider({
   }
 
   async function deleteSample(id: string) {
+    if (!(samplerEngine && audioCtx)) return;
+
     await deleteSampleRecord(id).catch((error) =>
       console.error(`Error deleting sample ${id}:`, error)
     );
@@ -367,18 +378,20 @@ export default function SamplerProvider({
   /* RECORDING */
 
   const startRecording = useCallback(async () => {
-    if (!samplerEngine) throw new Error('Sampler engine not initialized');
+    if (!(samplerEngine && audioCtx)) return;
+
     await samplerEngine.startRecording();
   }, [samplerEngine]);
 
   const stopRecording = useCallback(async () => {
-    if (!samplerEngine) throw new Error('Sampler engine not initialized');
+    if (!(samplerEngine && audioCtx)) return;
+
     const { sample, buffer } = await samplerEngine.stopRecording();
     if (sample && buffer) {
       samplerEngine.loadSample(sample, buffer);
       unsavedSampleIds.current.add(sample.id);
       setAllSamples((prev) => [...prev, sample]);
-      router.replace(`?samples=${sample.slug}`, { scroll: false }); // , { scroll: false }
+      router.replace(`?samples=${sample.slug}`, { scroll: false });
     }
   }, [samplerEngine, router]);
 

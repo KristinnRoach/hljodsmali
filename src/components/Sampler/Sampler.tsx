@@ -28,6 +28,11 @@ export default function Sampler_cli() {
     toggleHold,
   } = useSamplerCtx();
 
+  if (!samplerEngine) {
+    console.error('SamplerEngine not initialized in Sampler component');
+    return null;
+  }
+
   return (
     <div className={styles.sampler}>
       {/* <section className={styles.buttons}> */}

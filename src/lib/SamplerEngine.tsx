@@ -33,9 +33,13 @@ export default class SamplerEngine {
 
   /* Constructor */
 
-  private constructor(audioCtx: AudioContext) {
+  private constructor(audioCtx: AudioContext | null) {
+    if (!audioCtx) {
+      throw new Error('Audio context not set up');
+    }
     this.audioCtx = audioCtx;
-    this.masterGain = this.audioCtx.createGain();
+
+    this.masterGain = this.audioCtx?.createGain();
     this.masterGain.gain.value = 0.75;
     this.masterGain.connect(this.audioCtx.destination);
 

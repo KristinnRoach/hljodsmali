@@ -1,13 +1,13 @@
-export function createAudioContext(
-  latencyHint: number = 0.001,
-  outputID?: string
-): AudioContext {
-  return new (window.AudioContext || (window as any).webkitAudioContext)({
-    latencyHint: latencyHint,
-    // sinkId: outputID,
-    // sampleRate: 44100, // henda ef gerir ekkert gott (defaultar í devices preferred sample rate)
-  });
-}
+// export function createAudioContext(
+//   latencyHint: number = 0.001,
+//   outputID?: string
+// ): AudioContext {
+//   return new (window.AudioContext || (window as any).webkitAudioContext)({
+//     latencyHint: latencyHint,
+//     // sinkId: outputID,
+//     // sampleRate: 44100, // henda ef gerir ekkert gott (defaultar í devices preferred sample rate)
+//   });
+// }
 
 export async function resumeAudioContext(
   audioCtx: AudioContext
