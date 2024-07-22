@@ -44,7 +44,7 @@ export default function ReactAudioCtxProvider({
         // console.warn('audioCtx closed from ReactAudioCtxProvider');
       };
     }
-  }, [audioCtx]);
+  }, []);
 
   return (
     <ReactAudioCtx.Provider value={{ audioCtx }}>

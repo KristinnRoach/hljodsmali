@@ -24,7 +24,7 @@ export default function useKeyboard() {
 
   if (!samplerEngine) {
     console.error('SamplerEngine not initialized in useKeyboard hook');
-    return;
+    throw new Error('SamplerEngine not initialized in useKeyboard hook');
   }
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function useKeyboard() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [samplerEngine]);
+  }, [samplerEngine, handleLoopKeys, toggleHold]);
 
   return {
     setEnabled: (enabled: boolean) => {
