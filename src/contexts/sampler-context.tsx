@@ -32,7 +32,7 @@ import {
 import { useReactAudioCtx } from './react-audio-context';
 
 type SamplerCtxType = {
-  samplerEngine: SamplerEngine;
+  samplerEngine: SamplerEngine | null;
   allSamples: Sample_db[];
   getSelectedSamples: () => Sample_db[];
   saveAll: () => void;
