@@ -17,13 +17,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <AudioDeviceProvider>
-        <ReactAudioCtxProvider>
-          <SamplerProvider>
-            <body>{children}</body>
-          </SamplerProvider>
-        </ReactAudioCtxProvider>
-      </AudioDeviceProvider>
+      <body>
+        <AudioDeviceProvider>
+          <ReactAudioCtxProvider>
+            <SamplerProvider>{children}</SamplerProvider>
+          </ReactAudioCtxProvider>
+        </AudioDeviceProvider>
+      </body>
     </html>
   );
 }

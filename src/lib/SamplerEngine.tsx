@@ -18,7 +18,7 @@ export type LoadedSample = {
 export default class SamplerEngine {
   private static instance: SamplerEngine | null = null;
 
-  private audioContext: AudioContext;
+  private audioCtx: AudioContext;
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
 
@@ -33,31 +33,22 @@ export default class SamplerEngine {
 
   /* Constructor */
 
-  private constructor(audioContext: AudioContext) {
-    this.audioContext = audioContext;
-    this.masterGain = this.audioContext.createGain();
+  private constructor(audioCtx: AudioContext) {
+    this.audioCtx = audioCtx;
+    this.masterGain = this.audioCtx.createGain();
     this.masterGain.gain.value = 0.75;
-    this.masterGain.connect(this.audioContext.destination);
+    this.masterGain.connect(this.audioCtx.destination);
 
     this.setupRecording();
-    console.log('Audio Engine context: ', this.audioContext);
+    console.log('Audio Engine context: ', this.audioCtx);
   }
 
   /* Sample Engine instance */
 
-  public static getInstance(audioContext?: AudioContext): SamplerEngine {
+  public static getInstance(audioCtx: AudioContext): SamplerEngine {
     if (!SamplerEngine.instance) {
-      if (!audioContext) {
-        console.log(
-          'AudioContext must be provided when creating SamplerEngine instance'
-        );
-        return null;
-      }
-      SamplerEngine.instance = new SamplerEngine(audioContext);
+      SamplerEngine.instance = new SamplerEngine(audioCtx);
       console.log('new SamplerEngine instance created');
-    }
-    if (!SamplerEngine.instance) {
-      console.warn('SamplerEngine instance not created');
     }
     return SamplerEngine.instance;
   }
@@ -113,7 +104,7 @@ export default class SamplerEngine {
       sample_settings: updatedSampleSettings,
     };
 
-    const sampleGain = this.audioContext.createGain();
+    const sampleGain = this.audioCtx.createGain();
     sampleGain.connect(this.masterGain);
     sampleGain.gain.value = updatedSampleSettings.sampleVolume;
 
@@ -152,7 +143,7 @@ export default class SamplerEngine {
     if (loadedSample) {
       loadedSample.sampleGain.gain.setValueAtTime(
         volume,
-        this.audioContext.currentTime
+        this.audioCtx.currentTime
       );
       loadedSample.sample.sample_settings.sampleVolume = volume;
     }
@@ -246,7 +237,7 @@ export default class SamplerEngine {
       console.log('Playing sample: ', s);
       if (s && s.buffer) {
         const voice = new SingleUseVoice(
-          this.audioContext,
+          this.audioCtx,
           s.buffer,
           s.sample.sample_settings,
           s.sample.id,
@@ -272,7 +263,7 @@ export default class SamplerEngine {
 
   setMasterVolume(volume: number) {
     // add ramp?
-    this.masterGain.gain.setValueAtTime(volume, this.audioContext.currentTime);
+    this.masterGain.gain.setValueAtTime(volume, this.audioCtx.currentTime);
   }
 
   getMasterVolume(): number {
@@ -317,9 +308,7 @@ export default class SamplerEngine {
         try {
           const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
           const arrayBuffer = await blob.arrayBuffer();
-          const audioBuffer = await this.audioContext.decodeAudioData(
-            arrayBuffer
-          );
+          const audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
 
           const newSample: Sample_db = createNewSampleObject(
             `new-sample${Date.now().toString()}`, // date eða index eðeikka

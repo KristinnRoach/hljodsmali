@@ -62,9 +62,11 @@ export default function SamplerProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { audioCtx } = useReactAudioCtx();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const { audioCtx } = useReactAudioCtx();
+
   const samplerEngine = SamplerEngine.getInstance(audioCtx);
 
   // State
@@ -210,7 +212,7 @@ export default function SamplerProvider({
     const loadSamples = async () => {
       // TODO: fix edge case where slug is not unique (e.g. slug to id map) ?
 
-      const ids = [];
+      const ids: string[] = [];
       const loadPromises = selectedSlugsMemo.map(async (slug) => {
         const sample = allSamples.find((s) => s.slug === slug);
         if (sample && sample.id) {

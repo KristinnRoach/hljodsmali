@@ -4,7 +4,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Icon from './Basic/Icon';
 import { Save, Trash2 } from 'react-feather';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './LinkList.module.scss';

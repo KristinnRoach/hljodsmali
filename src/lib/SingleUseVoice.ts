@@ -10,11 +10,11 @@ export default class SingleUseVoice {
 
   private source: AudioBufferSourceNode;
   private sampleId: string;
-  private midiNote: number;
+  private midiNote: number = -1;
   private voiceGain: GainNode;
   private settings: Sample_settings;
-  private trigger: number | null = null;
-  private held: number | null = null;
+  private trigger: number = -1;
+  private held: number = -1;
 
   constructor(
     private audioCtx: AudioContext,

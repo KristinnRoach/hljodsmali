@@ -1,14 +1,22 @@
+// src/components/Sampler/error.tsx
 'use client';
 
-import { FC } from 'react';
+import { useEffect } from 'react';
 
-const error = ({ error, reset }: { error: Error; reset: () => void }) => {
-  return (
-    <div>
-      An error occured..
-      <button onClick={reset}>Try again?</button>
-    </div>
-  );
+type ErrorProps = {
+  error: Error & { digest?: string };
+  reset: () => void;
 };
 
-export default error;
+export default function Error({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div>
+      <h2>Something went wrong!</h2>
+      <button onClick={reset}>Try again</button>
+    </div>
+  );
+}

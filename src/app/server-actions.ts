@@ -49,9 +49,11 @@ export async function fetchSampleAudio(sampleId: string): Promise<ArrayBuffer> {
   }
 }
 
-export async function getSampleUrl(sample: Sample_db): Promise<string> {
-  return pb.files.getUrl(sample, sample.sample_file);
-}
+// fix string vs file if this is needed
+
+// export async function getSampleUrl(sample: Sample_db): Promise<string> {
+//   return pb.files.getUrl(sample, sample.sample_file);
+// }
 
 // export async function fetchSampleAudio(sample: Sample): Promise<AudioBuffer> {
 //   const url = await pb.files.getUrl(sample, sample.sample_file);

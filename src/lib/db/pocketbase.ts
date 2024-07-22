@@ -11,11 +11,14 @@ export default pb;
 export async function createSampleRecord( // check compatibility with older version (below)
   sample: Partial<Sample_db>
 ): Promise<Sample_db> {
+  if (!sample.bufferDuration)
+    throw new Error('Buffer duration is required to createSampleRecord');
+
   const formData = new FormData();
   formData.append('name', sample.name);
   formData.append('slug', sample.slug);
   formData.append('sample_file', sample.sample_file as File); // as File ??
-  formData.append('bufferDuration', sample.bufferDuration.toString());
+  formData.append('bufferDuration', sample.bufferDuration?.toString());
   formData.append('sample_settings', JSON.stringify(sample.sample_settings));
 
   if (pb.authStore.model?.id) {

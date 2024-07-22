@@ -1,3 +1,4 @@
+// src/contexts/react-audio-context.tsx
 'use client';
 
 import React, { createContext, useContext, useEffect } from 'react';
@@ -24,20 +25,21 @@ export default function ReactAudioCtxProvider({
     });
   }
 
+  if (!audioCtx) {
+    console.warn('Failed to create audio context');
+    throw new Error('Failed to create audio context');
+  }
+
   useEffect(() => {
-    if (!audioCtx) {
-      // would it be better to just create a new audio context here?
-      console.error('Failed to create audio context');
-      throw new Error('Failed to create audio context');
-    } else {
+    if (audioCtx) {
       const handleStateChange = () => {
-        resumeAudioContext(audioCtx);
+        resumeAudioContext(audioCtx!);
       };
 
       audioCtx.addEventListener('statechange', handleStateChange);
 
       return () => {
-        audioCtx.removeEventListener('statechange', handleStateChange);
+        audioCtx?.removeEventListener('statechange', handleStateChange);
         // audioCtx.close(); // unecessary and could cause issues?
         // console.warn('audioCtx closed from ReactAudioCtxProvider');
       };
