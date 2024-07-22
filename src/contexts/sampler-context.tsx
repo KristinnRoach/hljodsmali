@@ -184,7 +184,7 @@ export default function SamplerProvider({
         console.error('Error decoding dropped audio file:', error);
       }
     },
-    [audioCtx, samplerEngine, router, audioCtx]
+    [audioCtx, samplerEngine, router]
   );
 
   useEffect(() => {
@@ -251,7 +251,7 @@ export default function SamplerProvider({
     return () => {
       samplerEngine.setSelectedSampleIds([]);
     };
-  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine, audioCtx]); // allSamples ?
+  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine]); // allSamples ?
 
   const getSelectedSamples = useCallback(() => {
     // const selectedIds = searchParams.getAll('samples');
@@ -381,7 +381,7 @@ export default function SamplerProvider({
     if (!(samplerEngine && audioCtx)) return;
 
     await samplerEngine.startRecording();
-  }, [samplerEngine]);
+  }, [samplerEngine, audioCtx]);
 
   const stopRecording = useCallback(async () => {
     if (!(samplerEngine && audioCtx)) return;
