@@ -45,6 +45,12 @@ const samplesSchema = {
       },
     }),
     new SchemaField({
+      // CHECK WHEN IMPLEMENTED
+      name: 'zeroCrossings',
+      type: 'json',
+      required: true,
+    }),
+    new SchemaField({
       name: 'sample_settings',
       type: 'json',
       options: {

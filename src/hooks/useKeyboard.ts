@@ -37,18 +37,15 @@ export default function useKeyboard() {
       if (
         !isEnabled.current ||
         event.repeat ||
-        pressedKeys.current.has(event.code)
-      )
+        pressedKeys.current.has(event.code) ||
+        event.target instanceof HTMLTextAreaElement || // ignore keyboard events when typing in input fields or textareas
+        (event.target instanceof HTMLInputElement &&
+          event.target.type === 'text')
+      ) {
         return;
+      }
 
       pressedKeys.current.add(event.code);
-
-      // if (
-      //   event.target instanceof HTMLInputElement ||
-      //   event.target instanceof HTMLTextAreaElement
-      // ) {
-      //   return; // ignore keyboard events when typing in input fields // NOT TESTED
-      // }
 
       switch (event.code) {
         case 'CapsLock':
@@ -87,7 +84,16 @@ export default function useKeyboard() {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (!isEnabled.current) return;
+      if (
+        !isEnabled.current ||
+        event.repeat ||
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target instanceof HTMLInputElement &&
+          event.target.type === 'text')
+      ) {
+        return;
+      }
+
       pressedKeys.current.delete(event.code);
 
       switch (event.code) {

@@ -6,6 +6,7 @@ import {
   getDefaultSampleSettings,
   createNewSampleObject,
 } from '../types/sample';
+import { findZeroCrossings } from './DSP/zeroCrossingUtils';
 
 export type LoadedSample = {
   sample: Sample_db;
@@ -108,6 +109,17 @@ export default class SamplerEngine {
       sample_settings: updatedSampleSettings,
     };
 
+    if (!sample.zeroCrossings || sample.zeroCrossings.length === 0) {
+      updatedSample.zeroCrossings = findZeroCrossings(buffer);
+    }
+
+    SingleUseVoice.zeroCrossings.set(
+      updatedSample.id,
+      updatedSample.zeroCrossings! // ?? [] should not be necessary
+    );
+
+    console.log('Zero crossings:', SingleUseVoice.zeroCrossings);
+
     const sampleGain = this.audioCtx.createGain();
     sampleGain.connect(this.masterGain);
     sampleGain.gain.value = updatedSampleSettings.sampleVolume;
@@ -134,6 +146,7 @@ export default class SamplerEngine {
   // }
 
   addBufferDurationToLoadedSamples(): void {
+    // remove function if redundant, else add zeroCrossings
     this.loadedSamples.forEach((loadedSample, key) => {
       if (loadedSample.buffer && loadedSample.buffer.duration) {
         loadedSample.sample.bufferDuration = loadedSample.buffer.duration;
@@ -238,7 +251,7 @@ export default class SamplerEngine {
 
     // can this be done in paralell instead of sequentially?
     selected.forEach((s) => {
-      console.log('Playing sample: ', s);
+      // console.log('Playing sample: ', s);
       if (s && s.buffer) {
         const voice = new SingleUseVoice(
           this.audioCtx,
@@ -249,8 +262,9 @@ export default class SamplerEngine {
         );
         // voice.voiceGain.connect(loadedSample.sampleGain);
         // loadedSample.sampleGain.connect(this.masterGain);
+
         voice.start(midiNote);
-        console.log('new voice: ', voice);
+        // console.log('new voice: ', voice);
       }
     });
   }
@@ -331,17 +345,17 @@ export default class SamplerEngine {
       this.mediaRecorder!.stop();
     });
   }
-
-  // getNewRecordings(): Sample_db[] {
-  //   const newRecordings = [...this.newRecordedSamples];
-  //   this.newRecordedSamples = [];
-  //   return newRecordings;
-  // }
-
-  // hasNewRecordings(): boolean {
-  //   return this.newRecordedSamples.length > 0;
-  // }
 }
+
+// getNewRecordings(): Sample_db[] {
+//   const newRecordings = [...this.newRecordedSamples];
+//   this.newRecordedSamples = [];
+//   return newRecordings;
+// }
+
+// hasNewRecordings(): boolean {
+//   return this.newRecordedSamples.length > 0;
+// }
 
 // // Move to sample type file, localize creation of sample_db objects to one place for consistency
 

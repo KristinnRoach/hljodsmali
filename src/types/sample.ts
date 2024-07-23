@@ -1,5 +1,7 @@
 // src/types/sample.ts
 
+import { findZeroCrossings } from '../lib/DSP/zeroCrossingUtils';
+
 export type Sample_settings = {
   startPoint: number;
   endPoint: number;
@@ -23,6 +25,7 @@ export type Sample_db = {
   bufferDuration: number;
   created: string;
   updated: string;
+  zeroCrossings?: number[]; // remove ? when db samples updated
   sample_settings: Sample_settings;
 };
 
@@ -51,12 +54,18 @@ export function createNewSampleObject(
   name: string,
   blob: Blob,
   duration: number = 0,
-  user: string = ''
+  user: string = '',
+  audioBuffer?: AudioBuffer
 ): Sample_db {
   const file = new File([blob], name + '.webm', { type: 'audio/webm' }); // check for consistency
   const slug = name.toLowerCase().replace(/ /g, '-');
 
   const defaultSettings = getDefaultSampleSettings(duration);
+
+  // Find zero crossings
+  const zeroCrossings: number[] = audioBuffer
+    ? findZeroCrossings(audioBuffer)
+    : [];
 
   const sample: Sample_db = {
     id: tempId,
@@ -64,9 +73,10 @@ export function createNewSampleObject(
     slug: slug,
     user: user, // Add user ID
     sample_file: file,
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
+    created: new Date().toISOString(), // remove?
+    updated: new Date().toISOString(), // remove?
     bufferDuration: duration,
+    zeroCrossings: zeroCrossings,
     sample_settings: defaultSettings,
   };
   return sample;

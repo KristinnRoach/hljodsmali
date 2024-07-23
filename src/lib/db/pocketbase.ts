@@ -19,6 +19,9 @@ export async function createSampleRecord( // check compatibility with older vers
   formData.append('slug', sample.slug);
   formData.append('sample_file', sample.sample_file as File); // as File ??
   formData.append('bufferDuration', sample.bufferDuration?.toString());
+
+  formData.append('zeroCrossings', JSON.stringify(sample.zeroCrossings));
+
   formData.append('sample_settings', JSON.stringify(sample.sample_settings));
 
   if (pb.authStore.model?.id) {
@@ -31,6 +34,9 @@ export async function createSampleRecord( // check compatibility with older vers
     formData.get('slug'),
     formData.get('sample_file'),
     formData.get('bufferDuration'),
+
+    formData.get('zeroCrossings'),
+
     formData.get('sample_settings')
   );
 
@@ -82,7 +88,17 @@ export async function fetchSamples(): Promise<Sample_db[]> {
       sort: '-created',
     });
     console.log('Fetched samples:', samples);
-    return samples;
+    return samples.map((s) => ({
+      ...s,
+      zeroCrossings: Array.isArray(s.zeroCrossings)
+        ? // if there is a possibility of zeroCrossings or sampleSettings being already in memory, if not then just parse the json
+          s.zeroCrossings
+        : JSON.parse(s.zeroCrossings as unknown as string),
+      sample_settings:
+        typeof s.sample_settings === 'string'
+          ? JSON.parse(s.sample_settings)
+          : s.sample_settings,
+    }));
   } catch (error) {
     console.error('Error fetching sample records:', error);
     if (error instanceof Error) {

@@ -27,7 +27,7 @@ export default function ReactAudioCtxProvider({
       });
       setAudioCtx(newAudioCtx);
     }
-  }, []);
+  }, [audioCtx]);
 
   // if (!audioCtx) {
   //   console.warn('Failed to create audio context');

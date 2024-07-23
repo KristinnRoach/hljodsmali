@@ -1,0 +1,19 @@
+// src/hooks/useZeroCrossing.ts
+import { useMemo } from 'react';
+import {
+  findZeroCrossings,
+  snapToNearestZeroCrossing,
+} from '../lib/DSP/ZeroCrossingDetector';
+
+export function useZeroCrossing(audioBuffer: AudioBuffer | null) {
+  const zeroCrossings = useMemo(() => {
+    if (!audioBuffer) return [];
+    return findZeroCrossings(audioBuffer);
+  }, [audioBuffer]);
+
+  const snapToZeroCrossing = useMemo(() => {
+    return (time: number) => snapToNearestZeroCrossing(time, zeroCrossings);
+  }, [zeroCrossings]);
+
+  return { zeroCrossings, snapToZeroCrossing };
+}
