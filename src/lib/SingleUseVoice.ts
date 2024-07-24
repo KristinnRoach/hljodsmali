@@ -1,11 +1,14 @@
 import { Sample_settings } from '../types/sample';
+import { snapToNearestZeroCrossing } from '../lib/DSP/zeroCrossingUtils';
 
 export default class SingleUseVoice {
   private static allVoices: Set<SingleUseVoice> = new Set();
+  static zeroCrossings: Map<string, number[]> = new Map(); // gera private og setter ef þetta virkar
 
   // Loop & Hoild: should be able to save for each sample or global? // global makes sense with CapsLock
   private static globalLoop: boolean = false;
   private static hold: boolean = false;
+
   // private static sampleGainNodesMap: Map<string, GainNode> = new Map();
 
   private source: AudioBufferSourceNode;
@@ -86,7 +89,6 @@ export default class SingleUseVoice {
       if (voice.midiNote === midiNote) {
         if (!SingleUseVoice.hold) {
           // (!voice.source.loop) {
-          console.log('releaseNote static :', voice);
           voice.triggerRelease();
         }
       }
@@ -155,9 +157,7 @@ export default class SingleUseVoice {
       0.0001,
       this.now() + this.settings.releaseTime
     );
-    this.held = this.now() - this.trigger; // round
-
-    console.log('held:', this.held);
+    this.held = this.now() - this.trigger; // not using !!
 
     this.source.stop(this.now() + this.settings.releaseTime + 0.1);
 
@@ -194,12 +194,18 @@ export default class SingleUseVoice {
     });
   }
 
-  updateLoopPoints(settings: Partial<Sample_settings> = this.settings) {
-    if (settings.loopStart) {
-      this.source.loopStart = settings.loopStart;
+  updateLoopPoints(updated: Partial<Sample_settings> = this.settings) {
+    if (updated.loopStart) {
+      this.source.loopStart = snapToNearestZeroCrossing(
+        updated.loopStart,
+        SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+      );
     }
-    if (settings.loopEnd) {
-      this.source.loopEnd = settings.loopEnd;
+    if (updated.loopEnd) {
+      this.source.loopEnd = snapToNearestZeroCrossing(
+        updated.loopEnd,
+        SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+      );
     }
   }
 
