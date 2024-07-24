@@ -354,12 +354,18 @@ export default function SamplerProvider({
   async function deleteSample(id: string) {
     if (!(samplerEngine && audioCtx)) return;
 
+    const name = allSamples.find((s) => s.id === id)?.name;
+
+    const confirmDelete = confirm(`Delete ${name || 'this sample'}?`);
+    if (!confirmDelete) return;
+
     await deleteSampleRecord(id).catch((error) =>
       console.error(`Error deleting sample ${id}:`, error)
     );
     samplerEngine.unloadSample(id);
     setAllSamples((prev) => prev.filter((s) => s.id !== id));
     unsavedSampleIds.current.delete(id);
+    selectedSlugsMemo.splice(selectedSlugsMemo.indexOf(id), 1);
     router.replace(`?samples=${selectedSlugsMemo[0]}`, { scroll: false });
   }
 

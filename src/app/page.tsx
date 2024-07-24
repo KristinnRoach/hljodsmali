@@ -12,7 +12,7 @@ export default function Home() {
   // async?
   return (
     <>
-      <main>
+      <main className={styles.main}>
         <Auth />
         <Sampler_cli />
         {/* <div className={styles.position_fixed}>
