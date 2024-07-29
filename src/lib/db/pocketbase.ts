@@ -118,11 +118,19 @@ export async function fetchSampleByID(sampleId: string): Promise<Sample_db> {
   }
 }
 
+export function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+}
+
 export async function getSampleAudioBuffer(
   sample: Sample_db,
   audioCtx: AudioContext
 ): Promise<AudioBuffer> {
-  'use client'; // ?
+  'use client'; // ??
 
   try {
     const url = pb.files.getUrl(sample, sample.sample_file as string);
@@ -133,14 +141,6 @@ export async function getSampleAudioBuffer(
     console.error('Error loading audio buffer:', error);
     throw error;
   }
-}
-
-export function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-{2,}/g, '-');
 }
 
 // export const createSampleRecord = async (

@@ -7,18 +7,24 @@ import Auth from '../components/Auth/Auth';
 
 import styles from '../styles/page.module.scss';
 import Shapes from '../components/UI/Shapes/Shapes';
+import Visualizer_cli from '../components/UI/Visualizer_cli';
 
 export default function Home() {
   // async?
   return (
     <>
       <main className={styles.main}>
-        <Auth />
-        <Sampler_cli />
+        <div className={styles.login}>
+          <Auth />
+        </div>
+        <div className={styles.topBar}>
+          <Sampler_cli />
+        </div>
         {/* <div className={styles.position_fixed}>
           <KeyboardGUI />
         </div> */}
-        <Shapes />
+        {/* <Shapes /> */}
+        <Visualizer_cli />
       </main>
     </>
   );

@@ -2,10 +2,11 @@
 
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Save, Trash2 } from 'react-feather';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useShiftKey } from '../../hooks/useShiftKey';
 import styles from './LinkList.module.scss';
 
 type Item = {
@@ -33,18 +34,17 @@ export default function LinkList<T extends Item>({
 }: ListProps<T>) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isShiftDown, setIsShiftDown] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Memoize items optimal ?
-  const memoizedItems = useMemo(() => items, [items]);
+  const isShiftDown = useShiftKey();
+
   const selectedItems = searchParams.getAll(paramName);
 
-  const totalPages = Math.ceil(memoizedItems.length / itemsPerPage);
+  const totalPages = Math.ceil(items.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentItems = memoizedItems.slice(startIndex, endIndex);
+  const currentItems = items.slice(startIndex, endIndex);
 
   function getUpdatedHref(itemSlug: string): string {
     const newSelectedSlugs = isShiftDown
@@ -55,28 +55,6 @@ export default function LinkList<T extends Item>({
       .map((slug) => `${paramName}=${slug}`)
       .join('&')}`;
   }
-
-  function handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Shift') {
-      setIsShiftDown(true);
-    }
-  }
-
-  function handleKeyUp(event: KeyboardEvent): void {
-    if (event.key === 'Shift') {
-      setIsShiftDown(false);
-    }
-  }
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
 
   const handleClick = (
     event: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
@@ -133,11 +111,3 @@ export default function LinkList<T extends Item>({
     </section>
   );
 }
-
-// function getUpdatedHref(itemId: string): string {
-//   const newSelectedItems = isShiftDown
-//     ? [...selectedItems, itemId]
-//     : [itemId];
-
-//   return `?${newSelectedItems.map((id) => `${paramName}=${id}`).join('&')}`;
-// }

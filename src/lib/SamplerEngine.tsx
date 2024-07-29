@@ -9,10 +9,15 @@ import {
 
 import { findZeroCrossings } from './DSP/zeroCrossingUtils';
 
-export type LoadedSample = {
+export type Loaded = {
   sample: Sample_db;
   buffer: AudioBuffer | null;
-  sampleGain: GainNode;
+
+  nodes: {
+    sampleGain: GainNode;
+    lowCut: BiquadFilterNode;
+    highCut: BiquadFilterNode;
+  };
 };
 
 /* Singleton class for managing audio playback and recording */
@@ -24,7 +29,7 @@ export default class SamplerEngine {
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
 
-  private loadedSamples: Map<string, LoadedSample> = new Map();
+  private loadedSamples: Map<string, Loaded> = new Map();
   private selectedSampleIds: Set<string> = new Set();
 
   // private newRecordedSamples: Sample_db[] = [];
@@ -45,8 +50,12 @@ export default class SamplerEngine {
     this.masterGain.gain.value = 0.75;
     this.masterGain.connect(this.audioCtx.destination);
 
+    // LIMITER / COMPRESSOR NODE
+
     this.setupRecording();
     console.log('Audio Engine context: ', this.audioCtx);
+
+    SingleUseVoice.initialize(this.audioCtx.sampleRate);
   }
 
   /* Sample Engine instance */
@@ -96,48 +105,110 @@ export default class SamplerEngine {
 
   /* Sample Manager */
 
-  loadSample(sample: Sample_db, buffer: AudioBuffer): LoadedSample {
-    const defaultSettings = getDefaultSampleSettings(buffer.duration);
+  createGain(volume: number): GainNode {
+    const newGain = this.audioCtx.createGain();
+    newGain.gain.value = volume;
+    return newGain;
+  }
 
-    const updatedSampleSettings: Sample_settings = {
-      ...defaultSettings,
-      ...sample.sample_settings,
+  setupFilters(
+    lowCutoff?: number,
+    highCutoff?: number
+  ): { lowCut: BiquadFilterNode; highCut: BiquadFilterNode } {
+    const lowCut = this.audioCtx.createBiquadFilter();
+    lowCut.type = 'highpass';
+    lowCut.frequency.value = lowCutoff || 40;
+
+    const highCut = this.audioCtx.createBiquadFilter();
+    highCut.type = 'lowpass';
+    highCut.frequency.value = highCutoff || 20000;
+
+    return { lowCut: lowCut, highCut: highCut };
+  }
+
+  connectSampleAudioNodes(
+    sampleGain: GainNode,
+    lowCut: BiquadFilterNode,
+    highCut: BiquadFilterNode,
+    masterOut: GainNode = this.masterGain
+  ): void {
+    if (!masterOut) throw new Error('Master output not set up');
+
+    sampleGain.connect(lowCut);
+    lowCut.connect(highCut);
+    highCut.connect(masterOut);
+    masterOut.connect(this.audioCtx.destination);
+  }
+
+  loadSample(sampleToLoad: Sample_db, buffer: AudioBuffer): Loaded {
+    const loading: Sample_db = {
+      ...sampleToLoad,
+      bufferDuration: buffer.duration,
+      sample_settings: {
+        ...getDefaultSampleSettings(buffer.duration),
+        ...sampleToLoad.sample_settings,
+      },
     };
 
-    const updatedSample: Sample_db = {
-      ...sample,
-      bufferDuration: buffer.duration, // redundant?
-      sample_settings: updatedSampleSettings,
-    };
-
-    if (!sample.zeroCrossings || sample.zeroCrossings.length === 0) {
-      updatedSample.zeroCrossings = findZeroCrossings(buffer);
+    if (
+      !sampleToLoad.zeroCrossings ||
+      sampleToLoad.zeroCrossings.length === 0
+    ) {
+      loading.zeroCrossings = findZeroCrossings(buffer);
     }
 
-    SingleUseVoice.zeroCrossings.set(
-      updatedSample.id,
-      updatedSample.zeroCrossings! // ?? [] should not be necessary
-    );
+    SingleUseVoice.zeroCrossings.set(loading.id, loading.zeroCrossings ?? []);
 
     console.log('Zero crossings:', SingleUseVoice.zeroCrossings);
 
-    const sampleGain = this.audioCtx.createGain();
-    sampleGain.connect(this.masterGain);
-    sampleGain.gain.value = updatedSampleSettings.sampleVolume;
+    const settings = loading.sample_settings;
 
-    const loadedSample: LoadedSample = {
-      sample: updatedSample,
+    // --------DELETE THIS WHEN FILTERS ARE IMPLEMENTED--------
+    if (settings.lowCutoff === undefined) {
+      settings.lowCutoff = 40;
+    }
+    if (settings.highCutoff === undefined) {
+      settings.highCutoff = 20000;
+    }
+    //---------------------------------------------------------
+
+    const sampleGain = this.createGain(settings.sampleVolume);
+
+    const { lowCut, highCut } = this.setupFilters(
+      settings.lowCutoff,
+      settings.highCutoff
+    );
+
+    this.connectSampleAudioNodes(sampleGain, lowCut, highCut);
+
+    // CREATE MASTER LIMITER / COMPRESSOR NODE
+
+    const loaded: Loaded = {
+      sample: loading,
       buffer: buffer,
-      sampleGain: sampleGain,
+      nodes: {
+        sampleGain: sampleGain,
+        lowCut: lowCut,
+        highCut: highCut,
+      },
     };
 
-    this.loadedSamples.set(sample.id, loadedSample);
+    this.loadedSamples.set(loaded.sample.id, loaded);
 
-    return loadedSample;
+    SingleUseVoice.sampleSettings.set(
+      loaded.sample.id,
+      loaded.sample.sample_settings
+    );
+
+    console.log('Loaded sample:', loaded);
+
+    return loaded;
   }
 
   unloadSample(id: string): void {
     this.loadedSamples.delete(id);
+    SingleUseVoice.sampleSettings.delete(id);
+    SingleUseVoice.zeroCrossings.delete(id);
   }
 
   // getUpdatedSamples(): Sample_db[] {
@@ -157,13 +228,13 @@ export default class SamplerEngine {
   }
 
   setSampleVolume(sampleId: string, volume: number) {
-    const loadedSample = this.loadedSamples.get(sampleId);
-    if (loadedSample) {
-      loadedSample.sampleGain.gain.setValueAtTime(
+    const loaded = this.loadedSamples.get(sampleId);
+    if (loaded) {
+      loaded.nodes.sampleGain.gain.setValueAtTime(
         volume,
         this.audioCtx.currentTime
       );
-      loadedSample.sample.sample_settings.sampleVolume = volume;
+      loaded.sample.sample_settings.sampleVolume = volume;
     }
   }
 
@@ -173,7 +244,9 @@ export default class SamplerEngine {
   }
 
   isSampleLoaded(id: string): boolean {
-    return this.loadedSamples.has(id);
+    const sample = this.loadedSamples.get(id);
+
+    return (sample && sample.buffer && sample.nodes.sampleGain) !== undefined;
   }
 
   setSelectedSampleIds(ids: string[]): void {
@@ -186,6 +259,14 @@ export default class SamplerEngine {
         console.error(`Sample ${id} not loaded`);
       }
     });
+  }
+
+  isPlaying(): boolean {
+    return SingleUseVoice.isPlaying();
+  }
+
+  getCurrentPlayheadPosition(): number {
+    return SingleUseVoice.getCurrentPlayheadPosition();
   }
 
   getSelectedSampleIds(): string[] {
@@ -201,31 +282,43 @@ export default class SamplerEngine {
       .filter((sample): sample is Sample_db => sample !== undefined);
   }
 
-  getLoadedSamples(): LoadedSample[] {
+  getLoadedSamples(): Loaded[] {
     return Array.from(this.loadedSamples.values());
   }
 
-  getSelectedLoadedSamples(): LoadedSample[] {
+  getSelectedLoadedSamples(): Loaded[] {
     return Array.from(this.loadedSamples.values()).filter((loadedSample) =>
       this.selectedSampleIds.has(loadedSample.sample.id)
     );
   }
 
-  updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
-    try {
-      this.updateSelectedSampleSettings(id, settings);
-    } catch (error) {
-      console.error(`Error updating sample ${id}:`, error);
-    }
-  }
+  // updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
+  //   try {
+  //     this.updateSelectedSampleSettings(id, settings);
+  //   } catch (error) {
+  //     console.error(`Error updating sample ${id}:`, error);
+  //   }
+  // }
 
-  private updateSelectedSampleSettings(
-    id: string,
-    settings: Partial<Sample_settings>
-  ) {
+  updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
     const loadedSample = this.loadedSamples.get(id);
 
     if (loadedSample) {
+      if (settings.lowCutoff !== undefined) {
+        loadedSample.nodes.lowCut.frequency.setValueAtTime(
+          settings.lowCutoff,
+          this.audioCtx.currentTime
+        );
+        console.log('Low cut:', settings.lowCutoff);
+      }
+      if (settings.highCutoff !== undefined) {
+        loadedSample.nodes.highCut.frequency.setValueAtTime(
+          settings.highCutoff,
+          this.audioCtx.currentTime
+        );
+        console.log('High cut:', settings.highCutoff);
+      }
+
       loadedSample.sample = {
         ...loadedSample.sample,
         sample_settings: {
@@ -233,6 +326,11 @@ export default class SamplerEngine {
           ...settings,
         },
       };
+
+      SingleUseVoice.sampleSettings.set(
+        loadedSample.sample.id,
+        loadedSample.sample.sample_settings
+      );
 
       if (
         'loopStart' in settings ||
@@ -252,20 +350,10 @@ export default class SamplerEngine {
 
     // can this be done in paralell instead of sequentially?
     selected.forEach((s) => {
-      // console.log('Playing sample: ', s);
       if (s && s.buffer) {
-        const voice = new SingleUseVoice(
-          this.audioCtx,
-          s.buffer,
-          s.sample.sample_settings,
-          s.sample.id,
-          s.sampleGain
-        );
-        // voice.voiceGain.connect(loadedSample.sampleGain);
-        // loadedSample.sampleGain.connect(this.masterGain);
-
+        const voice = new SingleUseVoice(this.audioCtx, s.buffer, s.sample.id);
+        voice.getVoiceGain().connect(s.nodes.sampleGain);
         voice.start(midiNote);
-        // console.log('new voice: ', voice);
       }
     });
   }

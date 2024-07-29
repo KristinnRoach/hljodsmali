@@ -12,6 +12,8 @@ export type Sample_settings = {
   sampleVolume: number;
   loopVolume: number;
   loopLocked: boolean;
+  lowCutoff: number;
+  highCutoff: number;
 };
 
 /* The Sample type should be the same as in the database schema. */
@@ -44,6 +46,8 @@ export function getDefaultSampleSettings(
     sampleVolume: 0.8,
     loopVolume: 0.7,
     loopLocked: false,
+    lowCutoff: 40,
+    highCutoff: 20000,
   };
 }
 
@@ -62,7 +66,7 @@ export function createNewSampleObject(
 
   const defaultSettings = getDefaultSampleSettings(duration);
 
-  // Find zero crossings
+  // Find zero crossings // óþarfi hér?
   const zeroCrossings: number[] = audioBuffer
     ? findZeroCrossings(audioBuffer)
     : [];
@@ -71,7 +75,7 @@ export function createNewSampleObject(
     id: tempId,
     name: name,
     slug: slug,
-    user: user, // Add user ID
+    user: user, // Add user ID ? remove?
     sample_file: file,
     created: new Date().toISOString(), // remove?
     updated: new Date().toISOString(), // remove?

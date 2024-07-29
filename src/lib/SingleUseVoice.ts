@@ -1,9 +1,12 @@
 import { Sample_settings } from '../types/sample';
 import { snapToNearestZeroCrossing } from '../lib/DSP/zeroCrossingUtils';
+import { snapDurationToNote, C5_DURATION_SEC } from './utils/noteToFreq';
 
 export default class SingleUseVoice {
+  private static sampleRate: number = 48000;
   private static allVoices: Set<SingleUseVoice> = new Set();
   static zeroCrossings: Map<string, number[]> = new Map(); // gera private og setter ef þetta virkar
+  static sampleSettings: Map<string, Sample_settings> = new Map();
 
   // Loop & Hoild: should be able to save for each sample or global? // global makes sense with CapsLock
   private static globalLoop: boolean = false;
@@ -19,22 +22,55 @@ export default class SingleUseVoice {
   private trigger: number = -1;
   private held: number = -1;
 
+  // // private minLoopLength: number | null = null;
+  // private static readonly C1_FREQUENCY = 32.7; // C1 frequency in Hz
+  // private static minLoopLengthInSamples: number;
+
+  // private static calculateMinLoopLength(sampleRate: number): number {
+  //   const periodInSeconds = 1 / SingleUseVoice.C1_FREQUENCY;
+  //   return Math.ceil(periodInSeconds * sampleRate);
+  // }
+
+  // Static initializer block (supported in modern JavaScript/TypeScript)
+  static initialize(sampleRate: number = 48000) {
+    SingleUseVoice.sampleRate = sampleRate;
+    // SingleUseVoice.minLoopLengthInSamples =
+    //   SingleUseVoice.calculateMinLoopLength(sampleRate);
+  }
+
+  // // Method to update minLoopLengthInSamples if a different sample rate is encountered
+  // static updateMinLoopLength(sampleRate: number = SingleUseVoice.sampleRate) {
+  //   if (
+  //     SingleUseVoice.minLoopLengthInSamples === undefined ||
+  //     sampleRate !== SingleUseVoice.sampleRate
+  //   ) {
+  //     SingleUseVoice.minLoopLengthInSamples =
+  //       SingleUseVoice.calculateMinLoopLength(sampleRate);
+  //   }
+  // }
+
   constructor(
     private audioCtx: AudioContext,
     readonly buffer: AudioBuffer,
-    readonly sample_settings: Sample_settings, // býr til copy?
-    sampleId: string,
-    sampleGainNode: GainNode
+    sampleId: string
   ) {
+    console.log(
+      'SingleUseVoice.sampleSettings: ',
+      SingleUseVoice.sampleSettings
+    );
+    if (!SingleUseVoice.sampleSettings.has(sampleId)) {
+      throw new Error('Sample not loaded, id: ' + sampleId);
+    }
+
+    this.settings = SingleUseVoice.sampleSettings.get(sampleId)!;
     SingleUseVoice.allVoices.add(this);
+
     this.source = this.audioCtx.createBufferSource();
     this.source.buffer = buffer;
     this.voiceGain = this.audioCtx.createGain();
     this.voiceGain.gain.value = 0;
     this.source.connect(this.voiceGain);
-    this.voiceGain.connect(sampleGainNode);
 
-    this.settings = sample_settings;
     this.source.loop = SingleUseVoice.globalLoop || this.settings.loopLocked;
 
     this.sampleId = sampleId;
@@ -47,6 +83,18 @@ export default class SingleUseVoice {
   }
 
   /*  SHOULD USE 'SingleUseVoice.sampleGainNodesMap' or 'this.sampleGainNodesMap' for static stuff ?? */
+
+  static isPlaying(): boolean {
+    return SingleUseVoice.allVoices.size > 0;
+  }
+
+  static getCurrentPlayheadPosition() {
+    if (!(SingleUseVoice.allVoices.size > 0)) return 0;
+    const voices = Array.from(SingleUseVoice.allVoices);
+    if (voices[0].trigger <= 0) return 0;
+
+    return voices[0].now() - voices[0].trigger;
+  }
 
   static panic() {
     console.log('Panic! allVoices:', SingleUseVoice.allVoices);
@@ -95,19 +143,37 @@ export default class SingleUseVoice {
     });
   }
 
-  getSettings() {
-    return this.sample_settings;
-  }
+  // static updateSampleSettings( // ef set virkar ekki í samplerengine
+  //   sampleId: string,
+  //   settings: Partial<Sample_settings>
+  // ) {
+  //   SingleUseVoice.sampleSettings.set(sampleId, {
+  //     ...SingleUseVoice.sampleSettings.get(sampleId)!,
+  //     ...settings,
+  //   });
+  //   SingleUseVoice.updateActiveVoices(sampleId, settings);
+  // }
 
   now() {
     return this.audioCtx.currentTime;
+  }
+
+  getVoiceGain() {
+    return this.voiceGain;
   }
 
   start(midiNote: number) {
     const rate = 2 ** ((midiNote - 60) / 12);
     this.source.playbackRate.value = rate;
 
-    this.source.start(0, this.settings.startPoint);
+    this.source.start(
+      0,
+      this.settings.startPoint,
+      this.source.loop // sets end point only if not looping
+        ? undefined
+        : this.settings.endPoint - this.settings.startPoint
+    );
+    console.log('this.source.loop:', this.source.loop);
 
     // if (this.source.loop) {
     //   this.loopEnvelope();
@@ -127,14 +193,11 @@ export default class SingleUseVoice {
   loopEnvelope() {
     const { attackTime, releaseTime, loopStart, loopEnd } = this.settings;
     const loopDuration = loopEnd - loopStart;
-    const currentTime = this.now();
-    this.voiceGain.gain.setValueAtTime(0, currentTime);
-    this.voiceGain.gain.linearRampToValueAtTime(1, currentTime + attackTime);
-    this.voiceGain.gain.setValueAtTime(
-      1,
-      currentTime + loopDuration - releaseTime
-    );
-    this.voiceGain.gain.linearRampToValueAtTime(0, currentTime + loopDuration);
+    const now = this.now();
+    this.voiceGain.gain.setValueAtTime(0, now);
+    this.voiceGain.gain.linearRampToValueAtTime(1, now + attackTime);
+    this.voiceGain.gain.setValueAtTime(1, now + loopDuration - releaseTime);
+    this.voiceGain.gain.linearRampToValueAtTime(0, now + loopDuration);
   }
 
   triggerAttack() {
@@ -195,24 +258,118 @@ export default class SingleUseVoice {
   }
 
   updateLoopPoints(updated: Partial<Sample_settings> = this.settings) {
-    if (updated.loopStart) {
-      this.source.loopStart = snapToNearestZeroCrossing(
-        updated.loopStart,
-        SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+    let newLoopStart = updated.loopStart ?? this.settings.loopStart;
+    let newLoopEnd = updated.loopEnd ?? this.settings.loopEnd;
+
+    console.log('init looplength:', newLoopEnd - newLoopStart);
+
+    this.source.loopStart = snapToNearestZeroCrossing(
+      newLoopStart,
+      SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+    );
+    this.source.loopEnd = snapToNearestZeroCrossing(
+      newLoopEnd,
+      SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+    );
+
+    console.log('zero snap loop length: ', newLoopEnd - newLoopStart);
+
+    const loopLength = newLoopEnd - newLoopStart;
+
+    if (loopLength < C5_DURATION_SEC) return;
+    // Snap to C3 if close
+    if (loopLength < 0.02) {
+      const lengthAsC = snapDurationToNote(
+        newLoopEnd - newLoopStart,
+        ['C', 'G'],
+        'C',
+        'C',
+        2,
+        5,
+        'sec'
+      );
+      newLoopEnd = newLoopStart + (lengthAsC || newLoopEnd);
+
+      console.log(
+        'After C snap: newLoopEnd - newLoopStart:',
+        newLoopEnd - newLoopStart
       );
     }
-    if (updated.loopEnd) {
-      this.source.loopEnd = snapToNearestZeroCrossing(
-        updated.loopEnd,
-        SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
-      );
-    }
+
+    this.source.loopStart = newLoopStart;
+    this.source.loopEnd = newLoopEnd;
+
+    // // Update settings ? Needed ?
+    this.settings.loopStart = this.source.loopStart;
+    this.settings.loopEnd = this.source.loopEnd;
   }
 
   setLoopVolume(volume: number) {
     this.settings.loopVolume = volume;
   }
 }
+
+// C0 (16.35 Hz):
+// (1 / 16.35) * 1000 = 61.1620795107034 ms
+// C1 (32.70 Hz):
+// (1 / 32.70) * 1000 = 30.5810397553517 ms
+// C2 (65.41 Hz):
+// (1 / 65.41) * 1000 = 15.2881816237577 ms
+// C3 (130.81 Hz):
+// (1 / 130.81) * 1000 = 7.64468311290726 ms
+// C4 (261.63 Hz):
+// (1 / 261.63) * 1000 = 3.82234155638498 ms
+// C5 (523.25 Hz):
+// (1 / 523.25) * 1000 = 1.91117077819399 ms
+// C6 (1046.50 Hz):
+// (1 / 1046.50) * 1000 = 0.955585389097005 ms
+// C7 (2093.00 Hz):
+// (1 / 2093.00) * 1000 = 0.477792694455503 ms
+
+// testloop();
+
+// function calculateLoopLength(sampleRate: number, frequency: number): number {
+//   return Math.round(sampleRate / frequency);
+// }
+
+// // Function to calculate frequency of C for a given octave
+// function getCFrequency(octave: number): number {
+//   // C4 (middle C) is 261.63 Hz
+//   const C4_FREQUENCY = 261.63;
+//   // Each octave doubles the frequency
+//   return C4_FREQUENCY * Math.pow(2, octave - 4);
+// }
+
+// // Sample rate
+// const SAMPLE_RATE = 48000;
+
+// function testloop() {
+//   // Calculate and print loop lengths for C notes from C0 to C8
+//   for (let octave = 0; octave <= 8; octave++) {
+//     const frequency = getCFrequency(octave);
+//     const loopLength = calculateLoopLength(SAMPLE_RATE, frequency);
+//     console.log(
+//       `C${octave}: frequency = ${frequency.toFixed(
+//         2
+//       )} Hz, loop length = ${loopLength} samples`
+//     );
+//   }
+// }
+
+// updateLoopPoints(updated: Partial<Sample_settings> = this.settings) {
+//   if (updated.loopStart) {
+//     this.source.loopStart = snapToNearestZeroCrossing(
+//       updated.loopStart,
+//       SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+//     );
+//   }
+//   if (updated.loopEnd) {
+//     this.source.loopEnd = snapToNearestZeroCrossing(
+//       updated.loopEnd,
+//       SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+//     );
+//   }
+// }
 
 // loopEnvelope() {
 //   if (

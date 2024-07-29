@@ -24,6 +24,15 @@
   }
 }
 
+.waveform {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  width: 200px;
+}
+
 .slider {
   display: flex;
   flex-direction: row;

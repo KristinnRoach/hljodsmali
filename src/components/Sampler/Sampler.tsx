@@ -34,33 +34,44 @@ export default function Sampler_cli() {
   }
 
   return (
-    <div className={styles.sampler}>
-      {/* <section className={styles.buttons}> */}
-      <button onClick={saveAll} disabled={!hasUnsavedSamples}>
-        Save All
-      </button>
-      <Toggle label='Loop' isOn={isLooping} onToggle={toggleLoop} type='loop' />
-      <Toggle label='Hold' isOn={isHolding} onToggle={toggleHold} type='hold' />
+    <>
+      <div className={styles.sampler}>
+        <button onClick={saveAll} disabled={!hasUnsavedSamples}>
+          Save All
+        </button>
+        <Toggle
+          label='Loop'
+          isOn={isLooping}
+          onToggle={toggleLoop}
+          type='loop'
+        />
+        <Toggle
+          label='Hold'
+          isOn={isHolding}
+          onToggle={toggleHold}
+          type='hold'
+        />
 
-      <Recorder_CSR />
-      <section className={styles.samples}>
-        <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
-          {!isLoading && allSamples.length > 0 && (
-            <LinkList
-              items={allSamples}
-              title='Samples'
-              paramName='samples'
-              itemsPerPage={10}
-              onDelete={(id) => deleteSample(id)}
-              onSave={(id) => updateSample(id)}
-            />
-          )}
-          <MenuToggle label='Settings'>
-            <SampleSettings />
+        <Recorder_CSR />
+        <section className={styles.samples}>
+          <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
+            {!isLoading && allSamples.length > 0 && (
+              <LinkList
+                items={allSamples}
+                title='Samples'
+                paramName='samples'
+                itemsPerPage={10}
+                onDelete={(id) => deleteSample(id)}
+                onSave={(id) => updateSample(id)}
+              />
+            )}
+            <MenuToggle label='Settings'>
+              <SampleSettings />
+            </MenuToggle>
           </MenuToggle>
-        </MenuToggle>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   );
 }
 

@@ -9,6 +9,9 @@ type BasicSliderProps = {
   max: number;
   step?: number;
   onChange: (value: number) => void;
+  isLogarithmic?: boolean;
+  maxDynamic?: number;
+  minDynamic?: number;
 };
 
 const BasicSlider: React.FC<BasicSliderProps> = ({
@@ -18,32 +21,65 @@ const BasicSlider: React.FC<BasicSliderProps> = ({
   max,
   step,
   onChange,
+  isLogarithmic = false,
+  maxDynamic,
+  minDynamic,
 }) => {
-  // const [isDragging, setIsDragging] = useState(false);
+  const logToLinear = (logValue: number) => {
+    const minLog = Math.log(min);
+    const maxLog = Math.log(max);
+    const scale = (maxLog - minLog) / (max - min);
+    return Math.exp(minLog + scale * (logValue - min));
+  };
 
-  // const handleDragStart = () => {
-  //   setIsDragging(true);
-  // };
+  const linearToLog = (linearValue: number) => {
+    const minLog = Math.log(min);
+    const maxLog = Math.log(max);
+    const scale = (max - min) / (maxLog - minLog);
+    return min + scale * (Math.log(linearValue) - minLog);
+  };
 
-  // const handleDragEnd = () => {
-  //   setIsDragging(false);
-  // };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let newValue = parseFloat(e.target.value);
+    if (isLogarithmic) {
+      newValue = logToLinear(newValue);
+    }
+    if (maxDynamic !== undefined) {
+      newValue = Math.min(newValue, maxDynamic);
+    }
+    if (minDynamic !== undefined) {
+      newValue = Math.max(newValue, minDynamic);
+    }
+    onChange(newValue);
+  };
+
+  const displayValue = isLogarithmic ? linearToLog(value) : value;
 
   return (
     <div style={{ margin: '20px 0' }}>
       <label>
-        {label}: {value.toFixed(2)}
+        {label} {/* : {value.toFixed(isLogarithmic ? 0 : 2)} */}
       </label>
       <input
         type='range'
         min={min}
         max={max}
         step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
+        value={displayValue}
+        onChange={handleChange}
       />
     </div>
   );
 };
 
 export default BasicSlider;
+
+// const [isDragging, setIsDragging] = useState(false);
+
+// const handleDragStart = () => {
+//   setIsDragging(true);
+// };
+
+// const handleDragEnd = () => {
+//   setIsDragging(false);
+// };
