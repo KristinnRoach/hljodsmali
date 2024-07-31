@@ -30,7 +30,6 @@ import {
 } from '../lib/db/pocketbase';
 
 import { useReactAudioCtx } from './react-audio-context';
-import { set } from 'react-hook-form';
 
 type SamplerCtxType = {
   samplerEngine: SamplerEngine | null;
@@ -38,17 +37,18 @@ type SamplerCtxType = {
   selectedSamples: Sample_db[];
   latestSelectedSample: Sample_db | undefined;
   latestSelectedBuffer: AudioBuffer | undefined;
+  isSampleLoaded: (id: string) => boolean;
+  isSampleSelected: (id: string) => boolean;
   saveAll: () => void;
   updateSample: (id: string) => void;
   deleteSample: (id: string) => void;
   hasUnsavedSamples: boolean;
-  handleLoopKeys: (capsLock: boolean, spacebar: boolean) => void;
+  // handleLoopKeys: (capsLock: boolean, spacebar: boolean) => void;
   isLooping: boolean;
   toggleLoop: () => void;
-  handleHoldKey: (tabActive: boolean, spaceDown: boolean) => void;
+  // handleHoldKey: (tabActive: boolean, spaceDown: boolean) => void;
   isHolding: boolean;
   toggleHold: () => void;
-  // handleDelete: (id: string) => Promise<void>;
   updateSampleSettings: (
     id: string,
     settings: Partial<Sample_settings>
@@ -101,10 +101,20 @@ export default function SamplerProvider({
   const isMatchingSlug = (sample: Sample_db, slug: string) =>
     sample.slug === slug || `${sample.slug}-${sample.id}` === slug;
 
+  const isSampleLoaded = useCallback(
+    (id: string) => samplerEngine?.isSampleLoaded(id) ?? false,
+    [samplerEngine]
+  );
+
+  const isSampleSelected = useCallback(
+    (id: string) => samplerEngine?.isSampleSelected(id) ?? false,
+    [samplerEngine]
+  );
+
   /* LOOPING and HOLDING */
 
   const [isLooping, setIsLooping] = useState(
-    samplerEngine?.getGlobalLoop() ?? false
+    samplerEngine?.isLooping() ?? false
   );
   const [isHolding, setIsHolding] = useState(
     samplerEngine?.isHolding() ?? false
@@ -112,20 +122,46 @@ export default function SamplerProvider({
 
   const toggleLoop = () => {
     if (!(samplerEngine && audioCtx)) return;
-    samplerEngine?.toggleGlobalLoop();
-    setIsLooping(samplerEngine?.getGlobalLoop());
-    // isLoopingRef.current = samplerEngine.getGlobalLoop();
+
+    samplerEngine.toggleLoop();
+    setIsLooping(samplerEngine.isLooping()); // for use in UI and for mouse events
+    console.log('isLooping:', samplerEngine.isLooping());
   };
+
+  const toggleHold = () => {
+    if (!(samplerEngine && audioCtx)) return;
+
+    samplerEngine.toggleHold();
+    setIsHolding(samplerEngine.isHolding());
+    console.log('isHolding:', samplerEngine.isHolding());
+  };
+
+  // const handleHoldKey = (tabActive: boolean, spaceDown: boolean) => {
+  //   if (!(samplerEngine && audioCtx)) return;
+
+  //   const newHoldState = tabActive !== spaceDown;
+  //   if (newHoldState !== isHolding) {
+  //     setIsHolding(newHoldState);
+  //     samplerEngine.toggleHold();
+
+  //     // toggleHold();
+  //   }
+  // };
 
   /* Do it this way for clarity! */
 
-  // const mainLoopToggle(active: boolean) { // caps / button
+  // const handleCaps = (active: boolean) => {
+  //   // caps / button
+  //   if (!(samplerEngine && audioCtx)) return;
+  //   samplerEngine.toggleLoop();
+  //   // samplerEngine.handleMainLoopKeypress(active);
+  // };
 
-  // const momentaryLoopToggle(down: boolean) { // space
+  // const isMomentaryLoopDown(down: boolean) { // space
 
-  // const mainHoldToggle(active: boolean) { // tab / button
+  // const isMainHoldActive(active: boolean) { // tab / button
 
-  // const momentaryHoldToggle(down: boolean) { // space
+  // const isMomentaryHoldDown(down: boolean) { // space for now, separate function for clarity and easy expansion
 
   // if isHolding && isLooping -> space releases hold
   // if !isHolding && isLooping -> space holds
@@ -133,40 +169,27 @@ export default function SamplerProvider({
   // if !isHolding && !isLooping -> space does nothing
 
   /* this is a bit messy - implement the above */
-  const handleLoopKeys = (capsActive: boolean, spaceDown: boolean) => {
-    if (!(samplerEngine && audioCtx)) return;
+  // const handleLoopKeys = (capsActive: boolean, spaceDown: boolean) => {
+  //   if (!(samplerEngine && audioCtx)) return;
 
-    // if (isLooping && isHolding && spaceDown) {
-    //   toggleHold(); // space should release hold when looping, why does it not?
-    //   return;
-    // }
+  //   // if (isLooping && isHolding && spaceDown) {
+  //   //   toggleHold(); // space should release hold when looping, why does it not?
+  //   //   return;
+  //   // }
 
-    console.log('handleLoopKeys:', capsActive, spaceDown, isHolding);
+  //   console.log('handleLoopKeys:', capsActive, spaceDown, isHolding);
 
-    samplerEngine.handleLoopKeys(capsActive, spaceDown);
-    setIsLooping(samplerEngine.getGlobalLoop());
-  };
+  //   samplerEngine.handleLoopKeys(capsActive, spaceDown);
+  //   setIsLooping(samplerEngine.isLooping());
+  // };
 
-  const toggleHold = () => {
-    if (!(samplerEngine && audioCtx)) return;
-
-    // on which end is the truth? singleusevoice or usekeyboard?
-    samplerEngine.toggleHold();
-    setIsHolding(samplerEngine.isHolding());
-    console.log('isHolding:', samplerEngine.isHolding());
-  };
-
-  const handleHoldKey = (tabActive: boolean, spaceDown: boolean) => {
-    if (!(samplerEngine && audioCtx)) return;
-
-    const newHoldState = tabActive !== spaceDown;
-    if (newHoldState !== isHolding) {
-      setIsHolding(newHoldState);
-      samplerEngine.toggleHold();
-
-      // toggleHold();
-    }
-  };
+  // // move handleLoopKeys to samplerCtx, only toggle loop neccessary
+  // handleLoopKeys(loopToggle: boolean, loopMomentary: boolean): void {
+  //   const newLoopState = loopToggle !== loopMomentary;
+  //   if (newLoopState !== this.globalLoop) {
+  //     this.toggleGlobalLoop();
+  //   }
+  // }
 
   // Fetch samples
   useEffect(() => {
@@ -455,14 +478,16 @@ export default function SamplerProvider({
     selectedSamples,
     latestSelectedSample,
     latestSelectedBuffer,
+    isSampleLoaded,
+    isSampleSelected,
     saveAll,
     updateSample,
     deleteSample,
     hasUnsavedSamples: unsavedSampleIds.current.size > 0,
-    handleLoopKeys,
+    // handleLoopKeys,
     isLooping,
     toggleLoop,
-    handleHoldKey,
+    // handleHoldKey,
     isHolding,
     toggleHold,
     updateSampleSettings,

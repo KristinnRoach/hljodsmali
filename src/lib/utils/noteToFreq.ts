@@ -57,20 +57,22 @@ function getNoteDuration(
 }
 
 export function snapDurationToNote(
-  length: number,
+  duration: number,
   scale: NoteName[],
   lowestNoteName: NoteName = 'C',
   highestNoteName: NoteName = 'C',
   lowestOctave: number = 1,
   highestOctave: number = 5,
   timeUnit: 'ms' | 'sec' = 'ms'
-): number | undefined {
+): number {
   if (lowestOctave > highestOctave) {
-    throw new Error('lowestOctave must be less than or equal to highestOctave');
+    console.error('lowestOctave must be less than or equal to highestOctave');
+    return duration;
   }
 
   if (!scale.includes(lowestNoteName) || !scale.includes(highestNoteName)) {
-    throw new Error('lowestNoteName and highestNoteName must be in the scale');
+    console.error('lowestNoteName and highestNoteName must be in the scale');
+    return duration;
   }
 
   const lowestDuration = getNoteDuration(
@@ -85,11 +87,11 @@ export function snapDurationToNote(
     timeUnit
   );
 
-  if (length >= lowestDuration) return length;
-  if (length <= highestDuration) return highestDuration;
+  if (duration >= lowestDuration) return duration;
+  if (duration <= highestDuration) return highestDuration;
 
   let closestDuration = lowestDuration;
-  let smallestDifference = Math.abs(length - lowestDuration);
+  let smallestDifference = Math.abs(duration - lowestDuration);
 
   for (let oct = lowestOctave; oct <= highestOctave; oct++) {
     // if the highest octave, limit to highest note parameter
@@ -99,14 +101,14 @@ export function snapDurationToNote(
         : scale;
 
     for (const note of octavesLimited) {
-      const duration = getNoteDuration(note, oct, timeUnit);
-      if (duration < length) continue; // We've passed the target length
+      const noteDuration = getNoteDuration(note, oct, timeUnit);
+      if (noteDuration < duration) continue; // We've passed the target length
 
-      const difference = Math.abs(length - duration);
+      const difference = Math.abs(duration - noteDuration);
 
       if (difference < smallestDifference) {
         smallestDifference = difference;
-        closestDuration = duration;
+        closestDuration = noteDuration;
       }
     }
   }

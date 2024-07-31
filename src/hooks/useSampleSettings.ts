@@ -4,19 +4,37 @@ import { useSamplerCtx } from '../contexts/sampler-context';
 import { Sample_settings } from '../types/sample';
 
 export const useSampleSettings = () => {
-  const { selectedSamples, updateSampleSettings } = useSamplerCtx();
+  const { latestSelectedSample, updateSampleSettings } = useSamplerCtx();
 
   const handleSettingChange = useCallback(
     (settingKey: keyof Sample_settings, value: number) => {
+      if (!latestSelectedSample) throw new Error('No sample selected');
+
+      if (settingKey === 'loopStart') {
+        console.log(
+          'HANDLER: ',
+          settingKey,
+          ' loop length: ',
+          latestSelectedSample.sample_settings.loopEnd - value
+        );
+      }
+
+      if (settingKey === 'loopEnd') {
+        console.log(
+          'HANDLER: ',
+          settingKey,
+          ' loop length: ',
+          value - latestSelectedSample.sample_settings.loopStart
+        );
+      }
+
       try {
-        selectedSamples.forEach((sample) => {
-          updateSampleSettings(sample.id, { [settingKey]: value });
-        });
+        updateSampleSettings(latestSelectedSample.id, { [settingKey]: value });
       } catch (error) {
         console.error('Error updating sample settings:', error);
       }
     },
-    [selectedSamples, updateSampleSettings]
+    [latestSelectedSample, updateSampleSettings]
   );
 
   return { handleSettingChange };

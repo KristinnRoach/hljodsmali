@@ -1,6 +1,6 @@
 .container {
   position: fixed;
-  top: 15vh;
+  top: 30vh;
   left: 5vw;
   display: flex;
   flex-direction: column;
@@ -9,5 +9,7 @@
   background-color: transparent;
   // height: 5vh;
   // z-index: -1;
-  height: 60vh;
+  height: fit-content;
+
+  background-color: whitesmoke;
 }

@@ -7,7 +7,10 @@ import {
   createNewSampleObject,
 } from '../types/sample';
 
-import { findZeroCrossings } from './DSP/zeroCrossingUtils';
+import {
+  findZeroCrossings,
+  snapToNearestZeroCrossing,
+} from './DSP/zeroCrossingUtils';
 
 export type Loaded = {
   sample: Sample_db;
@@ -36,7 +39,7 @@ export default class SamplerEngine {
   // private updatedSamples: Map<string, Sample_db> = new Map();
 
   private masterGain: GainNode;
-  private globalLoop: boolean = false;
+  // private globalLoop: boolean = false;
 
   /* Constructor */
 
@@ -50,7 +53,7 @@ export default class SamplerEngine {
     this.masterGain.gain.value = 0.75;
     this.masterGain.connect(this.audioCtx.destination);
 
-    // LIMITER / COMPRESSOR NODE
+    // TODO: ADD LIMITER / COMPRESSOR NODE
 
     this.setupRecording();
     console.log('Audio Engine context: ', this.audioCtx);
@@ -70,21 +73,12 @@ export default class SamplerEngine {
 
   /* Loop and Hold state manager */
 
-  // move handleLoopKeys to samplerCtx, only toggle loop neccessary
-  handleLoopKeys(loopToggle: boolean, loopMomentary: boolean): void {
-    const newLoopState = loopToggle !== loopMomentary;
-    if (newLoopState !== this.globalLoop) {
-      this.toggleGlobalLoop();
-    }
+  toggleLoop(): void {
+    SingleUseVoice.toggleLoop();
   }
 
-  toggleGlobalLoop(): void {
-    this.globalLoop = !this.globalLoop;
-    SingleUseVoice.setGlobalLooping(this.globalLoop);
-  }
-
-  public getGlobalLoop(): boolean {
-    return this.globalLoop;
+  public isLooping(): boolean {
+    return SingleUseVoice.isLooping();
   }
 
   toggleHold(): void {
@@ -217,15 +211,15 @@ export default class SamplerEngine {
   //   return updatedSamples;
   // }
 
-  addBufferDurationToLoadedSamples(): void {
-    // remove function if redundant, else add zeroCrossings
-    this.loadedSamples.forEach((loadedSample, key) => {
-      if (loadedSample.buffer && loadedSample.buffer.duration) {
-        loadedSample.sample.bufferDuration = loadedSample.buffer.duration;
-        this.loadedSamples.set(key, loadedSample);
-      }
-    });
-  }
+  // addBufferDurationToLoadedSamples(): void {
+  //   // remove function if redundant, else add zeroCrossings
+  //   this.loadedSamples.forEach((loadedSample, key) => {
+  //     if (loadedSample.buffer && loadedSample.buffer.duration) {
+  //       loadedSample.sample.bufferDuration = loadedSample.buffer.duration;
+  //       this.loadedSamples.set(key, loadedSample);
+  //     }
+  //   });
+  // }
 
   setSampleVolume(sampleId: string, volume: number) {
     const loaded = this.loadedSamples.get(sampleId);
@@ -247,6 +241,10 @@ export default class SamplerEngine {
     const sample = this.loadedSamples.get(id);
 
     return (sample && sample.buffer && sample.nodes.sampleGain) !== undefined;
+  }
+
+  isSampleSelected(id: string): boolean {
+    return this.selectedSampleIds.has(id);
   }
 
   setSelectedSampleIds(ids: string[]): void {
@@ -292,54 +290,70 @@ export default class SamplerEngine {
     );
   }
 
-  // updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
-  //   try {
-  //     this.updateSelectedSampleSettings(id, settings);
-  //   } catch (error) {
-  //     console.error(`Error updating sample ${id}:`, error);
-  //   }
-  // }
-
   updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
-    const loadedSample = this.loadedSamples.get(id);
+    try {
+      const loadedSample = this.loadedSamples.get(id);
 
-    if (loadedSample) {
-      if (settings.lowCutoff !== undefined) {
-        loadedSample.nodes.lowCut.frequency.setValueAtTime(
-          settings.lowCutoff,
-          this.audioCtx.currentTime
+      if (loadedSample) {
+        if (settings.lowCutoff !== undefined) {
+          loadedSample.nodes.lowCut.frequency.setValueAtTime(
+            settings.lowCutoff,
+            this.audioCtx.currentTime
+          );
+          console.log('Low cut:', settings.lowCutoff);
+        }
+        if (settings.highCutoff !== undefined) {
+          loadedSample.nodes.highCut.frequency.setValueAtTime(
+            settings.highCutoff,
+            this.audioCtx.currentTime
+          );
+          console.log('High cut:', settings.highCutoff);
+        }
+        if (
+          settings.startPoint !== undefined &&
+          loadedSample.sample.zeroCrossings
+        ) {
+          const snapped = snapToNearestZeroCrossing(
+            settings.startPoint,
+            loadedSample.sample.zeroCrossings
+          );
+          loadedSample.sample.sample_settings.startPoint = snapped;
+        }
+        if (
+          settings.endPoint !== undefined &&
+          loadedSample.sample.zeroCrossings
+        ) {
+          const snapped = snapToNearestZeroCrossing(
+            settings.endPoint,
+            loadedSample.sample.zeroCrossings
+          );
+          loadedSample.sample.sample_settings.endPoint = snapped;
+        }
+
+        loadedSample.sample = {
+          ...loadedSample.sample,
+          sample_settings: {
+            ...loadedSample.sample.sample_settings,
+            ...settings,
+          },
+        };
+
+        SingleUseVoice.sampleSettings.set(
+          loadedSample.sample.id,
+          loadedSample.sample.sample_settings
         );
-        console.log('Low cut:', settings.lowCutoff);
-      }
-      if (settings.highCutoff !== undefined) {
-        loadedSample.nodes.highCut.frequency.setValueAtTime(
-          settings.highCutoff,
-          this.audioCtx.currentTime
-        );
-        console.log('High cut:', settings.highCutoff);
-      }
 
-      loadedSample.sample = {
-        ...loadedSample.sample,
-        sample_settings: {
-          ...loadedSample.sample.sample_settings,
-          ...settings,
-        },
-      };
-
-      SingleUseVoice.sampleSettings.set(
-        loadedSample.sample.id,
-        loadedSample.sample.sample_settings
-      );
-
-      if (
-        'loopStart' in settings ||
-        'loopEnd' in settings ||
-        'sampleVolume' in settings ||
-        'loopVolume' in settings
-      ) {
-        SingleUseVoice.updateActiveVoices(id, settings);
+        if (
+          'loopStart' in settings ||
+          'loopEnd' in settings ||
+          'sampleVolume' in settings ||
+          'loopVolume' in settings
+        ) {
+          SingleUseVoice.updateActiveVoices(id, settings);
+        }
       }
+    } catch (error) {
+      console.error(`Error updating sample ${id}:`, error);
     }
   }
 

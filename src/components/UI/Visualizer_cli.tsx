@@ -1,15 +1,24 @@
 // src/components/UI/Visualizer_cli.tsx
 'use client';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import WaveDynamic from './WaveForms/WaveDynamic';
 import { useSamplerCtx } from '../../contexts/sampler-context';
+import { Sample_db, Sample_settings } from '../../types/sample';
 import styles from './Visualizer_cli.module.scss';
+import { set } from 'react-hook-form';
 
 function Visualizer_cli() {
   const { latestSelectedSample, latestSelectedBuffer } = useSamplerCtx();
 
-  const sample = latestSelectedSample;
-  const buffer = latestSelectedBuffer;
+  const [sample, setSample] = useState<Sample_db | null>(null);
+  const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
+
+  useEffect(() => {
+    if (!latestSelectedSample || !latestSelectedBuffer) return;
+
+    setSample(latestSelectedSample);
+    setBuffer(latestSelectedBuffer);
+  }, [latestSelectedSample, latestSelectedBuffer]);
 
   // Convert time values to normalized values if necessary
   const normalizePoint = (point: number) =>
@@ -17,7 +26,6 @@ function Visualizer_cli() {
 
   const memoizedWaveDynamic = useMemo(() => {
     if (!sample || !buffer || buffer.length === 0) return null;
-
     const { startPoint, endPoint, loopStart, loopEnd } = sample.sample_settings;
 
     return (
@@ -26,10 +34,10 @@ function Visualizer_cli() {
         buffer={buffer}
         width={800}
         height={200}
-        loopStart={normalizePoint(loopStart)}
-        loopEnd={normalizePoint(loopEnd)}
-        startPoint={normalizePoint(startPoint)}
-        endPoint={normalizePoint(endPoint)}
+        loopStart={loopStart}
+        loopEnd={loopEnd}
+        startPoint={startPoint}
+        endPoint={endPoint}
         color={'#676767'}
         showCenterLine={false}
       />

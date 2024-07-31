@@ -18,6 +18,16 @@ export type Sample_settings = {
 
 /* The Sample type should be the same as in the database schema. */
 
+export type LoadedSample = {
+  id: string;
+  name: string;
+  slug: string;
+
+  buffer: AudioBuffer;
+  zeroCrossings: number[];
+  sample_settings: Sample_settings;
+};
+
 export type Sample_db = {
   id: string;
   name: string;
@@ -27,7 +37,7 @@ export type Sample_db = {
   bufferDuration: number;
   created: string;
   updated: string;
-  zeroCrossings?: number[]; // remove ? when db samples updated
+  zeroCrossings?: number[]; // REMOVE, ONLY IN LOADEDSAMPLE
   sample_settings: Sample_settings;
 };
 

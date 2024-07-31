@@ -20,7 +20,7 @@ export async function createSampleRecord( // check compatibility with older vers
   formData.append('sample_file', sample.sample_file as File); // as File ??
   formData.append('bufferDuration', sample.bufferDuration?.toString());
 
-  formData.append('zeroCrossings', JSON.stringify(sample.zeroCrossings));
+  // formData.append('zeroCrossings', JSON.stringify(sample.zeroCrossings));
 
   formData.append('sample_settings', JSON.stringify(sample.sample_settings));
 
@@ -28,17 +28,10 @@ export async function createSampleRecord( // check compatibility with older vers
     formData.append('user', pb.authStore.model.id);
   }
 
-  console.log(
-    'formData:',
-    formData.get('name'),
-    formData.get('slug'),
-    formData.get('sample_file'),
-    formData.get('bufferDuration'),
-
-    formData.get('zeroCrossings'),
-
-    formData.get('sample_settings')
-  );
+  console.log('FormData contents:');
+  for (let [key, value] of formData.entries()) {
+    console.log(key, ':', value);
+  }
 
   try {
     const record = await pb.collection('samples').create<Sample_db>(formData);

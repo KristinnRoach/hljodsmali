@@ -75,7 +75,7 @@ export default class SingleUseVoice {
 
     this.sampleId = sampleId;
     this.setLoop();
-    this.updateLoopPoints();
+    this.calculateLoopPoints();
 
     this.source.onended = () => {
       this.stop();
@@ -103,10 +103,10 @@ export default class SingleUseVoice {
     SingleUseVoice.allVoices.clear();
   }
 
-  static setGlobalLooping(isLoopOn: boolean) {
-    if (SingleUseVoice.globalLoop === isLoopOn) return;
+  static toggleLoop() {
+    // if (SingleUseVoice.globalLoop === isLoopOn) return;
 
-    SingleUseVoice.globalLoop = isLoopOn;
+    SingleUseVoice.globalLoop = !SingleUseVoice.globalLoop;
     // better to not set for active voices ?
     SingleUseVoice.allVoices.forEach((voice) => voice.setLoop());
     // setTimeout(() => {
@@ -115,7 +115,7 @@ export default class SingleUseVoice {
     // }, 500);
   }
 
-  static isGlobalLoopOn() {
+  static isLooping() {
     return SingleUseVoice.globalLoop;
   }
 
@@ -173,7 +173,6 @@ export default class SingleUseVoice {
         ? undefined
         : this.settings.endPoint - this.settings.startPoint
     );
-    console.log('this.source.loop:', this.source.loop);
 
     // if (this.source.loop) {
     //   this.loopEnvelope();
@@ -249,59 +248,70 @@ export default class SingleUseVoice {
     sampleId: string,
     settings: Partial<Sample_settings>
   ) {
+    // FOR EACH SAMPLE Static: update static sample_settings and recalculate loop points. Update Sample_db object in engine and context. Call the function below for each active voice
+    // FOR EACH Active VOICE non-static: use the recalculated loop points to update source.loopStart, source.loopEnd (settings.loopStart, settings.loopEnd needed or no?)
+
     SingleUseVoice.allVoices.forEach((voice) => {
       if (voice.sampleId === sampleId) {
+        voice.calculateLoopPoints();
+
         voice.settings = { ...voice.settings, ...settings };
-        voice.updateLoopPoints();
+        SingleUseVoice.sampleSettings.set(sampleId, voice.settings); // make clearer what is going on. No need for both voice and sample settings!
       }
     });
   }
 
-  updateLoopPoints(updated: Partial<Sample_settings> = this.settings) {
-    let newLoopStart = updated.loopStart ?? this.settings.loopStart;
-    let newLoopEnd = updated.loopEnd ?? this.settings.loopEnd;
-
-    console.log('init looplength:', newLoopEnd - newLoopStart);
-
-    this.source.loopStart = snapToNearestZeroCrossing(
-      newLoopStart,
-      SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
-    );
-    this.source.loopEnd = snapToNearestZeroCrossing(
-      newLoopEnd,
-      SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
-    );
-
-    console.log('zero snap loop length: ', newLoopEnd - newLoopStart);
-
-    const loopLength = newLoopEnd - newLoopStart;
-
-    if (loopLength < C5_DURATION_SEC) return;
-    // Snap to C3 if close
-    if (loopLength < 0.02) {
-      const lengthAsC = snapDurationToNote(
-        newLoopEnd - newLoopStart,
-        ['C', 'G'],
-        'C',
-        'C',
-        2,
-        5,
-        'sec'
-      );
-      newLoopEnd = newLoopStart + (lengthAsC || newLoopEnd);
-
-      console.log(
-        'After C snap: newLoopEnd - newLoopStart:',
-        newLoopEnd - newLoopStart
-      );
-    }
-
+  updateLoopPoints(
+    newLoopStart: number = this.source.loopStart,
+    newLoopEnd: number = this.source.loopEnd
+  ) {
     this.source.loopStart = newLoopStart;
     this.source.loopEnd = newLoopEnd;
+  }
 
-    // // Update settings ? Needed ?
-    this.settings.loopStart = this.source.loopStart;
-    this.settings.loopEnd = this.source.loopEnd;
+  calculateLoopPoints(updated: Partial<Sample_settings> = this.settings) {
+    // SHOULD BE STATIC?!
+    let start = updated.loopStart ?? this.settings.loopStart;
+    let end = updated.loopEnd ?? this.settings.loopEnd;
+
+    const initLoopLength = end - start;
+    console.log('init looplength:', initLoopLength);
+
+    if (initLoopLength <= C5_DURATION_SEC) return; // how does this affect rendering? Should be in render function, or both?
+
+    start = snapToNearestZeroCrossing(
+      start,
+      SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+    );
+    end = snapToNearestZeroCrossing(
+      end,
+      SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
+    );
+
+    const zeroSnapLength = end - start;
+    if (initLoopLength !== zeroSnapLength) {
+      console.log('length SNAPPED TO ZERO: ', end - start);
+    }
+
+    this.updateLoopPoints(start, end);
+
+    if (zeroSnapLength > 0.015) return;
+
+    // Snap to notes when in audiorange
+    const snappedLength = snapDurationToNote(
+      zeroSnapLength,
+      ['C'], // interpolate rather! // , 'D', 'E', 'F', 'G', 'A', 'B'
+      'C',
+      'C',
+      0,
+      7,
+      'sec' // try ms or samples if needed
+    );
+    const newEnd = start + snappedLength;
+
+    this.source.loopEnd = newEnd; // could call updateLoopPoints again, but only need to update loopEnd to adjust the length
+
+    console.log('length SNAPPED TO C: ', newEnd - start);
   }
 
   setLoopVolume(volume: number) {
