@@ -16,7 +16,7 @@ export default function Sampler_cli() {
   useKeyboard();
   const {
     samplerEngine,
-    allSamples,
+    sampleRecords,
     isLoading,
     saveAll,
     updateSample,
@@ -55,9 +55,9 @@ export default function Sampler_cli() {
         <Recorder_CSR />
         <section className={styles.samples}>
           <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
-            {!isLoading && allSamples.length > 0 && (
+            {!isLoading && sampleRecords.length > 0 && (
               <LinkList
-                items={allSamples}
+                items={sampleRecords}
                 title='Samples'
                 paramName='samples'
                 itemsPerPage={10}

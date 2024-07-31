@@ -3,7 +3,6 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 import { Sample_settings } from '../../../types/sample';
 import { useSampleSettings } from '../../../hooks/useSampleSettings';
-import { set } from 'react-hook-form';
 
 interface WaveDynamicProps {
   buffer: AudioBuffer;

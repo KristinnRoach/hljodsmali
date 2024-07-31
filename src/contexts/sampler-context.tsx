@@ -13,19 +13,19 @@ import React, {
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Sample_db,
+  SampleRecord,
   Sample_settings,
-  createNewSampleObject,
+  getDefaultSampleSettings,
 } from '../types/sample';
 
-import SamplerEngine, { Loaded } from '../lib/SamplerEngine';
+import SamplerEngine from '../lib/SamplerEngine';
 
 import {
   fetchSamples,
   updateSampleRecord,
   deleteSampleRecord,
   getSampleAudioBuffer,
-  createSampleRecord,
+  saveNewSampleRecord,
   renameSampleRecord,
 } from '../lib/db/pocketbase';
 
@@ -33,9 +33,10 @@ import { useReactAudioCtx } from './react-audio-context';
 
 type SamplerCtxType = {
   samplerEngine: SamplerEngine | null;
-  allSamples: Sample_db[];
-  selectedSamples: Sample_db[];
-  latestSelectedSample: Sample_db | undefined;
+  sampleRecords: SampleRecord[];
+  sampleSwitchFlag: number;
+  selectedSamples: SampleRecord[];
+  latestSelectedSample: SampleRecord | undefined;
   latestSelectedBuffer: AudioBuffer | undefined;
   isSampleLoaded: (id: string) => boolean;
   isSampleSelected: (id: string) => boolean;
@@ -43,10 +44,8 @@ type SamplerCtxType = {
   updateSample: (id: string) => void;
   deleteSample: (id: string) => void;
   hasUnsavedSamples: boolean;
-  // handleLoopKeys: (capsLock: boolean, spacebar: boolean) => void;
   isLooping: boolean;
   toggleLoop: () => void;
-  // handleHoldKey: (tabActive: boolean, spaceDown: boolean) => void;
   isHolding: boolean;
   toggleHold: () => void;
   updateSampleSettings: (
@@ -79,7 +78,7 @@ export default function SamplerProvider({
   //   : null;
 
   // State
-  const [allSamples, setAllSamples] = useState<Sample_db[]>([]);
+  const [sampleRecords, setSampleRecords] = useState<SampleRecord[]>([]);
   // const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -98,7 +97,13 @@ export default function SamplerProvider({
 
   /* UTILS */
 
-  const isMatchingSlug = (sample: Sample_db, slug: string) =>
+  const [sampleSwitchFlag, setSampleSwitchFlag] = useState(0);
+
+  useEffect(() => {
+    setSampleSwitchFlag((prev) => prev + 1);
+  }, [selectedSlugsMemo]);
+
+  const isMatchingSlug = (sample: SampleRecord, slug: string) =>
     sample.slug === slug || `${sample.slug}-${sample.id}` === slug;
 
   const isSampleLoaded = useCallback(
@@ -195,7 +200,7 @@ export default function SamplerProvider({
   useEffect(() => {
     setIsLoading(true);
     fetchSamples()
-      .then(setAllSamples)
+      .then(setSampleRecords)
       .catch((error) => console.error('Error fetching samples:', error))
       .finally(() => setIsLoading(false));
   }, []);
@@ -207,26 +212,32 @@ export default function SamplerProvider({
       if (!(samplerEngine && audioCtx)) return;
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        const sample = createNewSampleObject(
-          `dropped-${Date.now()}`,
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer); // if loadSamples is already called, it should create a buffer and record?
+        // const sampleId = `dropped-${Date.now()}`;
+        const sampleSettings = getDefaultSampleSettings(audioBuffer.duration);
+
+        const sampleRecord: SampleRecord = await saveNewSampleRecord(
           file.name,
           file,
-          audioBuffer.duration
+          sampleSettings
         );
-        if (!sample) console.error('Error creating new sample object');
 
-        samplerEngine.loadSample(sample, audioBuffer);
-        addLoadedBuffer(sample.id, audioBuffer);
+        if (!(sampleRecord && sampleSettings))
+          // && audioBuffer
+          throw new Error('Error saving sample record');
 
-        unsavedSampleIds.current.add(sample.id);
-        setAllSamples((prev) => [...prev, sample]);
-        router.replace(`?samples=${sample.slug}`, { scroll: false });
+        // samplerEngine.loadSample(sampleRecord, audioBuffer); // loadSamples is already called on drop ?
+        addLoadedBuffer(sampleRecord.id, audioBuffer);
+
+        // unsavedSampleIds.current.add(sampleId);
+        setSampleRecords((prev) => [...prev, sampleRecord]); // triggers loadSamples useEffect
+
+        router.replace(`?samples=${sampleRecord.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
       } catch (error) {
         console.error('Error decoding dropped audio file:', error);
       }
     },
-    [audioCtx, samplerEngine, router]
+    [audioCtx, samplerEngine, router] // needs all functions as dependencies?
   );
 
   useEffect(() => {
@@ -260,26 +271,25 @@ export default function SamplerProvider({
   useEffect(() => {
     if (!(samplerEngine && audioCtx)) return;
 
-    // console.log('selectedSlugsMemo: ', selectedSlugsMemo);
-
     const loadSamples = async () => {
       // TODO: fix edge case where slug is not unique (e.g. slug to id map) ?
 
       const ids: string[] = [];
       const loadPromises = selectedSlugsMemo.map(async (slug) => {
-        const sample = allSamples.find((s) => s.slug === slug);
-        if (sample && sample.id) {
-          ids.push(sample.id);
-          if (!samplerEngine.isSampleLoaded(sample.id)) {
-            console.log('loading sample:', sample);
+        const foundSample = sampleRecords.find((s) => s.slug === slug);
+
+        if (foundSample && foundSample.id) {
+          ids.push(foundSample.id);
+          if (!samplerEngine.isSampleLoaded(foundSample.id)) {
+            console.log('loading sample:', foundSample);
 
             try {
-              const buffer = await getSampleAudioBuffer(sample, audioCtx);
-              samplerEngine.loadSample(sample, buffer);
+              const buffer = await getSampleAudioBuffer(foundSample, audioCtx); // VERIFY: sample needs to be already in database for this to work
+              samplerEngine.loadSample(foundSample, buffer);
 
-              addLoadedBuffer(sample.id, buffer);
+              addLoadedBuffer(foundSample.id, buffer);
             } catch (error) {
-              console.error(`Error loading sample ${sample.id}:`, error);
+              console.error(`Error loading sample ${foundSample.id}:`, error);
             }
           }
         }
@@ -296,12 +306,12 @@ export default function SamplerProvider({
     return () => {
       samplerEngine.setSelectedSampleIds([]);
     };
-  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine]); // allSamples ?
+  }, [selectedSlugsMemo, sampleRecords, audioCtx, samplerEngine]); // allSamples ?
 
   const selectedSamples = useMemo(
     () =>
       Array.from(
-        allSamples
+        sampleRecords
           .filter((sample) =>
             selectedSlugsMemo.some((slug) => isMatchingSlug(sample, slug))
           )
@@ -310,10 +320,10 @@ export default function SamplerProvider({
               ? `${sample.slug}-${sample.id}` // adds id to slug if not unique (temp fix)
               : sample.slug;
             return map.set(key, sample);
-          }, new Map<string, Sample_db>())
+          }, new Map<string, SampleRecord>())
           .values()
       ),
-    [selectedSlugsMemo, allSamples]
+    [selectedSlugsMemo, sampleRecords]
   );
 
   const latestSelectedSample = useMemo(() => {
@@ -337,7 +347,7 @@ export default function SamplerProvider({
       try {
         samplerEngine.updateSampleSettings(id, settings);
 
-        setAllSamples((prev) =>
+        setSampleRecords((prev) =>
           prev.map((sample) =>
             sample.id === id
               ? {
@@ -373,43 +383,43 @@ export default function SamplerProvider({
     unsavedSampleIds.current.forEach((id) => {
       const loadedSample = samplerEngine
         .getLoadedSamples()
-        .find((isLoaded) => isLoaded.sample.id === id);
-      const sample = loadedSample?.sample;
+        .find((isLoaded) => isLoaded.id === id);
+      const sample = loadedSample;
       // const sample = allSamples.find((s) => s.id === id);
       if (!sample) return;
 
-      if (id.includes('new-sample') || id.includes('dropped')) {
-        const newName = promptUserForSampleName();
-        if (!newName) return;
+      // if (id.includes('new-sample') || id.includes('dropped')) {
+      //   const newName = promptUserForSampleName();
+      //   if (!newName) return;
 
-        const newSample = {
-          ...sample,
-          name: newName,
-          slug: newName.toLowerCase().replace(/\s+/g, '-'),
-        };
+      //   const newSample = {
+      //     ...sample,
+      //     name: newName,
+      //     slug: newName.toLowerCase().replace(/\s+/g, '-'),
+      //   };
 
-        createSampleRecord(newSample)
-          .then((savedSample) => {
-            setAllSamples((prev) =>
-              prev.map((s) => (s.id === id ? savedSample : s))
-            );
-            unsavedSampleIds.current.delete(id);
-            router.replace(`?samples=${savedSample.slug}`);
-          })
-          .catch((error) => console.error('Error saving sample:', error));
-      } else {
-        updateSampleRecord(id, { ...sample })
-          .then(() => {
-            unsavedSampleIds.current.delete(id);
-          })
-          .catch((error) => console.error('Error saving sample:', error));
-      }
+      //   saveNewSampleRecord(newSample.name, newSample.sample_file, newSample.sample_settings)
+      //     .then((savedSample) => {
+      //       setSampleRecords((prev) =>
+      //         prev.map((s) => (s.id === id ? savedSample : s))
+      //       );
+      //       unsavedSampleIds.current.delete(id);
+      //       router.replace(`?samples=${savedSample.slug}`);
+      //     })
+      //     .catch((error) => console.error('Error saving sample:', error));
+      // } else {
+      updateSampleRecord(id, { ...sample })
+        .then(() => {
+          unsavedSampleIds.current.delete(id);
+        })
+        .catch((error) => console.error('Error saving sample:', error));
+      // }
     });
     // unsavedSampleIds.current.clear(); // should not be necessary
   }
 
   async function updateSample(id: string) {
-    const sample = allSamples.find((s) => s.id === id);
+    const sample = sampleRecords.find((s) => s.id === id);
     if (!sample) return;
     await updateSampleRecord(id, { ...sample }).catch((error) =>
       console.error(`Error updating sample ${id} settings:`, error)
@@ -419,7 +429,7 @@ export default function SamplerProvider({
   async function deleteSample(id: string) {
     if (!(samplerEngine && audioCtx)) return;
 
-    const name = allSamples.find((s) => s.id === id)?.name;
+    const name = sampleRecords.find((s) => s.id === id)?.name;
 
     const confirmDelete = confirm(`Delete ${name || 'this sample'}?`);
     if (!confirmDelete) return;
@@ -428,7 +438,7 @@ export default function SamplerProvider({
       console.error(`Error deleting sample ${id}:`, error)
     );
     samplerEngine.unloadSample(id);
-    setAllSamples((prev) => prev.filter((s) => s.id !== id));
+    setSampleRecords((prev) => prev.filter((s) => s.id !== id));
     unsavedSampleIds.current.delete(id);
     selectedSlugsMemo.splice(selectedSlugsMemo.indexOf(id), 1);
     router.replace(`?samples=${selectedSlugsMemo[0]}`, { scroll: false });
@@ -447,7 +457,7 @@ export default function SamplerProvider({
     await renameSampleRecord(id, name).catch((error) =>
       console.error(`Error renaming sample ${id}:`, error)
     );
-    setAllSamples((prev) =>
+    setSampleRecords((prev) =>
       prev.map((s) => (s.id === id ? { ...s, name } : s))
     );
   }
@@ -463,18 +473,20 @@ export default function SamplerProvider({
   const stopRecording = useCallback(async () => {
     if (!(samplerEngine && audioCtx)) return;
 
-    const { sample, buffer } = await samplerEngine.stopRecording();
+    const { savedSampleRecord: sample, buffer } =
+      await samplerEngine.stopRecording();
     if (sample && buffer) {
-      samplerEngine.loadSample(sample, buffer);
-      unsavedSampleIds.current.add(sample.id);
-      setAllSamples((prev) => [...prev, sample]);
-      router.replace(`?samples=${sample.slug}`, { scroll: false });
+      // samplerEngine.loadSample(sample, buffer);
+      // unsavedSampleIds.current.add(sample.id);
+      setSampleRecords((prev) => [...prev, sample]); // triggers loadSamples useEffect
+      router.replace(`?samples=${sample.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
     }
   }, [samplerEngine, router, audioCtx]);
 
   const value = {
     samplerEngine,
-    allSamples,
+    sampleRecords,
+    sampleSwitchFlag,
     selectedSamples,
     latestSelectedSample,
     latestSelectedBuffer,
@@ -506,45 +518,6 @@ export function useSamplerCtx() {
   }
   return context;
 }
-
-/* LOOPING */
-
-// const [isLooping, setIsLooping] = useState(false);
-
-// const toggleLoop = useCallback(() => {
-//   samplerEngine.toggleGlobalLoop(true);
-//   setIsLooping(samplerEngine.getGlobalLoop());
-// }, [isLooping, samplerEngine]);
-
-// // Todo: fix this ugly code
-// if (
-//   allSamples[allSamples.length - 1]?.slug === selectedSlugsMemo[0] &&
-//   samplerEngine.isSampleLoaded(allSamples[allSamples.length - 1].slug)
-// ) {
-//   console.log('single sample already loaded:', allSamples[0].name);
-//   return;
-// }
-
-// useEffect(() => {
-//   if (!samplerEngine) return;
-
-//   samplerEngine.setSelectedSampleIds(selectedIds);
-
-//   const loadedSamples = samplerEngine.getLoadedSamples();
-//   const selected = samplerEngine.getSelectedSampleIds();
-
-//   console.log(
-//     'From sampler engine / context useEffect: ',
-//     'unsaved:',
-//     unsavedSampleIds.current,
-//     'loadedSamples:',
-//     loadedSamples,
-//     'engine selected:',
-//     selected,
-//     'context selected:',
-//     selectedIds
-//   );
-// }, [selectedIds, samplerEngine]);
 
 // async function saveUpdatedSamples() {
 //   const ids = unsavedSampleIds.current;

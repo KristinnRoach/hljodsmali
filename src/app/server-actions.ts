@@ -3,16 +3,19 @@
 
 import { revalidatePath } from 'next/cache';
 import pb from '../lib/db/pocketbase';
-import { Sample_db } from '../types/sample';
+import { SampleRecord } from '../types/sample';
 
-export async function saveSample(name: string, file: File): Promise<Sample_db> {
+export async function saveSample(
+  name: string,
+  file: File
+): Promise<SampleRecord> {
   // currentPath: string ?
   const formData = new FormData();
   formData.append('name', name);
   formData.append('sample_file', file);
   formData.append('user', pb.authStore.model?.id);
 
-  const record = await pb.collection('samples').create<Sample_db>(formData);
+  const record = await pb.collection('samples').create<SampleRecord>(formData);
   revalidatePath('/');
   return record;
 }
@@ -22,14 +25,14 @@ export async function deleteSample(id: string): Promise<void> {
   revalidatePath('/');
 }
 
-export async function fetchSamples(): Promise<Sample_db[]> {
+export async function fetchSamples(): Promise<SampleRecord[]> {
   return await pb
     .collection('samples')
-    .getFullList<Sample_db>({ sort: '-created' });
+    .getFullList<SampleRecord>({ sort: '-created' });
 }
 
-export async function fetchSample(sampleId: string): Promise<Sample_db> {
-  return await pb.collection('samples').getOne<Sample_db>(sampleId);
+export async function fetchSample(sampleId: string): Promise<SampleRecord> {
+  return await pb.collection('samples').getOne<SampleRecord>(sampleId);
 }
 
 export async function fetchSampleAudio(sampleId: string): Promise<ArrayBuffer> {

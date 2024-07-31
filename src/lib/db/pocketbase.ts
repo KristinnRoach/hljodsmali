@@ -1,5 +1,5 @@
 import PocketBase from 'pocketbase';
-import { Sample_db, Sample_settings } from '../../types/sample';
+import { SampleRecord, Sample_settings } from '../../types/sample';
 
 const pb = new PocketBase(
   process.env.POCKETBASE_URL || 'https://hljodsmali.pockethost.io/'
@@ -8,21 +8,21 @@ pb.autoCancellation(false);
 
 export default pb;
 
-export async function createSampleRecord( // check compatibility with older version (below)
-  sample: Partial<Sample_db>
-): Promise<Sample_db> {
-  if (!sample.bufferDuration)
-    throw new Error('Buffer duration is required to createSampleRecord');
-
+export async function saveNewSampleRecord(
+  name: string,
+  audioData: File | Blob, // string or file or blob?
+  sample_settings: Sample_settings
+): Promise<SampleRecord> {
+  if (audioData instanceof Blob) {
+    audioData = new File([audioData], name + '.webm', { type: 'audio/webm' }); // check audio type for consistency
+  }
+  // const slug = name.toLowerCase().replace(/ /g, '-');
+  const slug = generateSlug(name);
   const formData = new FormData();
-  formData.append('name', sample.name);
-  formData.append('slug', sample.slug);
-  formData.append('sample_file', sample.sample_file as File); // as File ??
-  formData.append('bufferDuration', sample.bufferDuration?.toString());
-
-  // formData.append('zeroCrossings', JSON.stringify(sample.zeroCrossings));
-
-  formData.append('sample_settings', JSON.stringify(sample.sample_settings));
+  formData.append('name', name);
+  formData.append('slug', slug);
+  formData.append('sample_file', audioData); //  as File);
+  formData.append('sample_settings', JSON.stringify(sample_settings));
 
   if (pb.authStore.model?.id) {
     formData.append('user', pb.authStore.model.id);
@@ -34,7 +34,9 @@ export async function createSampleRecord( // check compatibility with older vers
   }
 
   try {
-    const record = await pb.collection('samples').create<Sample_db>(formData);
+    const record = await pb
+      .collection('samples')
+      .create<SampleRecord>(formData);
     return record;
   } catch (error) {
     console.error('Error saving new sample:', error);
@@ -44,10 +46,10 @@ export async function createSampleRecord( // check compatibility with older vers
 
 export async function updateSampleRecord(
   sampleId: string,
-  data: Partial<Sample_db>
-): Promise<Sample_db> {
+  data: Partial<SampleRecord>
+): Promise<SampleRecord> {
   try {
-    return await pb.collection('samples').update<Sample_db>(sampleId, data);
+    return await pb.collection('samples').update<SampleRecord>(sampleId, data);
   } catch (error) {
     console.error('Error updating sample:', error);
     throw error;
@@ -66,27 +68,29 @@ export async function deleteSampleRecord(sampleId: string): Promise<void> {
 export async function renameSampleRecord(
   sampleId: string,
   name: string
-): Promise<Sample_db> {
+): Promise<SampleRecord> {
   try {
-    return await pb.collection('samples').update<Sample_db>(sampleId, { name });
+    return await pb
+      .collection('samples')
+      .update<SampleRecord>(sampleId, { name });
   } catch (error) {
     console.error('Error renaming sample:', error);
     throw error;
   }
 }
 
-export async function fetchSamples(): Promise<Sample_db[]> {
+export async function fetchSamples(): Promise<SampleRecord[]> {
   try {
-    const samples = await pb.collection('samples').getFullList<Sample_db>({
+    const samples = await pb.collection('samples').getFullList<SampleRecord>({
       sort: '-created',
     });
     console.log('Fetched samples:', samples);
     return samples.map((s) => ({
       ...s,
-      zeroCrossings: Array.isArray(s.zeroCrossings)
-        ? // if there is a possibility of zeroCrossings or sampleSettings being already in memory, if not then just parse the json
-          s.zeroCrossings
-        : JSON.parse(s.zeroCrossings as unknown as string),
+      // zeroCrossings: Array.isArray(s.zeroCrossings)
+      //   ? // if there is a possibility of zeroCrossings or sampleSettings being already in memory, if not then just parse the json
+      //     s.zeroCrossings
+      //   : JSON.parse(s.zeroCrossings as unknown as string),
       sample_settings:
         typeof s.sample_settings === 'string'
           ? JSON.parse(s.sample_settings)
@@ -102,9 +106,9 @@ export async function fetchSamples(): Promise<Sample_db[]> {
   }
 }
 
-export async function fetchSampleByID(sampleId: string): Promise<Sample_db> {
+export async function fetchSampleByID(sampleId: string): Promise<SampleRecord> {
   try {
-    return await pb.collection('samples').getOne<Sample_db>(sampleId);
+    return await pb.collection('samples').getOne<SampleRecord>(sampleId);
   } catch (error) {
     console.error('Error fetching sample record by id:', error);
     throw error;
@@ -120,7 +124,7 @@ export function generateSlug(name: string): string {
 }
 
 export async function getSampleAudioBuffer(
-  sample: Sample_db,
+  sample: SampleRecord,
   audioCtx: AudioContext
 ): Promise<AudioBuffer> {
   'use client'; // ??

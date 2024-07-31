@@ -3,14 +3,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import WaveDynamic from './WaveForms/WaveDynamic';
 import { useSamplerCtx } from '../../contexts/sampler-context';
-import { Sample_db, Sample_settings } from '../../types/sample';
+import { SampleRecord } from '../../types/sample';
 import styles from './Visualizer_cli.module.scss';
-import { set } from 'react-hook-form';
 
 function Visualizer_cli() {
-  const { latestSelectedSample, latestSelectedBuffer } = useSamplerCtx();
+  const { latestSelectedSample, latestSelectedBuffer, sampleSwitchFlag } =
+    useSamplerCtx();
 
-  const [sample, setSample] = useState<Sample_db | null>(null);
+  const [sample, setSample] = useState<SampleRecord | null>(null);
   const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ function Visualizer_cli() {
 
     setSample(latestSelectedSample);
     setBuffer(latestSelectedBuffer);
-  }, [latestSelectedSample, latestSelectedBuffer]);
+  }, [latestSelectedSample, latestSelectedBuffer, sampleSwitchFlag]);
 
   // Convert time values to normalized values if necessary
   const normalizePoint = (point: number) =>
@@ -28,9 +28,11 @@ function Visualizer_cli() {
     if (!sample || !buffer || buffer.length === 0) return null;
     const { startPoint, endPoint, loopStart, loopEnd } = sample.sample_settings;
 
+    console.log('Visualizer_cli: memoizedWaveDynamic', sample.name);
+
     return (
       <WaveDynamic
-        key={buffer.length} // Forces re-render when buffer changes
+        key={sample.id} // Forces re-render when buffer changes
         buffer={buffer}
         width={800}
         height={200}
@@ -42,7 +44,13 @@ function Visualizer_cli() {
         showCenterLine={false}
       />
     );
-  }, [sample, buffer]);
+  }, [
+    sample,
+    buffer,
+    sampleSwitchFlag,
+    latestSelectedSample,
+    latestSelectedBuffer,
+  ]); // why need all this for reliable re-render when switching samples?
 
   return <div className={styles.container}>{memoizedWaveDynamic}</div>;
 }

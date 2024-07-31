@@ -1,21 +1,26 @@
 // components/SampleSettings.tsx
 'use client';
 import React, { useState } from 'react';
-import { Sample_db, Sample_settings } from '../../types/sample';
+import { SampleRecord, Sample_settings } from '../../types/sample';
 import { useSamplerCtx } from '../../contexts/sampler-context';
 import { useSampleSettings } from '../../hooks/useSampleSettings';
 import BasicSlider from '../UI/Basic/BasicSlider';
 import styles from './Sampler.module.scss';
 
 const SampleSettings: React.FC = () => {
-  const { latestSelectedSample, isSampleLoaded, isSampleSelected } =
-    useSamplerCtx();
+  const {
+    latestSelectedSample,
+    latestSelectedBuffer,
+    isSampleLoaded,
+    isSampleSelected,
+  } = useSamplerCtx();
+  // QUICK FIX: add bufferDuration to latestSelectedSample or sampleRecord or samplesettings types
   const { handleSettingChange } = useSampleSettings();
 
-  const C5_DURATION_SEC = 0.00191117077819399; // 0.0595 seconds
+  const C5_DURATION_SEC = 0.00191117077819399; // just a constant for now
 
-  const sample = latestSelectedSample as Sample_db;
-  const settings = sample?.sample_settings as Sample_settings;
+  const sample = latestSelectedSample as SampleRecord;
+  const settings = sample.sample_settings as Sample_settings;
 
   const {
     startPoint, // remove
@@ -29,9 +34,11 @@ const SampleSettings: React.FC = () => {
     highCutoff,
   } = settings;
 
-  const bufferDuration = sample.bufferDuration;
-  const playDuration = endPoint - startPoint;
-  const loopDuration = loopEnd - loopStart;
+  const bufferDuration = latestSelectedBuffer?.duration ?? 0;
+  // if (!bufferDuration)
+  //   throw new Error('Buffer duration is missing in SampleSettings');
+  // const playDuration = endPoint - startPoint;
+  // const loopDuration = loopEnd - loopStart;
 
   const [durationHasChanged, setDurationHasChanged] = useState(false);
   const [loopDurationHasChanged, setLoopDurationHasChanged] = useState(false);
@@ -91,7 +98,7 @@ const SampleSettings: React.FC = () => {
               label='Start'
               value={startPoint}
               min={0}
-              max={sample.bufferDuration}
+              max={bufferDuration}
               step={0.001}
               onChange={handleStartChange}
               maxDynamic={endPoint - 0.0001}
@@ -100,7 +107,7 @@ const SampleSettings: React.FC = () => {
               label='End'
               value={endPoint}
               min={0}
-              max={sample.bufferDuration}
+              max={bufferDuration}
               step={0.001}
               onChange={handleEndChange}
               minDynamic={startPoint + 0.0001}
@@ -109,16 +116,16 @@ const SampleSettings: React.FC = () => {
               label='Loop Start'
               value={loopStart ?? 0}
               min={0}
-              max={sample.bufferDuration}
+              max={bufferDuration}
               step={0.0001}
               onChange={handleLoopStartChange}
               maxDynamic={loopEnd - 0.0001}
             />
             <BasicSlider
               label='Loop End'
-              value={loopEnd ?? sample.bufferDuration}
+              value={loopEnd ?? bufferDuration}
               min={0}
-              max={sample.bufferDuration}
+              max={bufferDuration}
               step={0.001}
               onChange={handleLoopEndChange}
               minDynamic={loopStart + 0.0001}
@@ -127,7 +134,7 @@ const SampleSettings: React.FC = () => {
               label='Attack'
               value={attackTime}
               min={0}
-              max={sample.bufferDuration}
+              max={bufferDuration}
               step={0.0001}
               onChange={(value) => handleSettingChange('attackTime', value)}
             />
@@ -135,7 +142,7 @@ const SampleSettings: React.FC = () => {
               label='Release'
               value={releaseTime}
               min={0.01}
-              max={sample.bufferDuration}
+              max={bufferDuration}
               step={0.0001}
               onChange={(value) => handleSettingChange('releaseTime', value)}
             />
@@ -244,7 +251,7 @@ export default SampleSettings;
 //               label='Start'
 //               value={sample.sample_settings.startPoint}
 //               min={0}
-//               max={sample.bufferDuration}
+//               max={bufferDuration}
 //               step={0.001}
 //               onChange={handleStartChange}
 //               maxDynamic={endPoint - 0.001} // TEMP FIX 0.01
@@ -253,7 +260,7 @@ export default SampleSettings;
 //               label='End'
 //               value={sample.sample_settings.endPoint}
 //               min={0}
-//               max={sample.bufferDuration}
+//               max={bufferDuration}
 //               step={0.001}
 //               onChange={handleEndChange}
 //               minDynamic={startPoint + 0.0001} // TEMP FIX 0.01
@@ -262,16 +269,16 @@ export default SampleSettings;
 //               label='Loop Start'
 //               value={sample.sample_settings.loopStart ?? 0}
 //               min={0}
-//               max={sample.bufferDuration}
+//               max={bufferDuration}
 //               step={0.0001}
 //               onChange={handleLoopStartChange}
 //               maxDynamic={loopEnd - 0.0001} // TEMP FIX 0.01
 //             />
 //             <BasicSlider
 //               label='Loop End'
-//               value={sample.sample_settings.loopEnd ?? sample.bufferDuration}
+//               value={sample.sample_settings.loopEnd ?? bufferDuration}
 //               min={0}
-//               max={sample.bufferDuration}
+//               max={bufferDuration}
 //               step={0.001}
 //               onChange={handleLoopEndChange}
 //               minDynamic={loopStart + 0.0001} // TEMP FIX 0.01
@@ -280,7 +287,7 @@ export default SampleSettings;
 //               label='Attack'
 //               value={sample.sample_settings.attackTime}
 //               min={0}
-//               max={sample.bufferDuration}
+//               max={bufferDuration}
 //               step={0.001}
 //               onChange={(value) => handleSettingChange('attackTime', value)}
 //             />
@@ -288,7 +295,7 @@ export default SampleSettings;
 //               label='Release'
 //               value={sample.sample_settings.releaseTime}
 //               min={0.01}
-//               max={sample.bufferDuration}
+//               max={bufferDuration}
 //               step={0.001}
 //               onChange={(value) => handleSettingChange('releaseTime', value)}
 //             />
@@ -343,7 +350,7 @@ export default SampleSettings;
 
 /* <MultiPointSlider
               min={0}
-              max={sample.bufferDuration}
+              max={bufferDuration}
               points={points}
               onChange={(newPoints) => {
                 newPoints.forEach((point) => {
@@ -620,42 +627,42 @@ export default SampleSettings;
 //                 'attackTime',
 //                 'Attack Time',
 //                 0,
-//                 sample.bufferDuration
+//                 bufferDuration
 //               )}
 //               {renderControl(
 //                 sample,
 //                 'releaseTime',
 //                 'Release Time',
 //                 0.01,
-//                 sample.bufferDuration
+//                 bufferDuration
 //               )}
 //               {renderControl(
 //                 sample,
 //                 'startPoint',
 //                 'Start',
 //                 0,
-//                 sample.sample_settings.endPoint ?? sample.bufferDuration
+//                 sample.sample_settings.endPoint ?? bufferDuration
 //               )}
 //               {renderControl(
 //                 sample,
 //                 'endPoint',
 //                 'End',
 //                 sample.sample_settings.startPoint ?? 0,
-//                 sample.bufferDuration
+//                 bufferDuration
 //               )}
 //               {renderControl(
 //                 sample,
 //                 'loopStart',
 //                 'Loop Start',
 //                 0,
-//                 sample.sample_settings.loopEnd ?? sample.bufferDuration
+//                 sample.sample_settings.loopEnd ?? bufferDuration
 //               )}
 //               {renderControl(
 //                 sample,
 //                 'loopEnd',
 //                 'Loop End',
 //                 sample.sample_settings.loopStart ?? 0,
-//                 sample.bufferDuration
+//                 bufferDuration
 //               )}
 //               {renderControl(sample, 'sampleVolume', 'Sample Volume', 0, 1)}
 //               {renderControl(sample, 'loopVolume', 'Loop Volume', 0, 1)}

@@ -1,7 +1,5 @@
 // src/types/sample.ts
 
-import { findZeroCrossings } from '../lib/DSP/zeroCrossingUtils';
-
 export type Sample_settings = {
   startPoint: number;
   endPoint: number;
@@ -16,32 +14,18 @@ export type Sample_settings = {
   highCutoff: number;
 };
 
-/* The Sample type should be the same as in the database schema. */
-
-export type LoadedSample = {
-  id: string;
-  name: string;
-  slug: string;
-
-  buffer: AudioBuffer;
-  zeroCrossings: number[];
-  sample_settings: Sample_settings;
-};
-
-export type Sample_db = {
+export type SampleRecord = {
   id: string;
   name: string;
   slug: string;
   user?: string | null;
   sample_file: File | string; // is this ok?
-  bufferDuration: number;
+  bufferDuration?: number; // REMOVE, make a function to get for clarity
   created: string;
   updated: string;
-  zeroCrossings?: number[]; // REMOVE, ONLY IN LOADEDSAMPLE
+  // zeroCrossings?: number[]; // REMOVE, ONLY IN LOADEDSAMPLE
   sample_settings: Sample_settings;
 };
-
-// export type newSample = Omit<Sample_db, 'id' | 'created' | 'updated'>;
 
 export function getDefaultSampleSettings(
   bufferDuration: number
@@ -63,35 +47,35 @@ export function getDefaultSampleSettings(
 
 // Moved from engine to sample type file, localize creation of sample_db objects to one place for consistency
 
-export function createNewSampleObject(
-  tempId: string,
-  name: string,
-  blob: Blob,
-  duration: number = 0,
-  user: string = '',
-  audioBuffer?: AudioBuffer
-): Sample_db {
-  const file = new File([blob], name + '.webm', { type: 'audio/webm' }); // check for consistency
-  const slug = name.toLowerCase().replace(/ /g, '-');
+// export function createNewSampleObject(
+//   tempId: string,
+//   name: string,
+//   blob: Blob,
+//   duration: number = 0,
+//   user: string = '',
+//   audioBuffer?: AudioBuffer
+// ): SampleRecord {
+//   const file = new File([blob], name + '.webm', { type: 'audio/webm' }); // check for consistency
+//   const slug = name.toLowerCase().replace(/ /g, '-');
 
-  const defaultSettings = getDefaultSampleSettings(duration);
+//   const defaultSettings = getDefaultSampleSettings(duration);
 
-  // Find zero crossings // óþarfi hér?
-  const zeroCrossings: number[] = audioBuffer
-    ? findZeroCrossings(audioBuffer)
-    : [];
+//   // Find zero crossings // óþarfi hér?
+//   const zeroCrossings: number[] = audioBuffer
+//     ? findZeroCrossings(audioBuffer)
+//     : [];
 
-  const sample: Sample_db = {
-    id: tempId,
-    name: name,
-    slug: slug,
-    user: user, // Add user ID ? remove?
-    sample_file: file,
-    created: new Date().toISOString(), // remove?
-    updated: new Date().toISOString(), // remove?
-    bufferDuration: duration,
-    zeroCrossings: zeroCrossings,
-    sample_settings: defaultSettings,
-  };
-  return sample;
-}
+//   const sample: SampleRecord = {
+//     id: tempId,
+//     name: name,
+//     slug: slug,
+//     user: user, // Add user ID ? remove?
+//     sample_file: file,
+//     created: new Date().toISOString(), // remove?
+//     updated: new Date().toISOString(), // remove?
+//     // bufferDuration: duration,
+//     // zeroCrossings: zeroCrossings,
+//     sample_settings: defaultSettings,
+//   };
+//   return sample;
+// }
