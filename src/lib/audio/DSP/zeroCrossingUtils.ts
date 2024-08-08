@@ -1,5 +1,7 @@
 // src/lib/DSP/ZeroCrossingDetector.ts
 
+import { Sample_settings } from '@src/types/samples';
+
 // Usage
 // const zeroCrossings = findZeroCrossings(audioBuffer);
 // loopStart = snapToNearestZeroCrossing(userSelectedLoopStart, zeroCrossings);
@@ -40,6 +42,26 @@ export function snapToNearestZeroCrossing(
   return zeroCrossings.reduce((prev, curr) =>
     Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev
   );
+}
+
+export function getInitZeroSnappedPoints(
+  buffer: AudioBuffer
+): Partial<Sample_settings> {
+  const zeroCrossings = findZeroCrossings(buffer);
+  const bufferDuration = buffer.duration;
+
+  return {
+    startPoint: snapToNearestZeroCrossing(0.05 * bufferDuration, zeroCrossings),
+    endPoint: snapToNearestZeroCrossing(
+      bufferDuration - 0.1 * bufferDuration,
+      zeroCrossings
+    ),
+    loopStart: snapToNearestZeroCrossing(0.3 * bufferDuration, zeroCrossings),
+    loopEnd: snapToNearestZeroCrossing(
+      bufferDuration - 0.3 * bufferDuration,
+      zeroCrossings
+    ),
+  };
 }
 
 /* NOT TESTED MULTI CHANNEL VERSION BELOW */

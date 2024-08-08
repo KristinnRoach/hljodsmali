@@ -41,6 +41,7 @@ import { FormatKey } from '../types/mimeTypes';
 import { getHoursMinSec } from '../lib/utils/time-utils';
 import {
   findZeroCrossings,
+  getInitZeroSnappedPoints,
   snapToNearestZeroCrossing,
 } from '@src/lib/audio/DSP/zeroCrossingUtils';
 import { snap } from 'gsap';
@@ -230,27 +231,7 @@ export default function SamplerProvider({
         const audioBuffer = await decodeAudioData(arrayBuffer);
         const bufferDuration = audioBuffer.duration;
 
-        const zeroCrossings = findZeroCrossings(audioBuffer);
-
-        // TODO: move to zeroCross utils
-        const initZeroSnapped: Partial<Sample_settings> = {
-          startPoint: snapToNearestZeroCrossing(
-            0.05 * bufferDuration,
-            zeroCrossings
-          ),
-          endPoint: snapToNearestZeroCrossing(
-            bufferDuration - 0.1 * bufferDuration,
-            zeroCrossings
-          ),
-          loopStart: snapToNearestZeroCrossing(
-            0.3 * bufferDuration,
-            zeroCrossings
-          ),
-          loopEnd: snapToNearestZeroCrossing(
-            bufferDuration - 0.3 * bufferDuration,
-            zeroCrossings
-          ),
-        };
+        const initZeroSnapped = getInitZeroSnappedPoints(audioBuffer);
 
         const record = await createNewSampleRecord(
           tempName,
