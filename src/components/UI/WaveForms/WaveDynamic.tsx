@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
-import { Sample_settings } from '../../../types/sample';
+import { Sample_settings } from '../../../types/samples';
 import { useSampleSettings } from '../../../hooks/useSampleSettings';
 
 interface WaveDynamicProps {

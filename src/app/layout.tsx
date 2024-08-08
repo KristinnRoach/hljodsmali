@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 
-import '../styles/globals.scss';
-import ReactAudioCtxProvider from '../contexts/react-audio-context';
+import ReactAudioCtxProvider from '../contexts/ReactAudioCtx';
 import AudioDeviceProvider from '../contexts/audio-device-context';
+// import AudioRecorderProvider from '../contexts/audio-recorder-context';
+
+import '../styles/globals.scss';
 
 export const metadata: Metadata = {
   title: 'Hljóðsmali!',
@@ -25,7 +27,9 @@ export default function RootLayout({
       <body>
         <AudioDeviceProvider>
           <ReactAudioCtxProvider>
+            {/* <AudioRecorderProvider> */}
             <DynamicSamplerProvider>{children}</DynamicSamplerProvider>
+            {/* </AudioRecorderProvider> */}
           </ReactAudioCtxProvider>
         </AudioDeviceProvider>
       </body>

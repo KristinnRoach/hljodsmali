@@ -1,7 +1,9 @@
-import { Loaded } from '../SamplerEngine';
+// import { Loaded } from '../Sampler/SamplerEngine';
+import { Sample_settings } from '../../../types/samples';
 
 export async function renderAndDrawWaveform(
-  loadedSample: Loaded
+  buffer: AudioBuffer,
+  sampleSettings: Sample_settings
 ): Promise<AudioBuffer | undefined> {
   const buffer = loadedSample.buffer;
   const settings = loadedSample.sample.sample_settings;

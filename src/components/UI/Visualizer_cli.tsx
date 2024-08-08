@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import WaveDynamic from './WaveForms/WaveDynamic';
 import { useSamplerCtx } from '../../contexts/sampler-context';
-import { SampleRecord } from '../../types/sample';
-import styles from './Visualizer_cli.module.scss';
+import { SampleRecord } from '../../types/samples';
+import styles from './styles/Visualizer_cli.module.scss';
 
 function Visualizer_cli() {
   const { latestSelectedSample, latestSelectedBuffer, sampleSwitchFlag } =
@@ -21,8 +21,8 @@ function Visualizer_cli() {
   }, [latestSelectedSample, latestSelectedBuffer, sampleSwitchFlag]);
 
   // Convert time values to normalized values if necessary
-  const normalizePoint = (point: number) =>
-    buffer ? point / buffer.duration : 0;
+  // const normalizePoint = (point: number) =>
+  //   buffer ? point / buffer.duration : 0;
 
   const memoizedWaveDynamic = useMemo(() => {
     if (!sample || !buffer || buffer.length === 0) return null;

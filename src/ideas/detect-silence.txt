@@ -1,0 +1,31 @@
+Óritskoðað frá tjattaranum: 
+
+Auto-trimming samples:
+Automatically trim silence from the start and end of recorded samples.
+
+Voice-activated recording: 
+Start recording automatically when sound is detected, stop when silence is detected.
+
+Dynamic loop points: 
+Set loop start/end points based on detected sound/silence boundaries.
+
+Rhythmic quantization: 
+Use silence detection to help quantize recorded samples to a musical grid.
+
+Adaptive effects: 
+Trigger or modify effects based on the presence or absence of sound.
+
+Intelligent layering: 
+Automatically layer or switch between samples based on detected silence in playback.
+
+Performance metrics: 
+Measure and display the amount of silence vs. sound in a performance.
+
+Auto-gain: 
+Adjust gain automatically based on detected periods of silence to maintain consistent volume.
+
+Silence-based sequencing: 
+Create rhythmic patterns by triggering samples during detected silent periods.
+
+Audio-reactive visuals: 
+Drive visual elements based on the presence or absence of sound.

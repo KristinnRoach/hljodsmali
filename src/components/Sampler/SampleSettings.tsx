@@ -1,7 +1,7 @@
 // components/SampleSettings.tsx
 'use client';
 import React, { useState } from 'react';
-import { SampleRecord, Sample_settings } from '../../types/sample';
+import { SampleRecord, Sample_settings } from '../../types/samples';
 import { useSamplerCtx } from '../../contexts/sampler-context';
 import { useSampleSettings } from '../../hooks/useSampleSettings';
 import BasicSlider from '../UI/Basic/BasicSlider';

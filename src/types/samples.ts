@@ -1,4 +1,6 @@
-// src/types/sample.ts
+// src/types/samples.ts
+
+import { FormatKey, AudioFormat, APP_FORMATS } from './mimeTypes';
 
 export type Sample_settings = {
   startPoint: number;
@@ -14,27 +16,46 @@ export type Sample_settings = {
   highCutoff: number;
 };
 
+export type Sample_file = File & {
+  type: (typeof APP_FORMATS)[FormatKey];
+  name: `${string}${(typeof APP_FORMATS)[FormatKey]['extension']}`;
+  size: number;
+};
+
 export type SampleRecord = {
   id: string;
   name: string;
   slug: string;
   user?: string | null;
-  sample_file: File | string; // is this ok?
-  bufferDuration?: number; // REMOVE, make a function to get for clarity
-  created: string;
-  updated: string;
-  // zeroCrossings?: number[]; // REMOVE, ONLY IN LOADEDSAMPLE
+  sample_file: Sample_file; // File | Blob | string; // is this ok?
+  bufferDuration?: number;
+  created?: string;
+  updated?: string;
+  // zeroCrossings?: number[]; // REMOVE, ONLY IN SamplerEngine
   sample_settings: Sample_settings;
 };
+
+/* 
+validate sample settings - type guard ? :
+    startPoint: 0.1 > bufferDuration ? 0.1 : 0,
+    endPoint: (bufferDuration - 0.2 > 0.1) ? bufferDuration - 0.2 : bufferDuration,
+    loopStart: 0.1 > bufferDuration ? 0.1 : 0,
+    loopEnd: (bufferDuration - 0.2 > 0.1) ? bufferDuration - 0.2 : bufferDuration,
+    
+    Do loopStart and loopEnd need to be (or should they be) within startPoint and endPoint ?
+
+    add edge case check for envelope, looping and non-looping, (probly in SingleUseVoice)
+    */
 
 export function getDefaultSampleSettings(
   bufferDuration: number
 ): Sample_settings {
   return {
-    startPoint: 0,
-    endPoint: bufferDuration,
-    loopStart: 0,
-    loopEnd: bufferDuration,
+    startPoint: 0.1 > bufferDuration ? 0.1 : 0,
+    endPoint:
+      bufferDuration - 0.2 > 0.1 ? bufferDuration - 0.2 : bufferDuration,
+    loopStart: 0.1 > bufferDuration ? 0.1 : 0,
+    loopEnd: bufferDuration - 0.2 > 0.1 ? bufferDuration - 0.2 : bufferDuration,
     attackTime: 0.02,
     releaseTime: 0.2,
     sampleVolume: 0.8,
@@ -47,7 +68,7 @@ export function getDefaultSampleSettings(
 
 // Moved from engine to sample type file, localize creation of sample_db objects to one place for consistency
 
-// export function createNewSampleObject(
+// export function initializeSampleRecord(
 //   tempId: string,
 //   name: string,
 //   blob: Blob,
@@ -58,12 +79,7 @@ export function getDefaultSampleSettings(
 //   const file = new File([blob], name + '.webm', { type: 'audio/webm' }); // check for consistency
 //   const slug = name.toLowerCase().replace(/ /g, '-');
 
-//   const defaultSettings = getDefaultSampleSettings(duration);
-
-//   // Find zero crossings // óþarfi hér?
-//   const zeroCrossings: number[] = audioBuffer
-//     ? findZeroCrossings(audioBuffer)
-//     : [];
+//   const defaultSettings = getDefaultSampleSettings(duration || audioBuffer?.duration || 0);
 
 //   const sample: SampleRecord = {
 //     id: tempId,

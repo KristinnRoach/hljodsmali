@@ -1,13 +1,20 @@
 import React from 'react';
-// import 'server-only';
+import 'server-only';
+
+import dynamic from 'next/dynamic';
 
 import Sampler_cli from '../components/Sampler/Sampler';
-import KeyboardGUI from '../components/UI/Keyboard/spline/KeyboardGUISpline';
+// import KeyboardGUI from '../components/UI/Keyboard/spline/KeyboardGUISpline';
 import Auth from '../components/Auth/Auth';
 
 import styles from '../styles/page.module.scss';
 import Shapes from '../components/UI/Shapes/Shapes';
 import Visualizer_cli from '../components/UI/Visualizer_cli';
+
+const AudioDeviceSelector = dynamic(
+  () => import('../components/Sampler/AudioDeviceSelector'),
+  { ssr: false }
+);
 
 export default function Home() {
   // async?
@@ -18,13 +25,14 @@ export default function Home() {
           <Auth />
         </div>
         <div className={styles.topBar}>
+          <AudioDeviceSelector />
           <Sampler_cli />
         </div>
         {/* <div className={styles.position_fixed}>
           <KeyboardGUI />
         </div> */}
-        {/* <Shapes /> */}
         <Visualizer_cli />
+        <Shapes />
       </main>
     </>
   );

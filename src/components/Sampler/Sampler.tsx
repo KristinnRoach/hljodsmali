@@ -1,21 +1,27 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 
-import useKeyboard from '../../hooks/useKeyboard';
-import Recorder_CSR from './Recorder';
 import SampleSettings from './SampleSettings';
 import LinkList from '../UI/LinkList';
-
-import styles from './Sampler.module.scss';
-import { useSamplerCtx } from '../../contexts/sampler-context';
 import Toggle from '../UI/Basic/Toggle';
 import MenuToggle from '../UI/Basic/MenuToggle';
+
+import Recorder from './Recorder';
+
+import useKeyboard from '../../hooks/useKeyboard';
+import { useSamplerCtx } from '../../contexts/sampler-context';
+import { SAMPLES_PER_PAGE } from '../../types/constants';
+import { AudioFormat, FormatKey, APP_FORMATS } from '../../types/mimeTypes';
+
+import styles from './Sampler.module.scss';
+import { blobToSampleFile } from '@src/types/utils';
 
 export default function Sampler_cli() {
   useKeyboard();
   const {
     samplerEngine,
+    // handleNewRecording,
     sampleRecords,
     isLoading,
     saveAll,
@@ -35,10 +41,14 @@ export default function Sampler_cli() {
 
   return (
     <>
+      {/* <AudioDeviceSelector /> */}
       <div className={styles.sampler}>
         <button onClick={saveAll} disabled={!hasUnsavedSamples}>
           Save All
         </button>
+        {/* <button onClick={reSample} disabled={!hasUnsavedSamples}>
+          ReSample!
+        </button> */}
         <Toggle
           label='Loop'
           isOn={isLooping}
@@ -52,7 +62,8 @@ export default function Sampler_cli() {
           type='hold'
         />
 
-        <Recorder_CSR />
+        <Recorder />
+
         <section className={styles.samples}>
           <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
             {!isLoading && sampleRecords.length > 0 && (
@@ -60,7 +71,7 @@ export default function Sampler_cli() {
                 items={sampleRecords}
                 title='Samples'
                 paramName='samples'
-                itemsPerPage={10}
+                itemsPerPage={SAMPLES_PER_PAGE}
                 onDelete={(id) => deleteSample(id)}
                 onSave={(id) => updateSample(id)}
               />
@@ -74,6 +85,125 @@ export default function Sampler_cli() {
     </>
   );
 }
+
+// // import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+
+// // const {
+// //   startRecording,
+// //   stopRecording,
+// //   isRecording,
+// //   audioBlob,
+// //   requestPermission,
+// //   permissionGranted,
+// // } = useAudioRecorder();
+
+// // useEffect(() => {
+// //   requestPermission();
+// // }, [requestPermission]);
+
+// // const toggleRecording = useCallback(async () => {
+// //   if (!permissionGranted) {
+// //     await requestPermission();
+// //     return;
+// //   }
+
+//   if (isRecording) {
+//     const blob = await stopRecording();
+//     if (!blob) throw new Error('Failed to process recording');
+//     handleNewRecording(blob);
+//   } else {
+//     await startRecording();
+//   }
+// }, [
+//   isRecording,
+//   startRecording,
+//   stopRecording,
+//   permissionGranted,
+//   requestPermission,
+// ]);
+
+//   <div className='recorder'>
+//   <Toggle
+//     isOn={isRecording}
+//     onToggle={toggleRecording}
+//     label={
+//       isRecording
+//         ? 'Stop'
+//         : permissionGranted
+//         ? 'Record'
+//         : 'Grant Permission'
+//     }
+//     type='record'
+//   />
+// </div>
+
+// load new recording when recording stops
+
+// const stopRecording = useCallback(async (blob) => {
+//   if (!(samplerEngine && audioCtx)) return;
+
+//   const recordedBlob = await samplerEngine.stopRecording();
+//   if (recordedBlob) {
+//     //const mimeTypeKey: keyof typeof AUDIO_TYPE_ENUM
+
+//     /* FIND A NON-CONVOLUTED WAY TO GET THE KEYS, SIMPLIFY ENUMS SINCE THEY USE SAME KEYS */
+
+//     console.log('AUDIOTYPE: ', audioType);
+//     const record = await blobToSampleRecord(audioCtx, recordedBlob, 'OGG'); // REMOVE HARDCODED MIME TYPE
+
+//     const sampleName = prompt('Save sample now? Enter a name:');
+
+//     if (sampleName) {
+//       saveNewSampleRecord(record).then((savedRecord) => {
+//         setSampleRecords((prev) => [...prev, savedRecord]);
+//         router.replace(`?samples=${savedRecord.slug}`, { scroll: false });
+//       });
+//     } else {
+//       // samplerEngine.loadSample(savedRecord, buffer);
+//       // unsavedSampleIds.current.add(sample.id);
+//       setSampleRecords((prev) => [...prev, record]); // triggers loadSamples useEffect
+//       router.replace(`?samples=${record.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
+//     }
+//   }
+// }, [samplerEngine, router, audioCtx]);
+
+// const {
+//   latestSelectedLoadedSample, // REMOVE
+//   latestSelectedSample,
+
+//   .....
+
+// } = useSamplerCtx();
+
+// const { renderToFileOffline, isProcessing, error } = useResample();
+
+// const reSample = async () => {
+//   const loadedSample = latestSelectedLoadedSample;
+//   const record = latestSelectedSample;
+//   if (!loadedSample || !record) {
+//     console.error('No sample selected');
+//     return;
+//   }
+
+//   if (loadedSample.id !== record.id) {
+//     console.error('Loaded sample and record do not match');
+//     return;
+//   }
+
+//   const settings = record.sample_settings;
+//   const offsetDuration = 0;
+//   const shouldLoop = false;
+
+//   const reSampledBuffer = await renderToFileOffline(
+//     1,
+//     loadedSample,
+//     settings,
+//     offsetDuration,
+//     shouldLoop
+//   );
+
+//   console.log('reSampled buffer: ', reSampledBuffer);
+// };
 
 // import { notes } from '../UI/Keyboard/basic/note';
 // import Octave from '../UI/Keyboard/basic/Octave';

@@ -14,30 +14,43 @@ import React, {
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   SampleRecord,
+  Sample_file,
   Sample_settings,
   getDefaultSampleSettings,
-} from '../types/sample';
+} from '../types/samples';
 
-import SamplerEngine from '../lib/SamplerEngine';
+import SamplerEngine, {
+  LoadedSample,
+  SampleNodes,
+} from '../lib/audio/Sampler/SamplerEngine';
 
 import {
   fetchSamples,
-  updateSampleRecord,
-  deleteSampleRecord,
-  getSampleAudioBuffer,
+  createNewSampleRecord,
   saveNewSampleRecord,
+  deleteSampleRecord,
+  updateSampleRecord,
   renameSampleRecord,
 } from '../lib/db/pocketbase';
 
-import { useReactAudioCtx } from './react-audio-context';
+import { useReactAudioCtx, useAudioCtxUtils } from './ReactAudioCtx';
+
+// // import { AUDIO_TYPE_ENUM } from '../types/enums';
+import { blobToSampleFile, isSampleFile } from '../types/utils';
+import { FormatKey } from '../types/mimeTypes';
+import { getHoursMinSec } from '../lib/utils/time-utils';
 
 type SamplerCtxType = {
   samplerEngine: SamplerEngine | null;
+  handleNewRecording: (blob: Blob) => void;
   sampleRecords: SampleRecord[];
   sampleSwitchFlag: number;
   selectedSamples: SampleRecord[];
   latestSelectedSample: SampleRecord | undefined;
   latestSelectedBuffer: AudioBuffer | undefined;
+
+  latestSelectedLoadedSample: LoadedSample | undefined; // REMOVE
+
   isSampleLoaded: (id: string) => boolean;
   isSampleSelected: (id: string) => boolean;
   saveAll: () => void;
@@ -52,8 +65,6 @@ type SamplerCtxType = {
     id: string,
     settings: Partial<Sample_settings>
   ) => void;
-  startRecording: () => void;
-  stopRecording: () => void;
   isLoading: boolean;
 };
 
@@ -71,6 +82,7 @@ export default function SamplerProvider({
     throw new Error('No window object in sampler context'); // not necessary in a 'use client' context?
 
   const { audioCtx } = useReactAudioCtx();
+  const { decodeAudioData } = useAudioCtxUtils();
 
   const samplerEngine = audioCtx ? SamplerEngine.getInstance(audioCtx) : null; // should this be in a useMemo?
   // const samplerEngine = audioCtx
@@ -141,100 +153,93 @@ export default function SamplerProvider({
     console.log('isHolding:', samplerEngine.isHolding());
   };
 
-  // const handleHoldKey = (tabActive: boolean, spaceDown: boolean) => {
-  //   if (!(samplerEngine && audioCtx)) return;
-
-  //   const newHoldState = tabActive !== spaceDown;
-  //   if (newHoldState !== isHolding) {
-  //     setIsHolding(newHoldState);
-  //     samplerEngine.toggleHold();
-
-  //     // toggleHold();
-  //   }
-  // };
-
-  /* Do it this way for clarity! */
-
-  // const handleCaps = (active: boolean) => {
-  //   // caps / button
-  //   if (!(samplerEngine && audioCtx)) return;
-  //   samplerEngine.toggleLoop();
-  //   // samplerEngine.handleMainLoopKeypress(active);
-  // };
-
-  // const isMomentaryLoopDown(down: boolean) { // space
-
-  // const isMainHoldActive(active: boolean) { // tab / button
-
-  // const isMomentaryHoldDown(down: boolean) { // space for now, separate function for clarity and easy expansion
-
-  // if isHolding && isLooping -> space releases hold
-  // if !isHolding && isLooping -> space holds
-  // if isHolding && !isLooping -> space starts looping
-  // if !isHolding && !isLooping -> space does nothing
-
-  /* this is a bit messy - implement the above */
-  // const handleLoopKeys = (capsActive: boolean, spaceDown: boolean) => {
-  //   if (!(samplerEngine && audioCtx)) return;
-
-  //   // if (isLooping && isHolding && spaceDown) {
-  //   //   toggleHold(); // space should release hold when looping, why does it not?
-  //   //   return;
-  //   // }
-
-  //   console.log('handleLoopKeys:', capsActive, spaceDown, isHolding);
-
-  //   samplerEngine.handleLoopKeys(capsActive, spaceDown);
-  //   setIsLooping(samplerEngine.isLooping());
-  // };
-
-  // // move handleLoopKeys to samplerCtx, only toggle loop neccessary
-  // handleLoopKeys(loopToggle: boolean, loopMomentary: boolean): void {
-  //   const newLoopState = loopToggle !== loopMomentary;
-  //   if (newLoopState !== this.globalLoop) {
-  //     this.toggleGlobalLoop();
-  //   }
-  // }
-
-  // Fetch samples
-  useEffect(() => {
-    setIsLoading(true);
-    fetchSamples()
-      .then(setSampleRecords)
-      .catch((error) => console.error('Error fetching samples:', error))
-      .finally(() => setIsLoading(false));
-  }, []);
+  // // Fetch initial samples
+  // useEffect(() => {
+  //   setIsLoading(true);
+  //   fetchSamples()
+  //     .then(setSampleRecords)
+  //     .catch((error) => console.error('Error fetching samples:', error))
+  //     .finally(() => setIsLoading(false));
+  // }, []);
 
   // DRAG N DROP
 
   const handleDroppedFile = useCallback(
-    async (file: File) => {
+    async (data: File) => {
       if (!(samplerEngine && audioCtx)) return;
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer); // if loadSamples is already called, it should create a buffer and record?
-        // const sampleId = `dropped-${Date.now()}`;
-        const sampleSettings = getDefaultSampleSettings(audioBuffer.duration);
+        const timeNow = getHoursMinSec();
+        const tempName = `dropped-sample-${timeNow}`;
 
-        const sampleRecord: SampleRecord = await saveNewSampleRecord(
-          file.name,
-          file,
-          sampleSettings
+        const sample_file = blobToSampleFile(
+          data,
+          tempName,
+          'WEBM' // data.type as FormatKey
+        );
+        if (!(sample_file && isSampleFile(sample_file))) {
+          throw new Error('Error creating sample-file from data');
+        }
+
+        const arrayBuffer = await data.arrayBuffer();
+        const buffer = await decodeAudioData(arrayBuffer);
+
+        const record = await createNewSampleRecord(
+          tempName,
+          sample_file,
+          buffer.duration
         );
 
-        if (!(sampleRecord && sampleSettings))
-          // && audioBuffer
-          throw new Error('Error saving sample record');
+        if (!(record && record.sample_settings)) {
+          alert('Failed to create Sample from recording');
+        }
 
-        // samplerEngine.loadSample(sampleRecord, audioBuffer); // loadSamples is already called on drop ?
-        addLoadedBuffer(sampleRecord.id, audioBuffer);
+        unsavedSampleIds.current.add(record.id);
+        setSampleRecords((prev) => [...prev, record]); // triggers loadSamples useEffect
 
-        // unsavedSampleIds.current.add(sampleId);
-        setSampleRecords((prev) => [...prev, sampleRecord]); // triggers loadSamples useEffect
-
-        router.replace(`?samples=${sampleRecord.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
+        router.replace(`?samples=${record.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
       } catch (error) {
         console.error('Error decoding dropped audio file:', error);
+      }
+    },
+    [audioCtx, samplerEngine, router] // needs all functions as dependencies?
+  );
+
+  const handleNewRecording = useCallback(
+    async (blob: Blob) => {
+      if (!(samplerEngine && audioCtx)) return;
+
+      try {
+        const timeNow = getHoursMinSec();
+        const tempName = `unsaved-sample-${timeNow}`;
+
+        const sample_file = blobToSampleFile(
+          blob,
+          tempName,
+          'WEBM' // blob.type as FormatKey
+        );
+        if (!(sample_file && isSampleFile(sample_file))) {
+          throw new Error('Error creating sample file from blob');
+        }
+
+        const arrayBuffer = await blob.arrayBuffer();
+        const buffer = await decodeAudioData(arrayBuffer);
+
+        const record = await createNewSampleRecord(
+          tempName,
+          sample_file,
+          buffer.duration
+        );
+
+        if (!(record && record.sample_settings)) {
+          alert('Failed to create Sample from recording');
+        }
+
+        unsavedSampleIds.current.add(record.id);
+        setSampleRecords((prev) => [...prev, record]); // triggers loadSamples useEffect
+
+        router.replace(`?samples=${record.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
+      } catch (error) {
+        console.error('Error decoding new recording:', error);
       }
     },
     [audioCtx, samplerEngine, router] // needs all functions as dependencies?
@@ -254,6 +259,7 @@ export default function SamplerProvider({
       e.stopPropagation();
       const file = e.dataTransfer?.files[0];
       if (file && file.type.startsWith('audio/')) {
+        // TODO: add startsWith('audio/' || 'application' || 'video/') and handle accordingly
         await handleDroppedFile(file);
       }
     };
@@ -268,8 +274,9 @@ export default function SamplerProvider({
   }, [handleDroppedFile, samplerEngine, audioCtx]);
 
   // Sample selection and loading to sampler engine
+
   useEffect(() => {
-    if (!(samplerEngine && audioCtx)) return;
+    if (!(samplerEngine && audioCtx && sampleRecords)) return;
 
     const loadSamples = async () => {
       // TODO: fix edge case where slug is not unique (e.g. slug to id map) ?
@@ -283,13 +290,14 @@ export default function SamplerProvider({
           if (!samplerEngine.isSampleLoaded(foundSample.id)) {
             console.log('loading sample:', foundSample);
 
+            const arrayBuffer = await foundSample.sample_file.arrayBuffer();
             try {
-              const buffer = await getSampleAudioBuffer(foundSample, audioCtx); // VERIFY: sample needs to be already in database for this to work
+              const buffer = await decodeAudioData(arrayBuffer);
               samplerEngine.loadSample(foundSample, buffer);
 
               addLoadedBuffer(foundSample.id, buffer);
             } catch (error) {
-              console.error(`Error loading sample ${foundSample.id}:`, error);
+              console.error(`Error loading sample ${foundSample.name}:`, error);
             }
           }
         }
@@ -299,12 +307,14 @@ export default function SamplerProvider({
       samplerEngine.setSelectedSampleIds(ids);
 
       // console.log('ids: ', ids);
+      // setIsLoading(false);
     };
 
     loadSamples();
 
     return () => {
       samplerEngine.setSelectedSampleIds([]);
+      setIsLoading(false);
     };
   }, [selectedSlugsMemo, sampleRecords, audioCtx, samplerEngine]); // allSamples ?
 
@@ -338,6 +348,19 @@ export default function SamplerProvider({
       : undefined;
   }, [latestSelectedSample, loadedBuffers]);
 
+  //___________________________________________________________
+  // FOR TESTING - REMOVE (using for testing ReSample)
+
+  const latestSelectedLoadedSample = useMemo(() => {
+    return latestSelectedSample
+      ? samplerEngine
+          ?.getLoadedSamples()
+          .find((s) => s.id === latestSelectedSample.id)
+      : undefined;
+  }, [latestSelectedSample, samplerEngine]);
+
+  //___________________________________________________________
+
   /* SAMPLE SETTINGS */
 
   const updateSampleSettings = useCallback(
@@ -347,8 +370,8 @@ export default function SamplerProvider({
       try {
         samplerEngine.updateSampleSettings(id, settings);
 
-        setSampleRecords((prev) =>
-          prev.map((sample) =>
+        setSampleRecords((prevRecords) =>
+          prevRecords.map((sample) =>
             sample.id === id
               ? {
                   ...sample,
@@ -357,6 +380,7 @@ export default function SamplerProvider({
               : sample
           )
         );
+
         unsavedSampleIds.current.add(id);
       } catch (error) {
         console.error(
@@ -462,34 +486,57 @@ export default function SamplerProvider({
     );
   }
 
+  /* RESAMPLING */
+
+  // IMPELEMENT!
+
   /* RECORDING */
 
-  const startRecording = useCallback(async () => {
-    if (!(samplerEngine && audioCtx)) return;
+  // const startRecording = useCallback(async () => {
+  //   if (!(samplerEngine && audioCtx)) return;
 
-    await samplerEngine.startRecording();
-  }, [samplerEngine, audioCtx]);
+  //   await samplerEngine.startRecording();
+  // }, [samplerEngine, audioCtx]);
 
-  const stopRecording = useCallback(async () => {
-    if (!(samplerEngine && audioCtx)) return;
+  // const stopRecording = useCallback(async () => {
+  //   if (!(samplerEngine && audioCtx)) return;
 
-    const { savedSampleRecord: sample, buffer } =
-      await samplerEngine.stopRecording();
-    if (sample && buffer) {
-      // samplerEngine.loadSample(sample, buffer);
-      // unsavedSampleIds.current.add(sample.id);
-      setSampleRecords((prev) => [...prev, sample]); // triggers loadSamples useEffect
-      router.replace(`?samples=${sample.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
-    }
-  }, [samplerEngine, router, audioCtx]);
+  //   const recordedBlob = await samplerEngine.stopRecording();
+  //   if (recordedBlob) {
+  //     //const mimeTypeKey: keyof typeof AUDIO_TYPE_ENUM
+
+  //     /* FIND A NON-CONVOLUTED WAY TO GET THE KEYS, SIMPLIFY ENUMS SINCE THEY USE SAME KEYS */
+
+  //     console.log('AUDIOTYPE: ', audioType);
+  //     const record = await blobToSampleRecord(audioCtx, recordedBlob, 'OGG'); // REMOVE HARDCODED MIME TYPE
+
+  //     const sampleName = prompt('Save sample now? Enter a name:');
+
+  //     if (sampleName) {
+  //       saveNewSampleRecord(record).then((savedRecord) => {
+  //         setSampleRecords((prev) => [...prev, savedRecord]);
+  //         router.replace(`?samples=${savedRecord.slug}`, { scroll: false });
+  //       });
+  //     } else {
+  //       // samplerEngine.loadSample(savedRecord, buffer);
+  //       // unsavedSampleIds.current.add(sample.id);
+  //       setSampleRecords((prev) => [...prev, record]); // triggers loadSamples useEffect
+  //       router.replace(`?samples=${record.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
+  //     }
+  //   }
+  // }, [samplerEngine, router, audioCtx]);
 
   const value = {
     samplerEngine,
+    handleNewRecording,
     sampleRecords,
     sampleSwitchFlag,
     selectedSamples,
     latestSelectedSample,
     latestSelectedBuffer,
+
+    latestSelectedLoadedSample, // REMOVE
+
     isSampleLoaded,
     isSampleSelected,
     saveAll,
@@ -503,8 +550,6 @@ export default function SamplerProvider({
     isHolding,
     toggleHold,
     updateSampleSettings,
-    startRecording,
-    stopRecording,
     isLoading,
   };
 
@@ -518,6 +563,30 @@ export function useSamplerCtx() {
   }
   return context;
 }
+
+// // get initial audio MIME type from SamplerEngine
+// useEffect(() => {
+//   if (!samplerEngine) return;
+//   setAudioType(samplerEngine.getAudioType());
+// }, [samplerEngine]);
+
+// // set audio MIME type in SamplerEngine when changed
+// useEffect(() => {
+//   if (!audioType || !samplerEngine) return;
+//   const samplerAudioType = samplerEngine?.getAudioType();
+//   if (samplerAudioType === audioType) return;
+//   samplerEngine?.setAudioType(audioType);
+// }, [audioType]);
+
+// // change audio type handler
+// const handleAudioTypeChange = useCallback(
+//   (type: AUDIO_TYPE_ENUM) => {
+//     if (!audioType || !samplerEngine) return;
+//     if (type === audioType) return;
+//     setAudioType(type);
+//   },
+//   [audioType, setAudioType, samplerEngine]
+// );
 
 // async function saveUpdatedSamples() {
 //   const ids = unsavedSampleIds.current;
@@ -534,5 +603,60 @@ export function useSamplerCtx() {
 //     unsavedSampleIds.current = new Set();
 //   } catch (error) {
 //     console.error('Error updating sample settings:', error);
+//   }
+// }
+
+// const handleHoldKey = (tabActive: boolean, spaceDown: boolean) => {
+//   if (!(samplerEngine && audioCtx)) return;
+
+//   const newHoldState = tabActive !== spaceDown;
+//   if (newHoldState !== isHolding) {
+//     setIsHolding(newHoldState);
+//     samplerEngine.toggleHold();
+
+//     // toggleHold();
+//   }
+// };
+
+/* Do it this way for clarity! */
+
+// const handleCaps = (active: boolean) => {
+//   // caps / button
+//   if (!(samplerEngine && audioCtx)) return;
+//   samplerEngine.toggleLoop();
+//   // samplerEngine.handleMainLoopKeypress(active);
+// };
+
+// const isMomentaryLoopDown(down: boolean) { // space
+
+// const isMainHoldActive(active: boolean) { // tab / button
+
+// const isMomentaryHoldDown(down: boolean) { // space for now, separate function for clarity and easy expansion
+
+// if isHolding && isLooping -> space releases hold
+// if !isHolding && isLooping -> space holds
+// if isHolding && !isLooping -> space starts looping
+// if !isHolding && !isLooping -> space does nothing
+
+/* this is a bit messy - implement the above */
+// const handleLoopKeys = (capsActive: boolean, spaceDown: boolean) => {
+//   if (!(samplerEngine && audioCtx)) return;
+
+//   // if (isLooping && isHolding && spaceDown) {
+//   //   toggleHold(); // space should release hold when looping, why does it not?
+//   //   return;
+//   // }
+
+//   console.log('handleLoopKeys:', capsActive, spaceDown, isHolding);
+
+//   samplerEngine.handleLoopKeys(capsActive, spaceDown);
+//   setIsLooping(samplerEngine.isLooping());
+// };
+
+// // move handleLoopKeys to samplerCtx, only toggle loop neccessary
+// handleLoopKeys(loopToggle: boolean, loopMomentary: boolean): void {
+//   const newLoopState = loopToggle !== loopMomentary;
+//   if (newLoopState !== this.globalLoop) {
+//     this.toggleGlobalLoop();
 //   }
 // }

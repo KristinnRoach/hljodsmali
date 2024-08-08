@@ -4,25 +4,16 @@ import {
   SampleRecord,
   Sample_settings,
   getDefaultSampleSettings,
-  // createNewSampleObject,
-} from '../types/sample';
+} from '../../../types/samples';
 
 import {
   findZeroCrossings,
   snapToNearestZeroCrossing,
-} from './DSP/zeroCrossingUtils';
-import { saveNewSampleRecord } from './db/pocketbase';
+} from '../DSP/zeroCrossingUtils';
 
-// export type Loaded = {
-//   sample: SampleRecord;
-//   buffer: AudioBuffer | null;
+import { FormatKey, APP_FORMATS, AudioFormat } from '../../../types/mimeTypes';
 
-//   nodes: {
-//     sampleGain: GainNode;
-//     lowCut: BiquadFilterNode;
-//     highCut: BiquadFilterNode;
-//   };
-// };
+import { detectSilence } from '../../../components/Sampler/silenceDetector';
 
 export type SampleNodes = {
   sampleGain: GainNode;
@@ -42,36 +33,19 @@ export type LoadedSample = {
   sampleNodes: SampleNodes;
 };
 
-// export function createNewLoadedSample(
-//   id: string,
-//   name: string,
-//   slug: string,
-//   buffer: AudioBuffer
-// ): LoadedSample {
-//   const duration = buffer.duration;
-//   const zeroCrossings = findZeroCrossings(buffer);
-//   const defaultSettings = getDefaultSampleSettings(duration);
-
-//   return {
-//     id: id,
-//     name: name,
-//     slug: slug,
-//     buffer: buffer,
-//     zeroCrossings: zeroCrossings,
-//     sample_settings: defaultSettings,
-//   };
-// }
-
 /* Singleton class for managing audio playback and recording */
 
 export default class SamplerEngine {
   private static instance: SamplerEngine | null = null;
 
   private audioCtx: AudioContext;
+  private audioFormatKey: FormatKey = 'WEBM';
+
+  // TODO: implement user choice for recording/playback and download
+
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
 
-  // private loadedSamples: Map<string, Loaded> = new Map();
   private loadedSamples: Map<string, LoadedSample> = new Map(); // should be Set or Map for efficient lookup?
   private selectedSampleIds: Set<string> = new Set();
 
@@ -79,7 +53,6 @@ export default class SamplerEngine {
   // private updatedSamples: Map<string, Sample_db> = new Map();
 
   private masterGain: GainNode;
-  // private globalLoop: boolean = false;
 
   /* Constructor */
 
@@ -95,8 +68,10 @@ export default class SamplerEngine {
 
     // TODO: ADD LIMITER / COMPRESSOR NODE
 
-    this.setupRecording();
-    console.log('Audio Engine context: ', this.audioCtx);
+    // this.setupRecording();
+    console.log('Sampler Engine context: ', this.audioCtx);
+
+    console.log('MIME type: ', APP_FORMATS[this.audioFormatKey]);
 
     SingleUseVoice.initialize(this.audioCtx.sampleRate);
   }
@@ -137,6 +112,17 @@ export default class SamplerEngine {
     }
   }
 
+  /* Engine Settings */
+
+  getAudioFormat(): FormatKey {
+    return this.audioFormatKey;
+  }
+
+  // TODO: implement (with AudioRecorder)
+  // setAudioFormat(formatKey: FormatKey): void {
+  //   this.audioFormatKey = formatKey;
+  // }
+
   /* Sample Manager */
 
   createGain(volume: number): GainNode {
@@ -174,32 +160,12 @@ export default class SamplerEngine {
     masterOut.connect(this.audioCtx.destination);
   }
 
+  // createSampleFile ?
+  // createSampleRecord ?
+
   loadSample(record: SampleRecord, buffer: AudioBuffer): void {
-    // return boolean isLoaded?
-    // const loading: SampleRecord = {
-    //   ...sampleToLoad,
-    //   sample_settings: {
-    //     ...getDefaultSampleSettings(buffer.duration),
-    //     ...sampleToLoad.sample_settings,
-    //   },
-    // };
-
-    const zeroCrossings = findZeroCrossings(buffer);
-
-    SingleUseVoice.zeroCrossings.set(record.id, zeroCrossings); // VALIDATE: is zeroCrossings ok?
-
-    console.log('Zero crossings:', SingleUseVoice.zeroCrossings);
-
     const settings = record.sample_settings;
-
-    // // --------DELETE THIS WHEN FILTERS ARE IMPLEMENTED--------
-    // if (settings.lowCutoff === undefined) {
-    //   settings.lowCutoff = 40;
-    // }
-    // if (settings.highCutoff === undefined) {
-    //   settings.highCutoff = 20000;
-    // }
-    // //---------------------------------------------------------
+    const zeroCrossings = findZeroCrossings(buffer);
 
     const sampleGain = this.createGain(settings.sampleVolume);
 
@@ -222,6 +188,8 @@ export default class SamplerEngine {
     };
 
     this.loadedSamples.set(loadedSample.id, loadedSample);
+
+    SingleUseVoice.zeroCrossings.set(record.id, zeroCrossings); // VALIDATE zeroCrossings is ok
 
     SingleUseVoice.sampleSettings.set(
       loadedSample.id,
@@ -427,71 +395,162 @@ export default class SamplerEngine {
 
   /* Recording */
 
-  async setupRecording(): Promise<void> {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.mediaRecorder = new MediaRecorder(stream);
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.recordedChunks.push(event.data);
-        }
-      };
-    } catch (error) {
-      console.error('Failed to setup recording:', error);
-      throw error;
-    }
+  onSilence() {
+    console.log('silence, ');
+  }
+  onSpeak() {
+    console.log('speaking');
   }
 
-  async startRecording(): Promise<void> {
-    if (!this.mediaRecorder) {
-      await this.setupRecording();
-    }
-    this.recordedChunks = [];
-    this.mediaRecorder?.start();
-  }
+  // navigator.mediaDevices
+  //   .getUserMedia({
+  //     audio: true,
+  //   })
+  //   .then((stream) => {
+  //     detectSilence(stream, onSilence, onSpeak);
 
-  async stopRecording(): Promise<{
-    savedSampleRecord: SampleRecord;
-    buffer: AudioBuffer;
-  }> {
-    if (!this.mediaRecorder) {
-      throw new Error('Media Recorder not set up');
-    }
+  // stopSilenceDetection: (() => void) | null = null;
 
-    return new Promise((resolve, reject) => {
-      this.mediaRecorder!.onstop = async () => {
-        try {
-          const blob = new Blob(this.recordedChunks, { type: 'audio/webm' }); // decide blob / string / file
-          const arrayBuffer = await blob.arrayBuffer();
-          const audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+  // cleanupSilenceDetection(): void {
+  //   if (this.stopSilenceDetection) {
+  //     this.stopSilenceDetection();
+  //     this.stopSilenceDetection = null;
+  //   }
+  // }
 
-          const sampleSettings = getDefaultSampleSettings(audioBuffer.duration);
+  // async setupRecording(): Promise<void> {
+  //   try {
+  //     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-          const savedRecord: SampleRecord = await saveNewSampleRecord(
-            'new-sample' + new Date().getHours() + new Date().getMinutes(),
-            blob,
-            sampleSettings
-          );
+  //     // this.stopSilenceDetection = detectSilence(
+  //     //   this.audioCtx,
+  //     //   stream,
+  //     //   this.onSilence,
+  //     //   this.onSpeak
+  //     // );
 
-          this.loadSample(savedRecord, audioBuffer);
+  //     this.mediaRecorder = new MediaRecorder(stream, {
+  //       mimeType: this.audioFormat.mimeType,
+  //     });
+  //     this.mediaRecorder.ondataavailable = (event) => {
+  //       if (event.data.size > 0) {
+  //         this.recordedChunks.push(event.data);
+  //       }
+  //     };
+  //   } catch (error) {
+  //     console.error('Failed to setup recording:', error);
+  //     throw error;
+  //   }
+  // }
 
-          // const newSample: SampleRecord = createNewSampleObject(
-          //   `new-sample${Date.now().toString()}`, // date eða index eðeikka
-          //   `new-sample${this.loadedSamples.size}`,
-          //   blob,
-          //   audioBuffer.duration
-          // );
-          this.recordedChunks = [];
-          resolve({ savedSampleRecord: savedRecord, buffer: audioBuffer }); // could be void?
-          // this.setupRecording(); // Reset media recorder here?
-        } catch (error) {
-          reject(error);
-        }
-      };
+  // async startRecording(): Promise<void> {
+  //   if (!this.mediaRecorder) {
+  //     await this.setupRecording();
+  //   }
+  //   this.recordedChunks = [];
+  //   this.mediaRecorder?.start();
+  // }
 
-      this.mediaRecorder!.stop();
-    });
-  }
+  // async stopRecording(): Promise<Blob> {
+  //   return new Promise((resolve, reject) => {
+  //     if (!this.mediaRecorder) {
+  //       reject(new Error('Media Recorder not set up'));
+  //     }
+
+  //     this.mediaRecorder!.onstop = () => {
+  //       const blob = new Blob(this.recordedChunks, {
+  //         type: this.audioFormat.mimeType,
+  //       });
+  //       if (!blob || blob.size === 0 || blob.type === '') {
+  //         reject(new Error('No audio data recorded'));
+  //       }
+  //       // this.cleanupSilenceDetection();
+  //       resolve(blob);
+  //     };
+
+  //     this.mediaRecorder!.stop();
+  //   });
+  // }
+
+  // export function createNewLoadedSample(
+  //   id: string,
+  //   name: string,
+  //   slug: string,
+  //   buffer: AudioBuffer
+  // ): LoadedSample {
+  //   const duration = buffer.duration;
+  //   const zeroCrossings = findZeroCrossings(buffer);
+  //   const defaultSettings = getDefaultSampleSettings(duration);
+
+  //   return {
+  //     id: id,
+  //     name: name,
+  //     slug: slug,
+  //     buffer: buffer,
+  //     zeroCrossings: zeroCrossings,
+  //     sample_settings: defaultSettings,
+  //   };
+  // }
+
+  // async stopRecording(): Promise<{
+  //   sampleRecord: SampleRecord;
+  //   buffer: AudioBuffer;
+  // }> {
+  //   if (!this.mediaRecorder) {
+  //     throw new Error('Media Recorder not set up');
+  //   }
+
+  //   return new Promise((resolve, reject) => {
+  //     this.mediaRecorder!.onstop = async () => {
+  //       try {
+  //         const blob = new Blob(this.recordedChunks, { type: 'audio/webm' }); // decide blob / string / file
+  //         const arrayBuffer = await blob.arrayBuffer();
+  //         const audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+
+  //         const sampleSettings = getDefaultSampleSettings(audioBuffer.duration);
+
+  //         // const savedRecord: SampleRecord = await saveNewSampleRecord(
+  //         //   'new-sample' + new Date().getHours() + new Date().getMinutes(),
+  //         //   blob,
+  //         //   sampleSettings
+  //         // );
+
+  //         // const timeOfRecording = new Date().getHours()+'-'+new Date().getMinutes();
+
+  //         // const record: SampleRecord = {
+  //         //   id: 'new-sample' + Date.now().toString(),
+  //         //   name: 'new-sample' + '-' + timeOfRecording,
+  //         //   slug: 'new-sample' + '-' + timeOfRecording,
+  //         //   sample_file: blob,
+  //         //   created: new Date().toISOString(),
+  //         //   updated: new Date().toISOString(),
+  //         //   sample_settings: sampleSettings,
+  //         // };
+
+  //         // try {
+  //         //   await saveNewSampleRecord(
+  //         //     record.name,
+  //         //     record.sample_file,
+  //         //     record.sample_settings
+  //         //   );
+  //         // } catch (error) {
+  //         //   console.error('Error saving new sample record:', error);
+  //         //   throw error;
+  //         // }
+
+  //         // this.loadSample(record, audioBuffer);
+
+  //         this.recordedChunks = [];
+  //         resolve({ sampleRecord: record, buffer: audioBuffer }); // could be void?
+  //         // this.setupRecording(); // Reset media recorder here?
+  //       } catch (error) {
+  //         reject(error);
+  //       }
+  //     };
+
+  //     this.mediaRecorder!.stop();
+  //   });
+  // }
 }
 
 // getNewRecordings(): Sample_db[] {

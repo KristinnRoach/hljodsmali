@@ -1,7 +1,7 @@
 // hooks/useSampleSettings.ts
 import { useCallback } from 'react';
 import { useSamplerCtx } from '../contexts/sampler-context';
-import { Sample_settings } from '../types/sample';
+import { Sample_settings } from '../types/samples';
 
 export const useSampleSettings = () => {
   const { latestSelectedSample, updateSampleSettings } = useSamplerCtx();

@@ -1,0 +1,33 @@
+'use client';
+
+// src/contexts/AudioRecorderContext.tsx
+import React, { createContext, useContext } from 'react';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
+
+const AudioRecorderContext = createContext<
+  ReturnType<typeof useAudioRecorder> | undefined
+>(undefined);
+
+const AudioRecorderProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const audioRecorderHook = useAudioRecorder();
+
+  return (
+    <AudioRecorderContext.Provider value={audioRecorderHook}>
+      {children}
+    </AudioRecorderContext.Provider>
+  );
+};
+
+export default AudioRecorderProvider;
+
+export const useAudioRecorderContext = () => {
+  const context = useContext(AudioRecorderContext);
+  if (context === undefined) {
+    throw new Error(
+      'useAudioRecorderContext must be used within an AudioRecorderProvider'
+    );
+  }
+  return context;
+};

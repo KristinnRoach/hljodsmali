@@ -1,0 +1,21 @@
+
+1. Byrja á að laga PB / type / mime dót svo sé með virkandi áður en byrja að breyta. 
+
+2. Svo gera clean upptöku system þar sem það er einfaldara en samplemanager og player,
+og hreinsar aðeins til.
+
+3 - 4
+Player og sample management
+
+
+RecorderEngine.ts - 
+( simple Recorder hook or context only if needed )  - 
+Recorder.tsx component
+
+PlayerEngine.ts - 
+simplified Player.ts context or hook - 
+Player.tsx component
+
+SampleLibrarian / SampleManager - context and / or component?
+(get rid of convoluted SamplerCtx)
+

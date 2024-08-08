@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { useAudioDeviceCtx } from '../../contexts/audio-device-context';
 

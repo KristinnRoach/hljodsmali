@@ -1,0 +1,138 @@
+// AudioRecorder.ts
+
+export class AudioRecorder {
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private stream: MediaStream | null = null;
+  private mimeType: string;
+
+  constructor(initMimeType: string) {
+    this.mimeType = initMimeType || 'audio/webm';
+  }
+
+  async startRecording(mimeType?: string): Promise<void> {
+    if (this.isRecording()) {
+      throw new Error('Recording already in progress');
+    }
+
+    if (mimeType) {
+      this.setMimeType(mimeType);
+    }
+
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(this.stream, {
+        mimeType: this.mimeType,
+      });
+      this.audioChunks = [];
+      this.mediaRecorder.ondataavailable = (event) =>
+        this.audioChunks.push(event.data);
+      this.mediaRecorder.start();
+    } catch (error) {
+      this.cleanUp();
+      console.error('Error starting recording:', error);
+      throw error;
+    }
+  }
+
+  stopRecording(): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      if (!this.isRecording()) {
+        reject(new Error('No recording in progress'));
+        return;
+      }
+
+      this.mediaRecorder!.onstop = () => {
+        const audioBlob = new Blob(this.audioChunks, { type: this.mimeType });
+        this.cleanUp();
+        resolve(audioBlob);
+      };
+
+      this.mediaRecorder!.stop();
+    });
+  }
+
+  private cleanUp(): void {
+    this.stream?.getTracks().forEach((track) => track.stop());
+    this.stream = null;
+    this.mediaRecorder = null;
+    this.audioChunks = [];
+  }
+
+  isRecording(): boolean {
+    return this.mediaRecorder !== null;
+  }
+
+  getMimeType(): string {
+    return this.mimeType;
+  }
+
+  private setMimeType(mimeType: string): void {
+    this.mimeType = MediaRecorder.isTypeSupported(mimeType)
+      ? mimeType
+      : 'audio/webm';
+    if (this.mimeType !== mimeType) {
+      console.warn(
+        `MIME type ${mimeType} is not supported. Using ${this.mimeType} instead.`
+      );
+    }
+  }
+}
+/*
+export class AudioRecorder {
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private stream: MediaStream | null = null;
+
+  async startRecording(): Promise<void> {
+    if (this.mediaRecorder) {
+      throw new Error('Recording already in progress');
+    }
+
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(this.stream);
+      this.audioChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        this.audioChunks.push(event.data);
+      };
+
+      this.mediaRecorder.start();
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      throw error;
+    }
+  }
+
+  stopRecording(): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      if (!this.mediaRecorder) {
+        reject(new Error('No recording in progress'));
+        return;
+      }
+
+      this.mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+        this.cleanUp();
+        resolve(audioBlob);
+      };
+
+      this.mediaRecorder.stop();
+    });
+  }
+
+  private cleanUp(): void {
+    if (this.stream) {
+      this.stream.getTracks().forEach((track) => track.stop());
+      this.stream = null;
+    }
+    this.mediaRecorder = null;
+    this.audioChunks = [];
+  }
+
+  isRecording(): boolean {
+    return this.mediaRecorder !== null;
+  }
+}
+*/

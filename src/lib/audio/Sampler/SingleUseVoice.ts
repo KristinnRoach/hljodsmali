@@ -1,6 +1,6 @@
-import { Sample_settings } from '../types/sample';
-import { snapToNearestZeroCrossing } from '../lib/DSP/zeroCrossingUtils';
-import { snapDurationToNote, C5_DURATION_SEC } from './utils/noteToFreq';
+import { Sample_settings } from '../../../types/samples';
+import { snapToNearestZeroCrossing } from '../DSP/zeroCrossingUtils';
+import { snapDurationToNote, C5_DURATION_SEC } from '../../utils/noteToFreq';
 
 export default class SingleUseVoice {
   private static sampleRate: number = 48000;
