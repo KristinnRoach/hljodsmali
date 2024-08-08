@@ -39,6 +39,11 @@ import { useReactAudioCtx, useAudioCtxUtils } from './ReactAudioCtx';
 import { blobToSampleFile, isSampleFile } from '../types/utils';
 import { FormatKey } from '../types/mimeTypes';
 import { getHoursMinSec } from '../lib/utils/time-utils';
+import {
+  findZeroCrossings,
+  snapToNearestZeroCrossing,
+} from '@src/lib/audio/DSP/zeroCrossingUtils';
+import { snap } from 'gsap';
 
 type SamplerCtxType = {
   samplerEngine: SamplerEngine | null;
@@ -222,12 +227,36 @@ export default function SamplerProvider({
         }
 
         const arrayBuffer = await blob.arrayBuffer();
-        const buffer = await decodeAudioData(arrayBuffer);
+        const audioBuffer = await decodeAudioData(arrayBuffer);
+        const bufferDuration = audioBuffer.duration;
+
+        const zeroCrossings = findZeroCrossings(audioBuffer);
+
+        // TODO: move to zeroCross utils
+        const initZeroSnapped: Partial<Sample_settings> = {
+          startPoint: snapToNearestZeroCrossing(
+            0.05 * bufferDuration,
+            zeroCrossings
+          ),
+          endPoint: snapToNearestZeroCrossing(
+            bufferDuration - 0.1 * bufferDuration,
+            zeroCrossings
+          ),
+          loopStart: snapToNearestZeroCrossing(
+            0.3 * bufferDuration,
+            zeroCrossings
+          ),
+          loopEnd: snapToNearestZeroCrossing(
+            bufferDuration - 0.3 * bufferDuration,
+            zeroCrossings
+          ),
+        };
 
         const record = await createNewSampleRecord(
           tempName,
           sample_file,
-          buffer.duration
+          audioBuffer.duration,
+          initZeroSnapped
         );
 
         if (!(record && record.sample_settings)) {

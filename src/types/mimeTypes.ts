@@ -3,6 +3,8 @@
 // ____________________ AUDIO FORMAT / MIME TYPES ______________________________
 
 export const APP_FORMATS = {
+  WEBM: { mimeType: 'audio/webm', extension: '.webm', canContainVideo: false },
+
   OGG: {
     mimeType: 'application/ogg; codecs=vorbis',
     extension: '.ogg',
@@ -25,7 +27,6 @@ export const APP_FORMATS = {
     extension: '.webm',
     canContainVideo: true,
   },
-  WEBM: { mimeType: 'audio/webm', extension: '.webm', canContainVideo: false },
 } as const;
 
 export type FormatKey = keyof typeof APP_FORMATS;

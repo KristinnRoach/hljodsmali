@@ -54,10 +54,6 @@ export default class SingleUseVoice {
     readonly buffer: AudioBuffer,
     sampleId: string
   ) {
-    console.log(
-      'SingleUseVoice.sampleSettings: ',
-      SingleUseVoice.sampleSettings
-    );
     if (!SingleUseVoice.sampleSettings.has(sampleId)) {
       throw new Error('Sample not loaded, id: ' + sampleId);
     }
@@ -275,7 +271,7 @@ export default class SingleUseVoice {
     let end = updated.loopEnd ?? this.settings.loopEnd;
 
     const initLoopLength = end - start;
-    console.log('init looplength:', initLoopLength);
+    // console.log('init looplength:', initLoopLength);
 
     if (initLoopLength <= C5_DURATION_SEC) return; // how does this affect rendering? Should be in render function, or both?
 
@@ -290,7 +286,7 @@ export default class SingleUseVoice {
 
     const zeroSnapLength = end - start;
     if (initLoopLength !== zeroSnapLength) {
-      console.log('length SNAPPED TO ZERO: ', end - start);
+      // console.log('length SNAPPED TO ZERO: ', end - start);
     }
 
     this.updateLoopPoints(start, end);

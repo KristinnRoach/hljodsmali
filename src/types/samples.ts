@@ -48,9 +48,12 @@ validate sample settings - type guard ? :
     */
 
 export function getDefaultSampleSettings(
-  bufferDuration: number
+  bufferDuration: number,
+  existingSettings?: Partial<Sample_settings>
 ): Sample_settings {
   return {
+    ...existingSettings,
+
     startPoint: 0.1 > bufferDuration ? 0.1 : 0,
     endPoint:
       bufferDuration - 0.2 > 0.1 ? bufferDuration - 0.2 : bufferDuration,

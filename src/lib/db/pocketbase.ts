@@ -22,9 +22,13 @@ export default pb;
 export async function createNewSampleRecord(
   name: string,
   sample_file: Sample_file,
-  bufferDuration: number
+  bufferDuration: number,
+  existingSettings?: Partial<Sample_settings>
 ): Promise<SampleRecord> {
-  const sampleSettings = getDefaultSampleSettings(bufferDuration);
+  const sampleSettings = getDefaultSampleSettings(
+    bufferDuration,
+    existingSettings // undefined if not provided
+  );
 
   const record: SampleRecord = {
     id: name,
