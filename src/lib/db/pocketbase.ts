@@ -81,7 +81,7 @@ export async function getSampleFileAsBlob(sample: SampleRecord): Promise<Blob> {
   return await fetch(url).then((response) => response.blob());
 }
 
-export async function updateSampleRecord(
+export async function updateDB_SampleRecord(
   sampleId: string,
   data: Partial<SampleRecord>
 ): Promise<SampleRecord> {

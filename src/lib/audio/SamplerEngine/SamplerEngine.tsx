@@ -13,8 +13,6 @@ import {
 
 import { FormatKey, APP_FORMATS, AudioFormat } from '../../../types/mimeTypes';
 
-import { detectSilence } from '../../../components/Sampler/silenceDetector';
-
 export type SampleNodes = {
   sampleGain: GainNode;
   lowCut: BiquadFilterNode;
@@ -304,14 +302,14 @@ export default class SamplerEngine {
             settings.lowCutoff,
             this.audioCtx.currentTime
           );
-          console.log('Low cut:', settings.lowCutoff);
+          loadedSample.sample_settings.lowCutoff = settings.lowCutoff;
         }
         if (settings.highCutoff !== undefined) {
           loadedSample.sampleNodes.highCut.frequency.setValueAtTime(
             settings.highCutoff,
             this.audioCtx.currentTime
           );
-          console.log('High cut:', settings.highCutoff);
+          loadedSample.sample_settings.highCutoff = settings.highCutoff;
         }
         if (settings.startPoint !== undefined && loadedSample.zeroCrossings) {
           const snapped = snapToNearestZeroCrossing(
@@ -395,12 +393,12 @@ export default class SamplerEngine {
 
   /* Recording */
 
-  onSilence() {
-    console.log('silence, ');
-  }
-  onSpeak() {
-    console.log('speaking');
-  }
+  // onSilence() {
+  //   console.log('silence, ');
+  // }
+  // onSpeak() {
+  //   console.log('speaking');
+  // }
 
   // navigator.mediaDevices
   //   .getUserMedia({

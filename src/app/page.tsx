@@ -32,7 +32,7 @@ export default function Home() {
           <KeyboardGUI />
         </div> */}
         <Visualizer_cli />
-        <Shapes />
+        {/* <Shapes /> */}
       </main>
     </>
   );

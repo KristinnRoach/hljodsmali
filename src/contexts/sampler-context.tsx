@@ -22,14 +22,14 @@ import {
 import SamplerEngine, {
   LoadedSample,
   SampleNodes,
-} from '../lib/audio/Sampler/SamplerEngine';
+} from '../lib/audio/SamplerEngine/SamplerEngine';
 
 import {
   fetchSamples,
   createNewSampleRecord,
   saveNewSampleRecord,
   deleteSampleRecord,
-  updateSampleRecord,
+  updateDB_SampleRecord,
   renameSampleRecord,
 } from '../lib/db/pocketbase';
 
@@ -236,7 +236,7 @@ export default function SamplerProvider({
         const record = await createNewSampleRecord(
           tempName,
           sample_file,
-          audioBuffer.duration,
+          bufferDuration,
           initZeroSnapped
         );
 
@@ -442,7 +442,7 @@ export default function SamplerProvider({
       //     })
       //     .catch((error) => console.error('Error saving sample:', error));
       // } else {
-      updateSampleRecord(id, { ...sample })
+      updateDB_SampleRecord(id, { ...sample })
         .then(() => {
           unsavedSampleIds.current.delete(id);
         })
@@ -452,10 +452,10 @@ export default function SamplerProvider({
     // unsavedSampleIds.current.clear(); // should not be necessary
   }
 
-  async function updateSample(id: string) {
+  async function saveUpdatedSampleRecord(id: string) {
     const sample = sampleRecords.find((s) => s.id === id);
     if (!sample) return;
-    await updateSampleRecord(id, { ...sample }).catch((error) =>
+    await updateDB_SampleRecord(id, { ...sample }).catch((error) =>
       console.error(`Error updating sample ${id} settings:`, error)
     );
   }
@@ -550,7 +550,7 @@ export default function SamplerProvider({
     isSampleLoaded,
     isSampleSelected,
     saveAll,
-    updateSample,
+    updateSample: saveUpdatedSampleRecord,
     deleteSample,
     hasUnsavedSamples: unsavedSampleIds.current.size > 0,
     // handleLoopKeys,

@@ -1,0 +1,62 @@
+// src/lib/audio/VolumeMonitor.ts
+
+import { createAnalyser, createMediaStreamSource } from './audioCtx-utils';
+
+let activeAnalyser: AnalyserNode | null = null;
+let activeDetectionLoop: number | null = null;
+let source: MediaStream | null = null;
+
+function createVolumeMonitor(stream: MediaStream): void {
+  if (!activeAnalyser) {
+    activeAnalyser = createAnalyser();
+    createMediaStreamSource(stream).connect(activeAnalyser);
+  }
+}
+
+export function getVolume(stream?: MediaStream): number | null {
+  if (!activeAnalyser) {
+    console.error('Analyser node not created');
+    return null;
+  }
+  const data = new Uint8Array(activeAnalyser.frequencyBinCount);
+  activeAnalyser.getByteFrequencyData(data);
+  const volume = Math.max(...data);
+  const decibels = 20 * Math.log10(volume / 255);
+
+  return decibels;
+}
+
+export function monitorStreamVolume(
+  stream: MediaStream,
+  onVolume: (volume: number) => void,
+  threshold: number
+): void {
+  if (!activeAnalyser) {
+    activeAnalyser = createAnalyser();
+    createMediaStreamSource(stream).connect(activeAnalyser);
+  }
+  if (!source) source = stream;
+
+  const decibels = getVolume();
+  if (decibels !== null) {
+    onVolume(decibels);
+  }
+
+  activeDetectionLoop = requestAnimationFrame(() =>
+    monitorStreamVolume(stream, onVolume, threshold)
+  );
+}
+
+export function stopMonitoringStream(): void {
+  if (activeAnalyser) {
+    activeAnalyser.disconnect();
+    activeAnalyser = null;
+  }
+
+  if (activeDetectionLoop) {
+    cancelAnimationFrame(activeDetectionLoop);
+    activeDetectionLoop = null;
+  }
+
+  source = null;
+}
