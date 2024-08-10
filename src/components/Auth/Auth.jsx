@@ -6,12 +6,11 @@ import useLogin from '../../hooks/useLogin';
 // import { signup, isLoggedIn } from '../../lib/user';
 
 import pb from '../../lib/db/pocketbase';
-import styles from './Auth.module.scss';
 
 /* TODO: REFACTOR TO USE SERVER ACTIONS */ // 'use client' only for button?
 /* TODO: ADD SIGN UP */
 
-export default function Auth() {
+export default function Auth({ className = '' }) {
   const logout = useLogout();
   const { login, isLoading } = useLogin();
   const { register, handleSubmit, reset } = useForm();
@@ -24,7 +23,7 @@ export default function Auth() {
 
   if (isLoggedIn) {
     return (
-      <div className={styles.login}>
+      <div className={className}>
         <h1>{('Logged In: ', isLoggedIn && pb.authStore.model.username)}</h1>
         <button onClick={logout}>Logout</button>
       </div>
@@ -32,8 +31,7 @@ export default function Auth() {
   }
 
   return (
-    <div className={styles.login}>
-      <h1></h1>
+    <div className={className}>
       {isLoading && <p>Loading...</p>}
       {/* <button onClick={toggleIsNewUser} disabled={isLoading}>
         New User?
@@ -45,14 +43,24 @@ export default function Auth() {
           placeholder='username'
           {...register('username')}
           required
+          tabIndex={0}
+          aria-label='username'
         />
         <input
           type='password'
           placeholder='password'
           {...register('password')}
           required
+          tabIndex={0}
+          aria-label='password'
         />
-        <button type='submit' disabled={isLoading}>
+
+        <button
+          type='submit'
+          disabled={isLoading}
+          tabIndex={0}
+          aria-label='login button'
+        >
           {isLoading ? 'Loading.. ' : 'Login'}
           {/* {isNewUser ? 'Sign Up' : 'Login'} */}
         </button>

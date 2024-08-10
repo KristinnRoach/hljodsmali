@@ -22,32 +22,10 @@ export default class SingleUseVoice {
   private trigger: number = -1;
   private held: number = -1;
 
-  // // private minLoopLength: number | null = null;
-  // private static readonly C1_FREQUENCY = 32.7; // C1 frequency in Hz
-  // private static minLoopLengthInSamples: number;
-
-  // private static calculateMinLoopLength(sampleRate: number): number {
-  //   const periodInSeconds = 1 / SingleUseVoice.C1_FREQUENCY;
-  //   return Math.ceil(periodInSeconds * sampleRate);
-  // }
-
   // Static initializer block (supported in modern JavaScript/TypeScript)
   static initialize(sampleRate: number = 48000) {
     SingleUseVoice.sampleRate = sampleRate;
-    // SingleUseVoice.minLoopLengthInSamples =
-    //   SingleUseVoice.calculateMinLoopLength(sampleRate);
   }
-
-  // // Method to update minLoopLengthInSamples if a different sample rate is encountered
-  // static updateMinLoopLength(sampleRate: number = SingleUseVoice.sampleRate) {
-  //   if (
-  //     SingleUseVoice.minLoopLengthInSamples === undefined ||
-  //     sampleRate !== SingleUseVoice.sampleRate
-  //   ) {
-  //     SingleUseVoice.minLoopLengthInSamples =
-  //       SingleUseVoice.calculateMinLoopLength(sampleRate);
-  //   }
-  // }
 
   constructor(
     private audioCtx: AudioContext,
@@ -71,7 +49,7 @@ export default class SingleUseVoice {
 
     this.sampleId = sampleId;
     this.setLoop();
-    this.calculateLoopPoints();
+    // this.calculateLoopPoints(); // should be set in setLoop and updateActiveVoices // remove when tested
 
     this.source.onended = () => {
       this.stop();
@@ -139,7 +117,7 @@ export default class SingleUseVoice {
     });
   }
 
-  // static updateSampleSettings( // ef set virkar ekki í samplerengine
+  // static updateSampleSettings( // if set does not work in samplerengine
   //   sampleId: string,
   //   settings: Partial<Sample_settings>
   // ) {
@@ -208,7 +186,6 @@ export default class SingleUseVoice {
 
   triggerRelease() {
     if (this.trigger <= 0) return;
-    // if (this.source.loop) return;
     if (SingleUseVoice.hold) return;
 
     this.voiceGain.gain.linearRampToValueAtTime(
@@ -218,22 +195,18 @@ export default class SingleUseVoice {
     this.held = this.now() - this.trigger; // not using !!
 
     this.source.stop(this.now() + this.settings.releaseTime + 0.1);
-
-    // if (!this.source.loop) {
-    //   this.source.stop(this.now() + this.settings.releaseTime + 0.1);
-    // } else {
-    //   this.loopEnvelope();
-    // }
   }
 
   setLoop(isLoopOn: boolean = SingleUseVoice.globalLoop) {
-    if (this.settings.loopLocked) {
-      return;
+    if (this.settings.loopLocked) return;
+
+    if (isLoopOn) {
+      this.calculateLoopPoints();
+    } else {
+      this.triggerRelease(); // get remaining play time ??
     }
+
     this.source.loop = isLoopOn;
-    if (!isLoopOn) {
-      this.triggerRelease(); // get remaining play time
-    }
   }
 
   setLoopLock(isLocked: boolean) {
@@ -296,7 +269,7 @@ export default class SingleUseVoice {
     // Snap to notes when in audiorange
     const snappedLength = snapDurationToNote(
       zeroSnapLength,
-      ['C'], // interpolate rather! // , 'D', 'E', 'F', 'G', 'A', 'B'
+      ['C', 'G'], // interpolate rather! // , 'D', 'E', 'F', 'G', 'A', 'B'
       'C',
       'C',
       0,
@@ -332,6 +305,32 @@ export default class SingleUseVoice {
 // C7 (2093.00 Hz):
 // (1 / 2093.00) * 1000 = 0.477792694455503 ms
 
+// // private minLoopLength: number | null = null;
+// private static readonly C1_FREQUENCY = 32.7; // C1 frequency in Hz
+// private static minLoopLengthInSamples: number;
+
+// private static calculateMinLoopLength(sampleRate: number): number {
+//   const periodInSeconds = 1 / SingleUseVoice.C1_FREQUENCY;
+//   return Math.ceil(periodInSeconds * sampleRate);
+// }
+
+// Static initializer block (supported in modern JavaScript/TypeScript)
+// static initialize(sampleRate: number = 48000) {
+//   SingleUseVoice.sampleRate = sampleRate;
+// SingleUseVoice.minLoopLengthInSamples =
+//   SingleUseVoice.calculateMinLoopLength(sampleRate);
+// }
+
+// // Method to update minLoopLengthInSamples if a different sample rate is encountered
+// static updateMinLoopLength(sampleRate: number = SingleUseVoice.sampleRate) {
+//   if (
+//     SingleUseVoice.minLoopLengthInSamples === undefined ||
+//     sampleRate !== SingleUseVoice.sampleRate
+//   ) {
+//     SingleUseVoice.minLoopLengthInSamples =
+//       SingleUseVoice.calculateMinLoopLength(sampleRate);
+//   }
+// }
 // testloop();
 
 // function calculateLoopLength(sampleRate: number, frequency: number): number {

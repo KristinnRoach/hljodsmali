@@ -1,3 +1,67 @@
+// src/components/UI/Basic/Toggle.module.scss
+
+/* Animation */
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOut {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
 .toggleButton {
   padding: 10px 20px;
   border: none;
@@ -81,14 +145,43 @@
   }
 }
 
-@keyframes pulse {
-  0% {
-    opacity: 1;
+.toggleMulti {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 44px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  text-transform: uppercase;
+  outline: none;
+
+  &:hover {
+    opacity: 0.9;
   }
-  50% {
-    opacity: 0.5;
+
+  &.recordArm {
+    color: white;
   }
-  100% {
-    opacity: 1;
+
+  &.idle {
+    font-weight: bold;
+    background-color: #c44c45;
+    box-shadow: #001f3f 0px 0px 10px;
+  }
+
+  &.armed {
+    font-weight: bold;
+    background-color: #ff4136;
+    box-shadow: #001f3f 0px 0px 10px;
+
+    animation: pulse 1s infinite;
+  }
+
+  &.recording {
+    font-weight: bold;
+    background-color: #ff4136;
+    box-shadow: #001f3f 0px 0px 10px;
+
+    animation: bounce 1s infinite;
   }
 }

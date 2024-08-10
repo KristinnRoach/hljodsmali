@@ -1,22 +1,27 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import VolumeMonitor from '../../lib/audio/VolumeMonitor';
 import { useSamplerCtx } from '../../contexts/sampler-context';
+import { ToggleMultiState } from '../UI/Basic/Toggle';
 
-const Recorder: React.FC = () => {
+const Recorder: React.FC = ({ className }: { className?: string }) => {
   const [audioFormat, setAudioFormat] = useState<'wav' | 'webm'>('webm');
   const [includeVideo, setIncludeVideo] = useState<boolean>(false);
-  const [streamVolume, setStreamVolume] = useState<number | null>(null);
-  const [status, setStatus] = useState<'idle' | 'armed' | 'recording'>('idle');
-  const [buttonText, setButtonText] = useState('Arm Recording'); // Initialize with the default value for 'idle'
 
-  const statusRef = useRef(status);
+  const [streamVolume, setStreamVolume] = useState<number | null>(null);
+  const [label, setLabel] = useState<string>('Arm!');
+
+  const [recorderState, setRecorderState] = useState<
+    'idle' | 'armed' | 'recording'
+  >('idle');
+  const recStateRef = useRef(recorderState); // do we need the useState also?
+
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const volumeMonitor = useRef<VolumeMonitor | null>(null);
   const chunks = useRef<Blob[]>([]);
 
-  const startRecThreshold = -40; // dB
-  const stopRecThreshold = -40; // dB
+  const startRecThreshold = -35; // dB  /* TEST: are those values correct? */
+  const stopRecThreshold = -45; // dB   /* TEST: are those values correct? */
   const silenceDelay = 100; // ms
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -24,20 +29,18 @@ const Recorder: React.FC = () => {
 
   // Update statusRef whenever status changes
   useEffect(() => {
-    statusRef.current = status;
-    const buttonTextMap = {
-      idle: 'Arm Recording',
-      armed: 'Armed',
-      recording: 'Recording',
-    };
-    setButtonText(buttonTextMap[status]);
-  }, [status]);
+    recStateRef.current = recorderState;
+
+    recorderState === 'idle' && setLabel('Start');
+    recorderState === 'armed' && setLabel('Armed');
+    recorderState === 'recording' && setLabel('Recording');
+  }, [recorderState]);
 
   const armRecording = useCallback(() => {
     navigator.mediaDevices
       .getUserMedia({
         audio: true,
-        // video: includeVideo, // for later
+        video: includeVideo, // for later
       })
       .then((newStream) => {
         stream.current = newStream;
@@ -54,7 +57,7 @@ const Recorder: React.FC = () => {
         volumeMonitor.current = new VolumeMonitor(newStream);
         volumeMonitor.current.monitorVolume(handleVolume);
 
-        setStatus('armed');
+        setRecorderState('armed');
 
         console.log('Armed!'); // Added for debugging
       })
@@ -65,10 +68,10 @@ const Recorder: React.FC = () => {
 
   const handleVolume = useCallback((dB: number) => {
     setStreamVolume(dB);
-    console.log(statusRef.current); // Added for debugging
+    console.log(recStateRef.current); // Added for debugging
 
-    if (dB > startRecThreshold && statusRef.current === 'armed') {
-      console.log('over threshold:', dB, 'dB, Status:', status); // Added for debugging
+    if (dB > startRecThreshold && recStateRef.current === 'armed') {
+      console.log('over threshold:', dB, 'dB, Status:', recorderState); // Added for debugging
 
       if (silenceTimer.current) {
         // should this be here?
@@ -78,7 +81,7 @@ const Recorder: React.FC = () => {
 
       console.log('Starting recording...'); // Added for debugging
       startRecording();
-    } else if (dB <= stopRecThreshold && statusRef.current === 'recording') {
+    } else if (dB <= stopRecThreshold && recStateRef.current === 'recording') {
       if (!silenceTimer.current) {
         silenceTimer.current = setTimeout(() => {
           console.log('Stopping recording due to silence...'); // Added for debugging
@@ -86,7 +89,7 @@ const Recorder: React.FC = () => {
           // silenceTimer.current = null;
         }, silenceDelay);
       }
-    } else if (dB > stopRecThreshold && statusRef.current === 'recording') {
+    } else if (dB > stopRecThreshold && recStateRef.current === 'recording') {
       if (silenceTimer.current) {
         clearTimeout(silenceTimer.current);
         silenceTimer.current = null;
@@ -99,7 +102,7 @@ const Recorder: React.FC = () => {
     if (recorder.current.state === 'inactive') {
       console.log('Actually starting MediaRecorder...'); // Added for debugging
       recorder.current.start();
-      setStatus('recording');
+      setRecorderState('recording');
     } else {
       console.log('MediaRecorder is already active or not initialized');
     }
@@ -122,27 +125,53 @@ const Recorder: React.FC = () => {
       silenceTimer.current = null;
     }
     setStreamVolume(null);
-    setStatus('idle');
+    setRecorderState('idle');
   }, []);
 
   useEffect(() => {
     return stopRecording;
   }, [stopRecording]);
 
+  const handleToggle = useCallback(
+    (newState: string) => {
+      switch (newState) {
+        case 'idle':
+          stopRecording();
+          break;
+        case 'armed':
+          armRecording();
+          break;
+        case 'recording':
+          // This state is handled automatically by the volume threshold
+          break;
+      }
+      setRecorderState(newState as 'idle' | 'armed' | 'recording');
+    },
+    [armRecording, stopRecording]
+  );
+
   return (
-    <div>
-      <button onClick={status === 'idle' ? armRecording : stopRecording}>
+    <div className={className}>
+      <ToggleMultiState
+        currentState={recorderState}
+        states={['idle', 'armed', 'recording']}
+        onToggle={handleToggle}
+        label={label}
+        type='recordArm' // Assuming you have a 'record' type in your styles
+      />
+      {/* <button onClick={recorderState === 'idle' ? armRecording : stopRecording}>
         {buttonText}
-      </button>
-      {streamVolume !== null && (
-        <p>Current Volume: {streamVolume.toFixed(2)} dB</p>
-      )}
-      <p>Status: {status}</p>
+      </button> */}
     </div>
   );
 };
 
 export default Recorder;
+
+/* {streamVolume !== null && (
+        <p>Current Volume: {streamVolume.toFixed(2)} dB</p>
+      )}
+      <p>Status: {status}</p> */
 
 // detectSilence(
 //   audioCtx!,
@@ -321,12 +350,6 @@ export default Recorder;
 //       return;
 //     }
 //   }, [status, armRecording]);
-
-//   const buttonText = {
-//     idle: 'Arm Recording',
-//     armed: 'Armed',
-//     recording: 'Recording',
-//   }[status];
 
 //   return (
 //     <div>

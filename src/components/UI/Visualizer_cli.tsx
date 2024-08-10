@@ -1,12 +1,12 @@
 // src/components/UI/Visualizer_cli.tsx
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import WaveDynamic from './WaveForms/WaveDynamic';
+import Waveform from './WaveForms/Waveform';
 import { useSamplerCtx } from '../../contexts/sampler-context';
 import { SampleRecord } from '../../types/samples';
 import styles from './styles/Visualizer_cli.module.scss';
 
-function Visualizer_cli() {
+function WaveformContainer() {
   const { latestSelectedSample, latestSelectedBuffer, sampleSwitchFlag } =
     useSamplerCtx();
 
@@ -31,7 +31,7 @@ function Visualizer_cli() {
     console.log('Visualizer_cli: memoizedWaveDynamic', sample.name);
 
     return (
-      <WaveDynamic
+      <Waveform
         key={sample.id} // Forces re-render when buffer changes
         buffer={buffer}
         width={800}
@@ -55,4 +55,4 @@ function Visualizer_cli() {
   return <div className={styles.container}>{memoizedWaveDynamic}</div>;
 }
 
-export default Visualizer_cli;
+export default WaveformContainer;

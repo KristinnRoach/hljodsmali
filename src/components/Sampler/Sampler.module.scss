@@ -1,12 +1,73 @@
 .sampler {
   display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0 auto;
+
+  > * {
+    margin: 0 auto;
+    padding: 0.5rem;
+    gap: 1rem;
+    // border-style: ridge;
+    // border-width: 1px;
+    // border-radius: 20%;
+  }
+}
+
+.topBar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 0.5rem 1rem 1rem 1rem;
+  z-index: 99;
+
+  .shapesContainer {
+    display: flex;
+    align-self: flex-start;
+    align-items: center;
+    max-height: 2vh;
+    overflow: visible;
+  }
+
+  .loginContainer {
+    form {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    form > * {
+      z-index: 99;
+    }
+
+    h1 {
+      font-size: 1rem;
+      text-align: center;
+      padding-bottom: 0.5rem;
+    }
+
+    button {
+      font-size: 1rem;
+      height: 1.5rem;
+    }
+
+    input,
+    button {
+      z-index: 99;
+    }
+  }
+}
+
+.controlsContainer {
+  display: flex;
   flex-direction: row;
   justify-content: space-evenly;
   gap: calc(0.1 * 80vw);
 
   margin: 0 auto;
   max-width: 80vw;
-  // width: 50vw;
   z-index: 99;
 
   &.buttons {
@@ -17,22 +78,34 @@
     }
   }
 
-  .samples {
+  .samplesContainer {
     max-width: 20vw;
-    // position: absolute; // position: sticky;
-    // top: 2rem;
-    // right: 2rem;
   }
 }
 
-// .waveform {
-//   display: flex;
-//   flex-direction: column;
-//   justify-content: center;
-//   align-items: center;
-//   gap: 1rem;
-//   width: 200px;
-// }
+.waveformContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+
+  //   background-color: transparent;
+  //   background-color: whitesmoke;
+
+  //   // position: fixed;
+  //   // top: 30vh;
+  //   // left: 5vw;
+}
+
+.keyboardContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  // margin: 0 auto;
+  // padding: 1rem;
+}
 
 .slider {
   display: flex;
@@ -55,7 +128,7 @@
 }
 
 .sliderContainer {
-  // display: flex;
+  display: flex;
   // flex-direction: column;
   // justify-content: center;
   // align-items: center;

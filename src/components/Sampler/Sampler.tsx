@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useCallback, useEffect } from 'react';
+import React from 'react';
 
 import SampleSettings from './SampleSettings';
 import LinkList from '../UI/LinkList';
-import Toggle from '../UI/Basic/Toggle';
-import MenuToggle from '../UI/Basic/MenuToggle';
-
+import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
 import Recorder from './Recorder';
 
 import useKeyboard from '../../hooks/useKeyboard';
+import WaveformContainer from '../UI/Visualizer_cli';
+import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
+import Shapes from '../UI/Shapes/Shapes';
+
 import { useSamplerCtx } from '../../contexts/sampler-context';
 import { SAMPLES_PER_PAGE } from '../../types/constants';
-import { AudioFormat, FormatKey, APP_FORMATS } from '../../types/mimeTypes';
 
 import styles from './Sampler.module.scss';
-import { blobToSampleFile } from '@src/types/utils';
+import AudioDeviceSelector from './AudioDeviceSelector';
+import Auth from '../Auth/Auth';
 
 export default function Sampler_cli() {
   useKeyboard();
@@ -41,31 +43,51 @@ export default function Sampler_cli() {
 
   return (
     <>
-      {/* <AudioDeviceSelector /> */}
       <div className={styles.sampler}>
-        <button onClick={saveAll} disabled={!hasUnsavedSamples}>
-          Save All
-        </button>
-        {/* <button onClick={reSample} disabled={!hasUnsavedSamples}>
-          ReSample!
-        </button> */}
-        <Toggle
-          label='Loop'
-          isOn={isLooping}
-          onToggle={toggleLoop}
-          type='loop'
-        />
-        <Toggle
-          label='Hold'
-          isOn={isHolding}
-          onToggle={toggleHold}
-          type='hold'
-        />
+        <section className={styles.topBar}>
+          <Auth className={styles.loginContainer} />
+          <Shapes className={styles.shapesContainer} />
+          <AudioDeviceSelector className={styles.deviceSelectorContainer} />
+        </section>
+        <section className={styles.controlsContainer}>
+          <button onClick={saveAll} disabled={!hasUnsavedSamples}>
+            Save All
+          </button>
+          <button disabled={!hasUnsavedSamples}>
+            {/*onClick={reSample} */}
+            ReSample!
+          </button>
 
-        <Recorder />
+          <Recorder />
 
-        <section className={styles.samples}>
-          <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
+          <Toggle
+            label='Loop'
+            isOn={isLooping}
+            onToggle={toggleLoop}
+            type='loop'
+          />
+          <Toggle
+            label='Hold'
+            isOn={isHolding}
+            onToggle={toggleHold}
+            type='hold'
+          />
+        </section>
+
+        <section className={styles.waveformContainer}>
+          <ToggleMenu label='Waveform'>
+            <WaveformContainer />
+          </ToggleMenu>
+        </section>
+
+        <section className={styles.keyboardContainer}>
+          <ToggleMenu label='Keyboard'>
+            <KeyboardGUI />
+          </ToggleMenu>
+        </section>
+
+        <section className={styles.samplesContainer}>
+          <ToggleMenu label={isLoading ? 'Loading...' : 'Samples'}>
             {!isLoading && sampleRecords.length > 0 && (
               <LinkList
                 items={sampleRecords}
@@ -76,10 +98,10 @@ export default function Sampler_cli() {
                 onSave={(id) => updateSample(id)}
               />
             )}
-            <MenuToggle label='Settings'>
+            <ToggleMenu label='Settings'>
               <SampleSettings />
-            </MenuToggle>
-          </MenuToggle>
+            </ToggleMenu>
+          </ToggleMenu>
         </section>
       </div>
     </>

@@ -7,11 +7,10 @@ import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 
 import { keyMap } from '../../../lib/utils/keymap';
-import styles from './Shapes.module.scss';
 
-export default function Shapes() {
+export default function Shapes({ className = '' }) {
   return (
-    <div className={styles.container}>
+    <div className={className}>
       <Canvas
         className='' // z-0
         shadows
@@ -38,7 +37,7 @@ export default function Shapes() {
 function Geometries() {
   const geometries = [
     {
-      position: [0, 0, 0],
+      position: [0, 0, -2],
       rate: 0.3,
       geometry: new THREE.IcosahedronGeometry(3),
     },

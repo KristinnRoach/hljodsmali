@@ -3,13 +3,13 @@
 import React from 'react';
 import { useAudioDeviceCtx } from '../../contexts/audio-device-context';
 
-function AudioDeviceSelector() {
+function AudioDeviceSelector({ className }: { className?: string }) {
   const { inputs, outputs, inputID, outputID, setInputID, setOutputID } =
     useAudioDeviceCtx();
 
   return (
-    <div>
-      <p>Input Device: </p>
+    <div className={className}>
+      {/* <p>Input Device: </p> */}
       <select value={inputID} onChange={(e) => setInputID(e.target.value)}>
         {inputs.map((device) => (
           <option key={device.deviceId} value={device.deviceId}>
