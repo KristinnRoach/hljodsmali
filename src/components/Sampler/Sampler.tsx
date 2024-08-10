@@ -8,9 +8,10 @@ import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
 import Recorder from './Recorder';
 
 import useKeyboard from '../../hooks/useKeyboard';
-import WaveformContainer from '../UI/Visualizer_cli';
+import WaveformContainer from '../UI/WaveformContainer';
 import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
-import Shapes from '../UI/Shapes/Shapes';
+
+import Shapes from '../UI/Shapes/Shapes'; // TODO: Resolve "Multiple instances of Three.js being imported" warning (if persists)
 
 import { useSamplerCtx } from '../../contexts/sampler-context';
 import { SAMPLES_PER_PAGE } from '../../types/constants';

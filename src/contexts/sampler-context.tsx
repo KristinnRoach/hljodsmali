@@ -12,16 +12,10 @@ import React, {
   useMemo,
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  SampleRecord,
-  Sample_file,
-  Sample_settings,
-  getDefaultSampleSettings,
-} from '../types/samples';
+import { SampleRecord, Sample_settings } from '../types/samples';
 
 import SamplerEngine, {
   LoadedSample,
-  SampleNodes,
 } from '../lib/audio/SamplerEngine/SamplerEngine';
 
 import {
@@ -35,7 +29,6 @@ import {
 
 import { useReactAudioCtx, useAudioCtxUtils } from './ReactAudioCtx';
 
-// // import { AUDIO_TYPE_ENUM } from '../types/enums';
 import { blobToSampleFile, isSampleFile } from '../types/utils';
 import { FormatKey } from '../types/mimeTypes';
 import { getHoursMinSec } from '../lib/utils/time-utils';
@@ -43,8 +36,7 @@ import {
   findZeroCrossings,
   getInitZeroSnappedPoints,
   snapToNearestZeroCrossing,
-} from '@src/lib/audio/DSP/zeroCrossingUtils';
-import { snap } from 'gsap';
+} from '../lib/audio/DSP/zeroCrossingUtils';
 
 type SamplerCtxType = {
   samplerEngine: SamplerEngine | null;
@@ -111,7 +103,10 @@ export default function SamplerProvider({
 
   const addLoadedBuffer = useCallback((id: string, buffer: AudioBuffer) => {
     loadedBuffers.current.set(id, buffer);
+    setBufferVersion((v) => v + 1); // Trigger re-render
   }, []);
+
+  const [bufferVersion, setBufferVersion] = useState(0);
 
   /* UTILS */
 
@@ -158,6 +153,8 @@ export default function SamplerProvider({
     setIsHolding(samplerEngine.isHolding());
     console.log('isHolding:', samplerEngine.isHolding());
   };
+
+  // TODO: fix initial fetch of samples
 
   // // Fetch initial samples
   // useEffect(() => {
@@ -244,6 +241,9 @@ export default function SamplerProvider({
           alert('Failed to create Sample from recording');
         }
 
+        loadedBuffers.current.set(record.id, audioBuffer);
+        setBufferVersion((v) => v + 1); // Trigger re-render
+
         unsavedSampleIds.current.add(record.id);
         setSampleRecords((prev) => [...prev, record]); // triggers loadSamples useEffect
 
@@ -252,7 +252,7 @@ export default function SamplerProvider({
         console.error('Error decoding new recording:', error);
       }
     },
-    [audioCtx, samplerEngine, router] // needs all functions as dependencies?
+    [audioCtx, samplerEngine, router, decodeAudioData] // needs all functions as dependencies?
   );
 
   useEffect(() => {
@@ -292,6 +292,8 @@ export default function SamplerProvider({
       // TODO: fix edge case where slug is not unique (e.g. slug to id map) ?
 
       const ids: string[] = [];
+      let buffersChanged = false;
+
       const loadPromises = selectedSlugsMemo.map(async (slug) => {
         const foundSample = sampleRecords.find((s) => s.slug === slug);
 
@@ -305,7 +307,8 @@ export default function SamplerProvider({
               const buffer = await decodeAudioData(arrayBuffer);
               samplerEngine.loadSample(foundSample, buffer);
 
-              addLoadedBuffer(foundSample.id, buffer);
+              loadedBuffers.current.set(foundSample.id, buffer);
+              buffersChanged = true;
             } catch (error) {
               console.error(`Error loading sample ${foundSample.name}:`, error);
             }
@@ -315,10 +318,13 @@ export default function SamplerProvider({
 
       await Promise.all(loadPromises);
       samplerEngine.setSelectedSampleIds(ids);
-
-      // console.log('ids: ', ids);
-      // setIsLoading(false);
+      if (buffersChanged) {
+        setBufferVersion((v) => v + 1); // Trigger re-render if buffers changed
+      }
     };
+
+    // console.log('ids: ', ids);
+    // setIsLoading(false);
 
     loadSamples();
 
@@ -356,7 +362,7 @@ export default function SamplerProvider({
     return latestSelectedSample
       ? loadedBuffers.current.get(latestSelectedSample.id)
       : undefined;
-  }, [latestSelectedSample, loadedBuffers]);
+  }, [latestSelectedSample, bufferVersion]); // Add bufferVersion as dependency
 
   //___________________________________________________________
   // FOR TESTING - REMOVE (using for testing ReSample)
@@ -498,43 +504,7 @@ export default function SamplerProvider({
 
   /* RESAMPLING */
 
-  // IMPELEMENT!
-
-  /* RECORDING */
-
-  // const startRecording = useCallback(async () => {
-  //   if (!(samplerEngine && audioCtx)) return;
-
-  //   await samplerEngine.startRecording();
-  // }, [samplerEngine, audioCtx]);
-
-  // const stopRecording = useCallback(async () => {
-  //   if (!(samplerEngine && audioCtx)) return;
-
-  //   const recordedBlob = await samplerEngine.stopRecording();
-  //   if (recordedBlob) {
-  //     //const mimeTypeKey: keyof typeof AUDIO_TYPE_ENUM
-
-  //     /* FIND A NON-CONVOLUTED WAY TO GET THE KEYS, SIMPLIFY ENUMS SINCE THEY USE SAME KEYS */
-
-  //     console.log('AUDIOTYPE: ', audioType);
-  //     const record = await blobToSampleRecord(audioCtx, recordedBlob, 'OGG'); // REMOVE HARDCODED MIME TYPE
-
-  //     const sampleName = prompt('Save sample now? Enter a name:');
-
-  //     if (sampleName) {
-  //       saveNewSampleRecord(record).then((savedRecord) => {
-  //         setSampleRecords((prev) => [...prev, savedRecord]);
-  //         router.replace(`?samples=${savedRecord.slug}`, { scroll: false });
-  //       });
-  //     } else {
-  //       // samplerEngine.loadSample(savedRecord, buffer);
-  //       // unsavedSampleIds.current.add(sample.id);
-  //       setSampleRecords((prev) => [...prev, record]); // triggers loadSamples useEffect
-  //       router.replace(`?samples=${record.slug}`, { scroll: false }); // FIX: triggers loadSamples useEffect again ?
-  //     }
-  //   }
-  // }, [samplerEngine, router, audioCtx]);
+  // TODO: IMPELEMENT ReSampling!
 
   const value = {
     samplerEngine,
