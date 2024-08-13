@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAudioDeviceCtx } from '../../contexts/audio-device-context';
+import { useAudioDeviceCtx } from '../../contexts/DevicesCtx';
 
 function AudioDeviceSelector({ className }: { className?: string }) {
   const { inputs, outputs, inputID, outputID, setInputID, setOutputID } =

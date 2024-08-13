@@ -1,10 +1,10 @@
-import { MAX_SAMPLE_FILE_SIZE_FREE } from './constants';
+import { MAX_SAMPLE_FILE_SIZE_FREE } from './constants/constants';
 import {
   SUPPORTED_IMPORT_TYPE_ENUM,
   // AUDIO_TYPE_ENUM,
   // AUDIO_TYPE_EXT_ENUM,
-} from './enums';
-import { APP_FORMATS, AudioFormat, FormatKey } from './mimeTypes';
+} from './constants/enums';
+import { APP_FORMATS, AudioFormat, FormatKey } from './constants/mimeTypes';
 import { Sample_file } from './samples';
 
 export async function blobToString(blob: Blob): Promise<string> {

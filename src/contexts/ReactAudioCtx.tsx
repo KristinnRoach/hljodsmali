@@ -2,7 +2,7 @@
 
 'use client';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import * as audioUtils from '../lib/audio/audioCtx-utils';
+import * as audioUtils from '../lib/audio/audio-utils/audioCtx-utils';
 
 type ReactAudioCtxType = {
   audioCtx: AudioContext | null;

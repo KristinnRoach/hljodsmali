@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import VolumeMonitor from '../../lib/audio/VolumeMonitor';
-import { useSamplerCtx } from '../../contexts/sampler-context';
+import { useSamplerCtx } from '../../contexts/SamplerCtx';
 import { ToggleMultiState } from '../UI/Basic/Toggle';
 
 const Recorder: React.FC = ({ className }: { className?: string }) => {
@@ -21,7 +21,7 @@ const Recorder: React.FC = ({ className }: { className?: string }) => {
   const chunks = useRef<Blob[]>([]);
 
   const startRecThreshold = -35; // dB  /* TEST: are those values correct? */
-  const stopRecThreshold = -45; // dB   /* TEST: are those values correct? */
+  const stopRecThreshold = -40; // dB   /* TEST: are those values correct? */
   const silenceDelay = 100; // ms
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
 

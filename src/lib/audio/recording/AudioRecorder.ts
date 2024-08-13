@@ -1,6 +1,10 @@
 // src/lib/recording/AudioRecorder.ts
 
-import { APP_FORMATS, FormatKey, AudioFormat } from '../../../types/mimeTypes';
+import {
+  APP_FORMATS,
+  FormatKey,
+  AudioFormat,
+} from '../../../types/constants/mimeTypes';
 
 export class AudioRecorder {
   private mediaRecorder: MediaRecorder | null = null;

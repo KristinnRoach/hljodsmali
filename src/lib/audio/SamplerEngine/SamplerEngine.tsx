@@ -11,7 +11,11 @@ import {
   snapToNearestZeroCrossing,
 } from '../DSP/zeroCrossingUtils';
 
-import { FormatKey, APP_FORMATS, AudioFormat } from '../../../types/mimeTypes';
+import {
+  FormatKey,
+  APP_FORMATS,
+  AudioFormat,
+} from '../../../types/constants/mimeTypes';
 
 export type SampleNodes = {
   sampleGain: GainNode;
@@ -326,6 +330,14 @@ export default class SamplerEngine {
           loadedSample.sample_settings.endPoint = snapped;
         }
 
+        if (settings.transposition !== undefined) {
+          loadedSample.sample_settings.transposition = settings.transposition;
+        }
+
+        if (settings.tuneOffset !== undefined) {
+          loadedSample.sample_settings.tuneOffset = settings.tuneOffset;
+        }
+
         // const newLoadedSample = {
         //   // WHY???
         //   ...loadedSample,
@@ -340,9 +352,18 @@ export default class SamplerEngine {
           loadedSample.sample_settings
         );
 
+        console.log(
+          'Updated sample settings:',
+          loadedSample.sample_settings.transposition,
+          loadedSample.sample_settings.tuneOffset,
+          loadedSample.sample_settings.lowCutoff
+        );
+
         if (
           'loopStart' in settings ||
           'loopEnd' in settings ||
+          'tuneOffset' in settings ||
+          'transposition' in settings ||
           'sampleVolume' in settings ||
           'loopVolume' in settings
         ) {

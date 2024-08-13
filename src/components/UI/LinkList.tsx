@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Save, Trash2 } from 'react-feather';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useShiftKey } from '../../hooks/useShiftKey';
-import styles from './styles/LinkList.module.scss';
+import styles from '../../styles/LinkList.module.scss';
 
 type Item = {
   name: string;

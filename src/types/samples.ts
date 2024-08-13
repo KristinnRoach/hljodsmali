@@ -1,8 +1,10 @@
 // src/types/samples.ts
 
-import { FormatKey, AudioFormat, APP_FORMATS } from './mimeTypes';
+import { FormatKey, AudioFormat, APP_FORMATS } from './constants/mimeTypes';
 
 export type Sample_settings = {
+  transposition: number;
+  tuneOffset: number;
   startPoint: number;
   endPoint: number;
   loopStart: number;
@@ -54,11 +56,13 @@ export function getDefaultSampleSettings(
   return {
     ...existingSettings,
 
-    startPoint: 0.1 > bufferDuration ? 0.1 : 0,
-    endPoint:
-      bufferDuration - 0.2 > 0.1 ? bufferDuration - 0.2 : bufferDuration,
-    loopStart: 0.1 > bufferDuration ? 0.1 : 0,
-    loopEnd: bufferDuration - 0.2 > 0.1 ? bufferDuration - 0.2 : bufferDuration,
+    transposition: 0,
+    tuneOffset: 0,
+
+    startPoint: 0,
+    endPoint: bufferDuration - 0.5 * bufferDuration, // TEMPFIX! test: 0.1 vs 0.5 vs 0.8 results dont make sense, must be scaled somewhere.  LONGER BUFFER DURATIONS MAKE END MARKERS OUT OF VIEW IN WAVEFORM
+    loopStart: 0, // 0.1 > bufferDuration ? 0.1 : 0,
+    loopEnd: bufferDuration - 0.5 * bufferDuration, // bufferDuration - 0.1 > 0.1 ? bufferDuration - 0.1 : bufferDuration,
     attackTime: 0.02,
     releaseTime: 0.2,
     sampleVolume: 0.8,

@@ -1,4 +1,7 @@
-import { createAnalyser, createMediaStreamSource } from './audioCtx-utils';
+import {
+  createAnalyser,
+  createMediaStreamSource,
+} from './audio-utils/audioCtx-utils';
 
 export default class VolumeMonitor {
   private analyser: AnalyserNode | null = null;

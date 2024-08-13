@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import styles from './Toggle.module.scss';
+import styles from '../../../styles/Toggle.module.scss';
 
 type ToggleProps = {
   isOn: boolean;
   onToggle: () => void;
   label: string;
   type?: 'default' | 'menu' | 'record' | 'loop' | 'hold' | 'lock' | 'link';
+  children?: React.ReactNode;
 };
 
 const Toggle: React.FC<ToggleProps> = ({
@@ -16,6 +17,7 @@ const Toggle: React.FC<ToggleProps> = ({
   onToggle,
   label,
   type = 'default',
+  children,
 }) => {
   return (
     <button
@@ -24,7 +26,8 @@ const Toggle: React.FC<ToggleProps> = ({
       }`}
       onClick={onToggle}
     >
-      {label}
+      {label && label}
+      {children}
     </button>
   );
 };

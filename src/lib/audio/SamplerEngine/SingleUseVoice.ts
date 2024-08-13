@@ -1,6 +1,10 @@
 import { Sample_settings } from '../../../types/samples';
 import { snapToNearestZeroCrossing } from '../DSP/zeroCrossingUtils';
-import { snapDurationToNote, C5_DURATION_SEC } from '../../utils/noteToFreq';
+import {
+  snapDurationToNote,
+  C5_DURATION_SEC,
+} from '../../../types/constants/note-utils';
+import { MIDDLE_C_MIDI } from '../../../types/constants/constants';
 
 export default class SingleUseVoice {
   private static sampleRate: number = 48000;
@@ -22,8 +26,9 @@ export default class SingleUseVoice {
   private trigger: number = -1;
   private held: number = -1;
 
-  // Static initializer block (supported in modern JavaScript/TypeScript)
+  // Static initializer block ?
   static initialize(sampleRate: number = 48000) {
+    // ensure this always represents the actual sample rate !!!
     SingleUseVoice.sampleRate = sampleRate;
   }
 
@@ -136,9 +141,21 @@ export default class SingleUseVoice {
     return this.voiceGain;
   }
 
+  semitoneToRate(baseRate: number, semitones: number): number {
+    return baseRate * 2 ** (semitones / 12);
+  }
+
   start(midiNote: number) {
-    const rate = 2 ** ((midiNote - 60) / 12);
-    this.source.playbackRate.value = rate;
+    const midiRate = this.semitoneToRate(1, midiNote - MIDDLE_C_MIDI);
+    const transposedRate = this.semitoneToRate(
+      midiRate,
+      this.settings.transposition
+    );
+    const tunedRate = this.semitoneToRate(
+      transposedRate,
+      this.settings.tuneOffset
+    );
+    this.source.playbackRate.value = tunedRate;
 
     this.source.start(
       0,
@@ -230,6 +247,30 @@ export default class SingleUseVoice {
     });
   }
 
+  static tuneActiveVoices(sampleId: string, tuneOffset: number) {
+    SingleUseVoice.allVoices.forEach((voice) => {
+      if (voice.sampleId === sampleId) {
+        voice.settings.tuneOffset = tuneOffset;
+        voice.source.playbackRate.value = voice.semitoneToRate(
+          voice.source.playbackRate.value,
+          tuneOffset
+        );
+      }
+    });
+  }
+
+  static transposeActiveVoices(sampleId: string, transposition: number) {
+    SingleUseVoice.allVoices.forEach((voice) => {
+      if (voice.sampleId === sampleId) {
+        voice.settings.transposition = transposition;
+        voice.source.playbackRate.value = voice.semitoneToRate(
+          voice.source.playbackRate.value,
+          transposition
+        );
+      }
+    });
+  }
+
   updateLoopPoints(
     newLoopStart: number = this.source.loopStart,
     newLoopEnd: number = this.source.loopEnd
@@ -240,29 +281,29 @@ export default class SingleUseVoice {
 
   calculateLoopPoints(updated: Partial<Sample_settings> = this.settings) {
     // SHOULD BE STATIC?!
-    let start = updated.loopStart ?? this.settings.loopStart;
-    let end = updated.loopEnd ?? this.settings.loopEnd;
+    let loopStart = updated.loopStart ?? this.settings.loopStart;
+    let loopEnd = updated.loopEnd ?? this.settings.loopEnd;
 
-    const initLoopLength = end - start;
+    const initLoopLength = loopEnd - loopStart;
     // console.log('init looplength:', initLoopLength);
 
     if (initLoopLength <= C5_DURATION_SEC) return; // how does this affect rendering? Should be in render function, or both?
 
-    start = snapToNearestZeroCrossing(
-      start,
+    loopStart = snapToNearestZeroCrossing(
+      loopStart,
       SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
     );
-    end = snapToNearestZeroCrossing(
-      end,
+    loopEnd = snapToNearestZeroCrossing(
+      loopEnd,
       SingleUseVoice.zeroCrossings.get(this.sampleId) ?? []
     );
 
-    const zeroSnapLength = end - start;
+    const zeroSnapLength = loopEnd - loopStart;
     if (initLoopLength !== zeroSnapLength) {
       // console.log('length SNAPPED TO ZERO: ', end - start);
     }
 
-    this.updateLoopPoints(start, end);
+    this.updateLoopPoints(loopStart, loopEnd);
 
     if (zeroSnapLength > 0.015) return;
 
@@ -276,11 +317,11 @@ export default class SingleUseVoice {
       7,
       'sec' // try ms or samples if needed
     );
-    const newEnd = start + snappedLength;
+    const newEnd = loopStart + snappedLength;
 
     this.source.loopEnd = newEnd; // could call updateLoopPoints again, but only need to update loopEnd to adjust the length
 
-    console.log('length SNAPPED TO C: ', newEnd - start);
+    console.log('length SNAPPED TO C: ', newEnd - loopStart);
   }
 
   setLoopVolume(volume: number) {

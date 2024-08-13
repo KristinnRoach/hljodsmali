@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { keyMap } from '../lib/utils/keymap';
+import { keyMap } from '../types/constants/keymap';
 
 // import SamplerEngine from '../lib/SamplerEngine';
-import { useSamplerCtx } from '../contexts/sampler-context';
+import { useSamplerCtx } from '../contexts/SamplerCtx';
 
 export default function useKeyboard() {
   const isSpacebarDown = useRef(false); // ?

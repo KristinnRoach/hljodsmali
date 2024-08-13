@@ -1,32 +1,35 @@
 // components/SampleSettings.tsx
 'use client';
 import React, { useState } from 'react';
+// import { Slider } from 'antd';
+
 import { SampleRecord, Sample_settings } from '../../types/samples';
-import { useSamplerCtx } from '../../contexts/sampler-context';
+import { useSamplerCtx } from '../../contexts/SamplerCtx';
 import { useSampleSettings } from '../../hooks/useSampleSettings';
+// import Tuner from './Tuner';
 import BasicSlider from '../UI/Basic/BasicSlider';
 import styles from './Sampler.module.scss';
 
 const SampleSettings: React.FC = () => {
-  const {
-    latestSelectedSample,
-    latestSelectedBuffer,
-    isSampleLoaded,
-    isSampleSelected,
-  } = useSamplerCtx();
-  // QUICK FIX: add bufferDuration to latestSelectedSample or sampleRecord or samplesettings types
+  const { latestSelectedSample, isSampleLoaded, isSampleSelected } =
+    useSamplerCtx();
   const { handleSettingChange } = useSampleSettings();
 
-  const C5_DURATION_SEC = 0.00191117077819399; // just a constant for now
-
   const sample = latestSelectedSample as SampleRecord;
-  const settings = sample.sample_settings as Sample_settings;
+  const settings = sample?.sample_settings as Sample_settings;
+  const bufferDuration = sample?.bufferDuration;
+
+  // if (!bufferDuration)
+  //   throw new Error('Buffer duration is missing in SampleSettings component');
 
   const {
-    startPoint, // remove
-    endPoint,
-    loopStart,
-    loopEnd,
+    // startPoint, // remove
+    // endPoint,
+    // loopStart,
+    // loopEnd,
+
+    // transposition,
+    // tuneOffset,
 
     attackTime,
     releaseTime,
@@ -34,50 +37,50 @@ const SampleSettings: React.FC = () => {
     highCutoff,
   } = settings;
 
-  const bufferDuration = latestSelectedBuffer?.duration ?? 0;
+  // const bufferDuration = latestSelectedBuffer?.duration ?? 0;
   // if (!bufferDuration)
   //   throw new Error('Buffer duration is missing in SampleSettings');
   // const playDuration = endPoint - startPoint;
   // const loopDuration = loopEnd - loopStart;
 
-  const [durationHasChanged, setDurationHasChanged] = useState(false);
-  const [loopDurationHasChanged, setLoopDurationHasChanged] = useState(false);
+  // const [durationHasChanged, setDurationHasChanged] = useState(false);
+  // const [loopDurationHasChanged, setLoopDurationHasChanged] = useState(false);
 
-  const handleStartChange = (value: number) => {
-    handleSettingChange('startPoint', value);
-    setDurationHasChanged(true);
-    if (!loopDurationHasChanged) {
-      handleSettingChange('loopStart', value);
-    }
-  };
+  // const handleStartChange = (value: number) => {
+  //   handleSettingChange('startPoint', value);
+  //   setDurationHasChanged(true);
+  //   if (!loopDurationHasChanged) {
+  //     handleSettingChange('loopStart', value);
+  //   }
+  // };
 
-  const handleEndChange = (value: number) => {
-    handleSettingChange('endPoint', value);
-    setDurationHasChanged(true);
-    if (!loopDurationHasChanged) {
-      handleSettingChange('loopEnd', value);
-    }
-  };
+  // const handleEndChange = (value: number) => {
+  //   handleSettingChange('endPoint', value);
+  //   setDurationHasChanged(true);
+  //   if (!loopDurationHasChanged) {
+  //     handleSettingChange('loopEnd', value);
+  //   }
+  // };
 
-  const handleLoopStartChange = (value: number) => {
-    if (loopEnd - value < C5_DURATION_SEC - 0.0001) return;
+  // const handleLoopStartChange = (value: number) => {
+  //   if (loopEnd - value < C5_DURATION_SEC - 0.0001) return;
 
-    handleSettingChange('loopStart', value);
-    setLoopDurationHasChanged(true);
-    if (!durationHasChanged) {
-      handleSettingChange('startPoint', value);
-    }
-  };
+  //   handleSettingChange('loopStart', value);
+  //   setLoopDurationHasChanged(true);
+  //   if (!durationHasChanged) {
+  //     handleSettingChange('startPoint', value);
+  //   }
+  // };
 
-  const handleLoopEndChange = (value: number) => {
-    if (value - loopStart < C5_DURATION_SEC - 0.0001) return;
+  // const handleLoopEndChange = (value: number) => {
+  //   if (value - loopStart < C5_DURATION_SEC - 0.0001) return;
 
-    handleSettingChange('loopEnd', value);
-    setLoopDurationHasChanged(true);
-    if (!durationHasChanged) {
-      handleSettingChange('endPoint', value);
-    }
-  };
+  //   handleSettingChange('loopEnd', value);
+  //   setLoopDurationHasChanged(true);
+  //   if (!durationHasChanged) {
+  //     handleSettingChange('endPoint', value);
+  //   }
+  // };
 
   return (
     <>
@@ -94,7 +97,7 @@ const SampleSettings: React.FC = () => {
           endPoint={endPoint}
         /> */}
             <h2>{sample.name}</h2>
-            <BasicSlider
+            {/* <BasicSlider
               label='Start'
               value={startPoint}
               min={0}
@@ -129,12 +132,24 @@ const SampleSettings: React.FC = () => {
               step={0.001}
               onChange={handleLoopEndChange}
               minDynamic={loopStart + 0.0001}
-            />
+            /> */}
+
+            {/* <Tuner transposition={transposition} tuneOffset={tuneOffset} /> */}
+
+            {/* <Slider 
+                    range={{ draggableTrack: true }}
+                    value={[attackTime, releaseTime]}
+                    onChange={(value: number[]) => handleSettingChange('attackTime', value)}
+                  /> */}
             <BasicSlider
               label='Attack'
               value={attackTime}
               min={0}
-              max={bufferDuration}
+              max={
+                bufferDuration && releaseTime
+                  ? bufferDuration - releaseTime
+                  : 2.0
+              }
               step={0.0001}
               onChange={(value) => handleSettingChange('attackTime', value)}
             />
@@ -142,7 +157,9 @@ const SampleSettings: React.FC = () => {
               label='Release'
               value={releaseTime}
               min={0.01}
-              max={bufferDuration}
+              max={
+                bufferDuration && attackTime ? bufferDuration - attackTime : 2.0
+              }
               step={0.0001}
               onChange={(value) => handleSettingChange('releaseTime', value)}
             />

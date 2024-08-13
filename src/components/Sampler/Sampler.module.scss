@@ -70,16 +70,37 @@
   max-width: 80vw;
   z-index: 99;
 
-  &.buttons {
-    h2 {
-      text-align: center;
-      padding: 0.2rem;
-      font-size: 1rem;
-    }
-  }
+  .tuner {
+    display: flex;
+    flex-direction: row;
+    // align-items: top;
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0 auto;
 
-  .samplesContainer {
-    max-width: 20vw;
+    .testTone {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    button {
+      font-size: 1rem;
+      height: 1rem;
+      width: 1rem;
+      font-size: 0.8rem;
+      padding: 1.2rem;
+    }
+
+    // TestTone {
+    //   display: flex;
+    //   flex-direction: row;
+    //   justify-content: center;
+    //   align-items: center;
+    //   gap: 0.5rem;
+    // }
   }
 }
 
@@ -89,13 +110,9 @@
   justify-content: center;
   align-items: center;
   margin: 0 auto;
-
-  //   background-color: transparent;
-  //   background-color: whitesmoke;
-
-  //   // position: fixed;
-  //   // top: 30vh;
-  //   // left: 5vw;
+  min-width: fit-content;
+  max-width: 100vw;
+  overflow-x: auto;
 }
 
 .keyboardContainer {
@@ -103,8 +120,6 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  // margin: 0 auto;
-  // padding: 1rem;
 }
 
 .slider {

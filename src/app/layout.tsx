@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 
 import ReactAudioCtxProvider from '../contexts/ReactAudioCtx';
-import AudioDeviceProvider from '../contexts/audio-device-context';
+import AudioDeviceProvider from '../contexts/DevicesCtx';
+import { AntdRegistry } from '@ant-design/nextjs-registry';
 // import AudioRecorderProvider from '../contexts/audio-recorder-context';
 
 import '../styles/globals.scss';
@@ -12,10 +13,10 @@ export const metadata: Metadata = {
   description: 'vóts, get é bra spilaðá hvað sem er??',
 };
 
-const DynamicSamplerProvider = dynamic(
-  () => import('../contexts/sampler-context'),
-  { ssr: false }
-);
+// gera dynamic audioctx líka?
+const DynamicSamplerProvider = dynamic(() => import('../contexts/SamplerCtx'), {
+  ssr: false,
+});
 
 export default function RootLayout({
   children,
@@ -28,7 +29,9 @@ export default function RootLayout({
         <AudioDeviceProvider>
           <ReactAudioCtxProvider>
             {/* <AudioRecorderProvider> */}
-            <DynamicSamplerProvider>{children}</DynamicSamplerProvider>
+            <DynamicSamplerProvider>
+              <AntdRegistry>{children}</AntdRegistry>
+            </DynamicSamplerProvider>
             {/* </AudioRecorderProvider> */}
           </ReactAudioCtxProvider>
         </AudioDeviceProvider>

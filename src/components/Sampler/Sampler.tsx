@@ -2,29 +2,36 @@
 
 import React from 'react';
 
+import Auth from '../Auth/Auth';
+
+import AudioDeviceSelector from './AudioDeviceSelector';
 import SampleSettings from './SampleSettings';
-import LinkList from '../UI/LinkList';
-import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
 import Recorder from './Recorder';
-
 import useKeyboard from '../../hooks/useKeyboard';
-import WaveformContainer from '../UI/WaveformContainer';
-import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
 
+import LinkList from '../UI/LinkList';
+
+// import { Tabs } from 'antd';
+
+import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
+
+import WaveformContainer from '../UI/WaveForms/WaveformContainer';
+import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
 import Shapes from '../UI/Shapes/Shapes'; // TODO: Resolve "Multiple instances of Three.js being imported" warning (if persists)
 
-import { useSamplerCtx } from '../../contexts/sampler-context';
-import { SAMPLES_PER_PAGE } from '../../types/constants';
+import { useSamplerCtx } from '../../contexts/SamplerCtx';
+import { useSampleSettings } from '../../hooks/useSampleSettings';
+import { SAMPLES_PER_PAGE } from '../../types/constants/constants';
 
 import styles from './Sampler.module.scss';
-import AudioDeviceSelector from './AudioDeviceSelector';
-import Auth from '../Auth/Auth';
+import Tuner from './Tuner';
 
 export default function Sampler_cli() {
   useKeyboard();
   const {
+    latestSelectedSample,
+
     samplerEngine,
-    // handleNewRecording,
     sampleRecords,
     isLoading,
     saveAll,
@@ -42,18 +49,27 @@ export default function Sampler_cli() {
     return null;
   }
 
+  const { transposition, tuneOffset } =
+    latestSelectedSample?.sample_settings || {};
+
   return (
     <>
       <div className={styles.sampler}>
         <section className={styles.topBar}>
           <Auth className={styles.loginContainer} />
-          <Shapes className={styles.shapesContainer} />
+          {/* <Shapes className={styles.shapesContainer} /> */}
           <AudioDeviceSelector className={styles.deviceSelectorContainer} />
         </section>
         <section className={styles.controlsContainer}>
-          <button onClick={saveAll} disabled={!hasUnsavedSamples}>
+          {/* <button onClick={saveAll} disabled={!hasUnsavedSamples}>
             Save All
-          </button>
+          </button> */}
+          <Tuner
+            className={styles.tuner}
+            transposition={transposition ?? 0}
+            tuneOffset={tuneOffset ?? 0}
+          />
+
           <button disabled={!hasUnsavedSamples}>
             {/*onClick={reSample} */}
             ReSample!
