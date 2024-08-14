@@ -43,7 +43,7 @@ export default function Auth({ className = '' }) {
           placeholder='username'
           {...register('username')}
           required
-          tabIndex={0}
+          tabIndex={-1}
           aria-label='username'
         />
         <input

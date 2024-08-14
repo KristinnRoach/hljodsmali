@@ -53,9 +53,7 @@ export function getDefaultSampleSettings(
   bufferDuration: number,
   existingSettings?: Partial<Sample_settings>
 ): Sample_settings {
-  return {
-    ...existingSettings,
-
+  const defaultSettings: Sample_settings = {
     transposition: 0,
     tuneOffset: 0,
 
@@ -65,12 +63,14 @@ export function getDefaultSampleSettings(
     loopEnd: bufferDuration - 0.5 * bufferDuration, // bufferDuration - 0.1 > 0.1 ? bufferDuration - 0.1 : bufferDuration,
     attackTime: 0.02,
     releaseTime: 0.2,
-    sampleVolume: 0.8,
-    loopVolume: 0.7,
+    sampleVolume: 1,
+    loopVolume: 0.8,
     loopLocked: false,
     lowCutoff: 40,
     highCutoff: 20000,
   };
+
+  return { ...defaultSettings, ...existingSettings };
 }
 
 // Moved from engine to sample type file, localize creation of sample_db objects to one place for consistency

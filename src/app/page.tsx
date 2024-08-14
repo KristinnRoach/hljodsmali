@@ -1,7 +1,7 @@
 import React from 'react';
 import 'server-only';
 
-import Sampler_cli from '../components/Sampler/Sampler';
+import Sampler from '../components/Sampler/Sampler';
 
 import styles from '../styles/page.module.scss';
 
@@ -10,7 +10,7 @@ export default function Home() {
   return (
     <>
       <main className={styles.main}>
-        <Sampler_cli />
+        <Sampler />
       </main>
     </>
   );

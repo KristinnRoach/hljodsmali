@@ -1,4 +1,4 @@
-import { findZeroCrossings } from '../lib/audio/DSP/zeroCrossingUtils';
+import { findZeroCrossings } from '../lib/audio-utils/zeroCrossingUtils';
 import { LoadedSample } from '../lib/audio/SamplerEngine/SamplerEngine';
 import { Sample_settings } from '../types/samples';
 import { useState, useCallback } from 'react';

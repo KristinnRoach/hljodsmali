@@ -10,7 +10,6 @@ import Recorder from './Recorder';
 import useKeyboard from '../../hooks/useKeyboard';
 
 import LinkList from '../UI/LinkList';
-
 // import { Tabs } from 'antd';
 
 import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
@@ -20,13 +19,13 @@ import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
 import Shapes from '../UI/Shapes/Shapes'; // TODO: Resolve "Multiple instances of Three.js being imported" warning (if persists)
 
 import { useSamplerCtx } from '../../contexts/SamplerCtx';
-import { useSampleSettings } from '../../hooks/useSampleSettings';
+// import { useSampleSettings } from '../../hooks/useSampleSettings';
 import { SAMPLES_PER_PAGE } from '../../types/constants/constants';
 
 import styles from './Sampler.module.scss';
 import Tuner from './Tuner';
 
-export default function Sampler_cli() {
+export default function Sampler() {
   useKeyboard();
   const {
     latestSelectedSample,
@@ -34,7 +33,7 @@ export default function Sampler_cli() {
     samplerEngine,
     sampleRecords,
     isLoading,
-    saveAll,
+    // saveAll,
     updateSample,
     deleteSample,
     hasUnsavedSamples,
@@ -57,7 +56,7 @@ export default function Sampler_cli() {
       <div className={styles.sampler}>
         <section className={styles.topBar}>
           <Auth className={styles.loginContainer} />
-          {/* <Shapes className={styles.shapesContainer} /> */}
+          <Shapes className={styles.shapesContainer} />
           <AudioDeviceSelector className={styles.deviceSelectorContainer} />
         </section>
         <section className={styles.controlsContainer}>
@@ -70,11 +69,7 @@ export default function Sampler_cli() {
             tuneOffset={tuneOffset ?? 0}
           />
 
-          <button disabled={!hasUnsavedSamples}>
-            {/*onClick={reSample} */}
-            ReSample!
-          </button>
-
+          <Recorder resamplerMode={true} />
           <Recorder />
 
           <Toggle
