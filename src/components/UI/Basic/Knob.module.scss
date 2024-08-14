@@ -1,0 +1,105 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  //   padding: 0.2rem;
+}
+
+.xs {
+  .knob {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .value {
+    font-size: 0.7rem;
+  }
+  .label {
+    font-size: 0.8rem;
+  }
+}
+
+.s {
+  .knob {
+    width: 3rem;
+    height: 3rem;
+  }
+  .value {
+    font-size: 0.7rem;
+  }
+  .label {
+    font-size: 1rem;
+  }
+}
+
+.m {
+  .knob {
+    width: 5rem;
+    height: 5rem;
+  }
+  .value {
+    font-size: 0.9rem;
+  }
+  .label {
+    font-size: 1.15rem;
+  }
+}
+
+.l {
+  .knob {
+    width: 7rem;
+    height: 7rem;
+  }
+  .value {
+    font-size: 1.1rem;
+  }
+  .label {
+    font-size: 1.3rem;
+  }
+}
+
+.knob {
+  display: flex;
+  // width: 10rem;
+  // height: 5rem;
+  border-radius: 50%;
+  background-color: #afff8f63;
+  position: relative;
+  cursor: grab;
+  user-select: none;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.indicator {
+  position: absolute;
+  top: 0%;
+  left: 50%;
+  width: 2px;
+  height: 50%;
+  background-color: #000000ba;
+  transform-origin: bottom center;
+  transform: translateX(-50%) rotate(0deg);
+}
+
+.value {
+  position: absolute;
+  top: 50%;
+  bottom: 10%;
+  left: 0%;
+  right: 0%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

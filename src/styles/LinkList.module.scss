@@ -1,0 +1,81 @@
+// src/components/UI/LinkList.module.scss
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  margin-top: 0.5rem;
+}
+
+.itemContainer {
+  display: flex;
+  //   justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.item {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #333;
+  background-color: #f0f0f0;
+  transition: background-color 0.3s ease;
+
+  width: fit-content;
+  padding: 8px;
+  height: fit-content;
+
+  // Match SVG stroke properties
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  &:hover {
+    background-color: #e0e0e0;
+  }
+
+  &.selected {
+    background-color: #d0d0d0;
+    font-weight: bold;
+  }
+}
+
+.buttons {
+  display: flex;
+  gap: 3px;
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    transition: background-color 0.3s ease;
+    border: 2px solid currentColor;
+
+    width: fit-content;
+    padding: 8px;
+    height: fit-content;
+
+    &:hover {
+      background-color: #e0e0e0;
+    }
+
+    // .saveIcon {
+    // }
+
+    // .deleteIcon {
+    // }
+  }
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+}

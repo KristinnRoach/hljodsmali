@@ -1,0 +1,42 @@
+import { useState, useCallback } from 'react';
+
+interface UseZoomProps {
+  minZoom?: number;
+  maxZoom?: number;
+  step?: number;
+}
+
+interface ZoomFunctions {
+  zoomValue: number;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+  setZoom: (zoom: number) => void;
+}
+
+export const useZoom = ({
+  minZoom = 0.1,
+  maxZoom = 5,
+  step = 0.1,
+}: UseZoomProps = {}): ZoomFunctions => {
+  const [zoomValue, setZoomValue] = useState(1);
+
+  const setZoom = useCallback(
+    (newZoom: number) => {
+      setZoomValue(Math.min(Math.max(newZoom, minZoom), maxZoom));
+    },
+    [minZoom, maxZoom]
+  );
+
+  const zoomIn = useCallback(
+    () => setZoom(zoomValue + step),
+    [zoomValue, step, setZoom]
+  );
+  const zoomOut = useCallback(
+    () => setZoom(zoomValue - step),
+    [zoomValue, step, setZoom]
+  );
+  const resetZoom = useCallback(() => setZoomValue(1), []);
+
+  return { zoomValue, zoomIn, zoomOut, resetZoom, setZoom };
+};

@@ -1,0 +1,12 @@
+// src/components/UI/styles/Waveform.module.scss
+
+.container {
+  width: 100%;
+  overflow: hidden;
+}
+
+.waveformScroller {
+  width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}

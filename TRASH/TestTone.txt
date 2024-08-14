@@ -1,0 +1,140 @@
+'use client';
+
+import React, { useRef, useState } from 'react';
+
+const middleC_freq = 261.63;
+
+type TestToneProps = {
+  initialVolume?: number;
+  initialFrequency?: number;
+  fadeInMs?: number;
+  fadeOutMs?: number;
+  //   className?: string;
+};
+
+function TestTone(props: TestToneProps) {
+  const ctx = useRef<AudioContext | null>(null);
+  const oscillator = useRef<OscillatorNode | null>(null);
+  const gainNode = useRef<GainNode | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(props.initialVolume || 0.15);
+
+  function handleToggle() {
+    const gain = gainNode.current;
+    const osc = oscillator.current;
+
+    if (osc && gain && ctx.current && isPlaying) {
+      gain.gain.setValueAtTime(gain.gain.value, gain.context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(
+        0.000001,
+        ctx.current.currentTime + (props.fadeOutMs ?? 250) * 0.001
+      );
+
+      setTimeout(() => {
+        osc.stop();
+        osc.disconnect();
+        gain.disconnect();
+        ctx.current?.close();
+      }, (props.fadeOutMs ?? 250) + 50);
+
+      gainNode.current = null;
+      oscillator.current = null;
+      setIsPlaying(false);
+    } else if (!oscillator.current && !isPlaying) {
+      if (!ctx.current) {
+        ctx.current = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
+      }
+
+      oscillator.current = ctx.current.createOscillator();
+      oscillator.current.type = 'triangle';
+
+      gainNode.current ? gainNode.current : ctx.current.createGain();
+      oscillator.current.frequency.value =
+        props.initialFrequency || middleC_freq;
+
+      if (!(gainNode.current && oscillator.current)) return;
+
+      gainNode.current.gain.setValueAtTime(0, ctx.current.currentTime);
+      oscillator.current
+        .connect(gainNode.current)
+        .connect(ctx.current.destination);
+      setVolume(props.initialVolume || 0.15);
+      gainNode.current.gain.linearRampToValueAtTime(
+        props.initialVolume || 0.15,
+        ctx.current.currentTime + (props.fadeInMs || 200) * 0.001
+      );
+
+      setIsPlaying(true);
+
+      if (oscillator.current && gainNode.current) {
+        oscillator.current.start();
+      }
+    }
+  }
+
+  function updateVolume(volume: number) {
+    if (gainNode.current) {
+      gainNode.current.gain.setValueAtTime(
+        volume,
+        ctx.current?.currentTime ?? 0
+      );
+      setVolume(volume);
+    }
+  }
+
+  return (
+    <>
+      <button onClick={handleToggle}>{isPlaying ? 'Stop' : 'Play'}</button>
+
+      <input
+        type='range'
+        min='0'
+        max='1'
+        step='0.01'
+        value={volume}
+        onChange={(e) => updateVolume(parseFloat(e.target.value))}
+      />
+    </>
+  );
+}
+
+export default TestTone;
+
+// import styled from 'styled-components';
+// import Toggle from '../UI/Basic/Toggle';
+// import Knob from '../UI/Basic/Knob';
+
+// import {
+//   createOscillator,
+//   createGainNode,
+// } from '../../lib/audio/audioCtx-utils';
+
+/* <Knob
+        label='Volume'
+        value={volume}
+        min={0}
+        max={0.3}
+        step={0.01}
+        onChange={(value) => updateVolume(value)}
+      /> */
+
+//   const TestToneWrapper = styled.div`
+//     display: flex;
+//     flex-direction: column;
+//     align-items: center;
+//     justify-content: center;
+//   `;
+
+//   const TestToneToggle = styled.button`
+//     display: flex;
+//     flex-shrink: 1;
+//     width: 30%;
+//     height: 1rem;
+//     cursor: pointer;
+//     background-color: #f7abb6;
+
+//     &:hover {
+//       background-color: #abd5f7;
+//     }
+//   `;
