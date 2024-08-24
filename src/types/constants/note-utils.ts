@@ -138,6 +138,51 @@ function getNoteDuration(
   return baseDuration / 2 ** octave / 1000;
 }
 
+function lerp(start: number, end: number, t: number): number {
+  return start * (1 - t) + end * t;
+}
+
+export function interpolateDurationToNote(
+  currentDuration: number,
+  targetDuration: number,
+  scale: NoteName[],
+  lowestNoteName: NoteName = 'C',
+  highestNoteName: NoteName = 'C',
+  lowestOctave: number = 1,
+  highestOctave: number = 5,
+  timeUnit: 'ms' | 'sec' = 'ms',
+  animationDuration: number = 1000,
+  onUpdate: (value: number) => void
+): void {
+  if (lowestOctave > highestOctave) {
+    console.error('lowestOctave must be less than or equal to highestOctave');
+    onUpdate(currentDuration);
+    return;
+  }
+
+  if (!scale.includes(lowestNoteName) || !scale.includes(highestNoteName)) {
+    console.error('lowestNoteName and highestNoteName must be in the scale');
+    onUpdate(currentDuration);
+    return;
+  }
+
+  const startTime = performance.now();
+
+  function animate(currentTime: number) {
+    const elapsedTime = currentTime - startTime;
+    const t = Math.min(elapsedTime / animationDuration, 1);
+
+    const interpolatedDuration = lerp(currentDuration, targetDuration, t);
+    onUpdate(interpolatedDuration);
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
 export function snapDurationToNote(
   duration: number,
   scale: NoteName[],

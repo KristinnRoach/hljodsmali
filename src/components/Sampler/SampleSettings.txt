@@ -37,51 +37,6 @@ const SampleSettings: React.FC = () => {
     highCutoff,
   } = settings;
 
-  // const bufferDuration = latestSelectedBuffer?.duration ?? 0;
-  // if (!bufferDuration)
-  //   throw new Error('Buffer duration is missing in SampleSettings');
-  // const playDuration = endPoint - startPoint;
-  // const loopDuration = loopEnd - loopStart;
-
-  // const [durationHasChanged, setDurationHasChanged] = useState(false);
-  // const [loopDurationHasChanged, setLoopDurationHasChanged] = useState(false);
-
-  // const handleStartChange = (value: number) => {
-  //   handleSettingChange('startPoint', value);
-  //   setDurationHasChanged(true);
-  //   if (!loopDurationHasChanged) {
-  //     handleSettingChange('loopStart', value);
-  //   }
-  // };
-
-  // const handleEndChange = (value: number) => {
-  //   handleSettingChange('endPoint', value);
-  //   setDurationHasChanged(true);
-  //   if (!loopDurationHasChanged) {
-  //     handleSettingChange('loopEnd', value);
-  //   }
-  // };
-
-  // const handleLoopStartChange = (value: number) => {
-  //   if (loopEnd - value < C5_DURATION_SEC - 0.0001) return;
-
-  //   handleSettingChange('loopStart', value);
-  //   setLoopDurationHasChanged(true);
-  //   if (!durationHasChanged) {
-  //     handleSettingChange('startPoint', value);
-  //   }
-  // };
-
-  // const handleLoopEndChange = (value: number) => {
-  //   if (value - loopStart < C5_DURATION_SEC - 0.0001) return;
-
-  //   handleSettingChange('loopEnd', value);
-  //   setLoopDurationHasChanged(true);
-  //   if (!durationHasChanged) {
-  //     handleSettingChange('endPoint', value);
-  //   }
-  // };
-
   return (
     <>
       {sample && isSampleLoaded(sample.id) && isSampleSelected(sample.id) && (

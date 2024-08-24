@@ -1,0 +1,26 @@
+// src/hooks/useSampleSettings.ts
+import { useCallback } from 'react';
+import { useLibraryContext } from '../contexts/LibraryCtx';
+import { Sample_settings } from '../types/samples';
+
+export const useSampleSettings = (sampleId: string) => {
+  const { samples, updateSampleSettings } = useLibraryContext();
+
+  const sample = samples.find((s) => s.id === sampleId);
+
+  const updateSettings = useCallback(
+    (settingsUpdates: Partial<Sample_settings>) => {
+      if (sample) {
+        updateSampleSettings(sampleId, settingsUpdates);
+      } else {
+        console.error(`Sample with id ${sampleId} not found`);
+      }
+    },
+    [sample, sampleId, updateSampleSettings]
+  );
+
+  return {
+    settings: sample?.sample_settings,
+    updateSettings,
+  };
+};

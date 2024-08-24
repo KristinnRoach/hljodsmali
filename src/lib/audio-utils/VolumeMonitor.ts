@@ -1,14 +1,20 @@
-import { createAnalyser, createMediaStreamSource } from './audioCtx-utils';
+// import { createAnalyser, createMediaStreamSource } from './audioCtx-utils';
+
+// import { useAudioCtx } from '../../contexts/AudioCtxContext';
 
 export default class VolumeMonitor {
   private analyser: AnalyserNode | null = null;
   private detectionLoop: number | null = null;
   private source: MediaStream | null = null;
 
-  public constructor(source: MediaStream) {
+  public constructor(source: MediaStream, audioCtx: AudioContext) {
+    // const { audioCtx } = useAudioCtx();
+    if (!audioCtx) {
+      throw new Error('Audio context is not available in VolumeMonitor');
+    }
     this.source = source;
-    this.analyser = createAnalyser();
-    createMediaStreamSource(source).connect(this.analyser);
+    this.analyser = audioCtx.createAnalyser();
+    audioCtx.createMediaStreamSource(source).connect(this.analyser);
   }
 
   getVolume(): number | null {

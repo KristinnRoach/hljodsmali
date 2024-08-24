@@ -1,83 +1,72 @@
-// audioCtx-utils.ts
+// // src/lib/audio-utils/audioCtx-utils.ts
 
-/* __________________ ERROR HANDLING __________________  */
+// /* __________________ ERROR HANDLING __________________  */
 
-class AudioContextError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AudioContextError';
-  }
-}
+// class AudioContextError extends Error {
+//   constructor(message: string) {
+//     super(message);
+//     this.name = 'AudioContextError';
+//   }
+// }
 
-const ensureAudioContext = (): AudioContext => {
-  if (!ctx) {
-    throw new AudioContextError('AudioContext not initialized');
-  }
-  return ctx;
-};
+// /* __________________ AUDIO CONTEXT MANAGEMENT __________________  */
 
-/* __________________ AUDIO CONTEXT MANAGEMENT __________________  */
+// let audioCtx: AudioContext | null = null;
 
-let ctx: AudioContext | null = null;
+// export const initializeAudioContext = (): AudioContext => {
+//   if (typeof window === 'undefined') {
+//     console.warn('AudioContext is not available in non-browser environment.');
+//     throw new AudioContextError(
+//       'AudioContext is not available in non-browser environment.'
+//     );
+//   }
 
-export const initializeAudioContext = (): AudioContext => {
-  if (!ctx) {
-    try {
-      ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
-        latencyHint: 0.0001,
-      });
-      if (ctx.state === 'running') {
-        console.log('Audio context initialized successfully.');
-        logLatency();
-      }
-    } catch (error) {
-      throw new AudioContextError('Failed to initialize AudioContext');
-    }
-  }
-  return ctx;
-};
+//   if (!audioCtx) {
+//     const AudioContextClass =
+//       window.AudioContext || (window as any).webkitAudioContext;
+//     if (!AudioContextClass) {
+//       throw new AudioContextError(
+//         'AudioContext is not supported in this browser'
+//       );
+//     }
+//     audioCtx = new AudioContextClass({ latencyHint: 0.0001 });
+//   }
 
-export async function resumeAudioContext(): Promise<void> {
-  const ctx = ensureAudioContext();
+//   return audioCtx;
+// };
 
-  if (ctx.state !== 'running') {
-    try {
-      await ctx.resume();
-      console.log('Audio context resumed successfully.');
-      logLatency();
-    } catch (error) {
-      console.error('Failed to resume audio context:', error);
-      throw error; // Re-throw to allow caller to handle the error
-    }
-  }
-}
+// export const getAudioContext = (): AudioContext => {
+//   return audioCtx || initializeAudioContext();
+// };
 
-export const closeAudioContext = (): void => {
-  if (ctx) {
-    ctx.close();
-    ctx = null;
-  }
-};
+// export async function resumeAudioContext(): Promise<void> {
+//   const ctx = getAudioContext();
+
+//   if (ctx && ctx.state !== 'running') {
+//     await ctx.resume();
+//     console.log('Audio context resumed successfully.');
+//     logLatency();
+//   }
+// }
+
+// export const closeAudioContext = (): void => {
+//   if (audioCtx) {
+//     audioCtx.close();
+//     audioCtx = null;
+//   }
+// };
 
 /* __________________  GETTERS  __________________  */
 
-export const getAudioContext = (): AudioContext | null => {
-  const ctx = ensureAudioContext();
-  return ctx;
-};
-
-export const getCtxTime = (): number => {
-  const ctx = ensureAudioContext();
+export const getCtxTime = (ctx: AudioContext): number => {
   return ctx.currentTime;
 };
 
-export const getSampleRate = () => {
-  const ctx = ensureAudioContext();
+export const getSampleRate = (ctx: AudioContext) => {
   return ctx.sampleRate;
 };
 
-export const getLatency = () => {
-  const ctx = ensureAudioContext();
+export const getLatency = (ctx: AudioContext) => {
   const latency = {
     base: ctx.baseLatency,
     output: ctx.outputLatency,
@@ -87,49 +76,74 @@ export const getLatency = () => {
 
 /* __________________  UTILS __________________  */
 
-export const logLatency = () => {
-  const ctx = ensureAudioContext();
+export const addAudioWorklet = async (
+  processorName: string,
+  processorUrl: string,
+  ctx: AudioContext
+): Promise<void> => {
+  await ctx.audioWorklet.addModule(processorUrl);
+  console.log(`Audio worklet processor '${processorName}' added successfully.`);
+};
+
+export const logLatency = (ctx: AudioContext) => {
   console.log('Base latency:', ctx.baseLatency);
   console.log('Output latency:', ctx.outputLatency);
 };
 
 export const decodeAudioData = (
+  ctx: AudioContext,
   arrayBuffer: ArrayBuffer
 ): Promise<AudioBuffer> => {
-  const ctx = ensureAudioContext();
   return ctx.decodeAudioData(arrayBuffer);
+};
+
+/* __________________  CONNECT / DISCONNECT TO AUDIO CONTEXT  __________________  */
+
+export const connectNodeToAudioCtx = (
+  node: AudioNode,
+  ctx: AudioContext
+): void => {
+  node.connect(ctx.destination);
+};
+
+export const disconnectNodeFromAudioCtx = (
+  node: AudioNode,
+  ctx: AudioContext
+): void => {
+  node.disconnect(ctx.destination);
 };
 
 /* __________________  CREATE NODES __________________  */
 
 // Source nodes
-export const createBufferSource = (): AudioBufferSourceNode => {
-  const ctx = ensureAudioContext();
+export const createBufferSource = (
+  ctx: AudioContext
+): AudioBufferSourceNode => {
   return ctx.createBufferSource();
 };
 
 export const createMediaStreamSource = (
-  mediaStream: MediaStream
+  mediaStream: MediaStream,
+  ctx: AudioContext
 ): MediaStreamAudioSourceNode => {
-  const ctx = ensureAudioContext();
   return ctx.createMediaStreamSource(mediaStream);
 };
 
 export const createMediaElementSource = (
   // Currently not in use
-  mediaElement: HTMLMediaElement
+  mediaElement: HTMLMediaElement,
+  ctx: AudioContext
 ): MediaElementAudioSourceNode => {
-  const ctx = ensureAudioContext();
   return ctx.createMediaElementSource(mediaElement);
 };
 
 type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'custom';
 
 export const createOscillator = (
+  ctx: AudioContext,
   frequency?: number,
   type?: OscillatorType
 ): OscillatorNode => {
-  const ctx = ensureAudioContext();
   const oscillator = ctx.createOscillator();
   if (frequency !== undefined)
     oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
@@ -138,64 +152,98 @@ export const createOscillator = (
 };
 
 // Destination nodes
-export const createMediaStreamDestination =
-  (): MediaStreamAudioDestinationNode => {
-    const ctx = ensureAudioContext();
-    return ctx.createMediaStreamDestination();
-  };
+export const createMediaStreamDestination = (
+  ctx: AudioContext
+): MediaStreamAudioDestinationNode => {
+  return ctx.createMediaStreamDestination();
+};
 
-export const createAnalyser = (): AnalyserNode => {
-  const ctx = ensureAudioContext();
+export const createAnalyser = (ctx: AudioContext): AnalyserNode => {
   return ctx.createAnalyser();
 };
 
-export const createGainNode = (initVolume?: number): GainNode => {
-  const ctx = ensureAudioContext();
+export const createGainNode = (
+  ctx: AudioContext,
+  initVolume?: number
+): GainNode => {
   const gainNode = ctx.createGain();
   if (initVolume !== undefined)
     gainNode.gain.setValueAtTime(initVolume, ctx.currentTime);
   return gainNode;
 };
 
-export const createDynamicsCompressor = (): DynamicsCompressorNode => {
-  const ctx = ensureAudioContext();
+export const createDynamicsCompressor = (
+  ctx: AudioContext
+): DynamicsCompressorNode => {
   return ctx.createDynamicsCompressor();
 };
 
 export const createBiquadFilter = (
-  type?: BiquadFilterType
+  ctx: AudioContext,
+  type?: BiquadFilterType,
+  initFreq?: number
 ): BiquadFilterNode => {
-  const ctx = ensureAudioContext();
   const filter = ctx.createBiquadFilter();
   if (type) filter.type = type;
+  if (initFreq !== undefined)
+    filter.frequency.setValueAtTime(initFreq, ctx.currentTime);
+
   return filter;
 };
 
-export const createDelay = (delayTime?: number): DelayNode => {
-  const ctx = ensureAudioContext();
+export const createDelay = (
+  ctx: AudioContext,
+  delayTime?: number
+): DelayNode => {
   const delay = ctx.createDelay();
   if (delayTime !== undefined)
     delay.delayTime.setValueAtTime(delayTime, ctx.currentTime);
   return delay;
 };
 
-export const createConvolver = (): ConvolverNode => {
-  const ctx = ensureAudioContext();
+export const createConvolver = (ctx: AudioContext): ConvolverNode => {
   return ctx.createConvolver();
 };
 
-export const createStereoPanner = (): StereoPannerNode => {
-  const ctx = ensureAudioContext();
+export const createStereoPanner = (ctx: AudioContext): StereoPannerNode => {
   return ctx.createStereoPanner();
 };
 
 // ChannelMerger: combine separate mono channels into stereo or surround sound.
 export const createChannelMerger = (
+  ctx: AudioContext,
   numberOfInputs?: number
 ): ChannelMergerNode => {
-  const ctx = ensureAudioContext();
   return ctx.createChannelMerger(numberOfInputs);
 };
+
+// Mock AudioContext for SSR
+// const MockAudioContext = {
+//   createGain: () => ({ gain: { value: 1 } }),
+//   createOscillator: () => ({
+//     frequency: { value: 440 },
+//     connect: () => {},
+//     start: () => {},
+//     stop: () => {},
+//   }),
+//   decodeAudioData: () => Promise.resolve({}),
+//   destination: {},
+//   currentTime: 0,
+// } as unknown as AudioContext;
+
+// export const initializeAudioContext = (): AudioContext | null => {
+//   if (typeof window !== 'undefined' && !theAudioContext) {
+//     const AudioContextClass =
+//       window.AudioContext || (window as any).webkitAudioContext;
+//     if (AudioContextClass) {
+//       theAudioContext = new AudioContextClass({ latencyHint: 0.0001 });
+//       console.log('Audio context initialized successfully.');
+//       logLatency();
+//     }
+//   }
+
+//   return theAudioContext;
+// };
 
 /* probably not needed since we can do osc.connect(osc.ctx.destination) */
 

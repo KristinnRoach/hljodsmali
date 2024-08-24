@@ -1,0 +1,70 @@
+// src/hooks/useAudioCtx.ts
+
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import * as audioUtils from '../lib/audio-utils/audioCtx-utils';
+
+export const useAudioCtx = () => {
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
+  const [isAudioReady, setIsAudioReady] = useState(false);
+
+  const initializeAudio = useCallback(async () => {
+    if (typeof window === 'undefined' || isAudioReady) return;
+
+    try {
+      const ctx = audioUtils.getAudioContext();
+      await audioUtils.resumeAudioContext();
+      setAudioCtx(ctx);
+      setIsAudioReady(true);
+    } catch (error) {
+      console.error('Failed to initialize audio context:', error);
+      setIsAudioReady(false);
+    }
+  }, [isAudioReady]);
+
+  useEffect(() => {
+    setIsAudioReady(!!audioCtx);
+  }, [audioCtx]);
+
+  useEffect(() => {
+    const resumeAudioContext = async () => {
+      if (audioCtx && audioCtx.state === 'suspended') {
+        await audioUtils.resumeAudioContext();
+      }
+    };
+    resumeAudioContext();
+  }, [audioCtx]);
+
+  const cleanup = useCallback(() => {
+    audioUtils.closeAudioContext();
+    setIsAudioReady(false);
+    setAudioCtx(null);
+  }, []);
+
+  useEffect(() => {
+    initializeAudio();
+    return () => {
+      cleanup();
+    };
+  }, []);
+
+  return {
+    audioCtx,
+    isAudioReady,
+  };
+};
+
+/* Explicit cleanup function */
+// const cleanupAudio = useCallback(() => {
+//     audioUtils.closeAudioContext();
+//     setIsAudioReady(false);
+//   }, []);
+
+//   useEffect(() => {
+//     initializeAudio();
+//     return () => {
+//       closeAudioContext();
+//       setIsAudioReady(false);
+//     };
+//   }, []);

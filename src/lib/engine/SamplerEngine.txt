@@ -1,8 +1,14 @@
-// src/lib/SamplerEngine.tsx // ts or tsx !?
+// src/lib/SamplerEngine.ts
 import SingleUseVoice from './SingleUseVoice';
 import {
+  SampleNodes,
+  Filter_settings,
+  Lock_settings,
   SampleRecord,
   Sample_settings,
+  Time_settings,
+  Tuning_settings,
+  Volume_settings,
   getDefaultSampleSettings,
 } from '../../types/samples';
 
@@ -17,24 +23,6 @@ import {
   AudioFormat,
 } from '../../types/constants/mimeTypes';
 
-export type SampleNodes = {
-  sampleGain: GainNode;
-  lowCut: BiquadFilterNode;
-  highCut: BiquadFilterNode;
-};
-
-export type LoadedSample = {
-  id: string;
-  name: string;
-  slug: string;
-
-  buffer: AudioBuffer;
-  zeroCrossings: number[];
-  sample_settings: Sample_settings;
-
-  sampleNodes: SampleNodes;
-};
-
 /* Singleton class for managing audio playback and recording */
 
 export default class SamplerEngine {
@@ -43,17 +31,28 @@ export default class SamplerEngine {
   private audioCtx: AudioContext;
   private audioFormatKey: FormatKey = 'WEBM';
 
-  private loadedSamples: Map<string, LoadedSample> = new Map(); // should be Set or Map for efficient lookup?
-  private selectedSampleIds: Set<string> = new Set();
+  /* Currently active voices state */
 
+  private activeVoices: Set<SingleUseVoice> = new Set();
+
+  /* Currently loaded samples state- make sure to clean up resources */
+  private sampleIds: Set<string> = new Set();
+  private buffers: Map<string, AudioBuffer> = new Map();
+  private sampleNodes: Map<string, SampleNodes> = new Map();
+  private zeroCrossings: Map<string, number[]> = new Map();
+  private sampleSettings: Map<string, Sample_settings> = new Map();
+
+  /* Current selection state */
+  private selectedForPlayback: Set<string> = new Set();
+  private selectedForSettings: Set<string> = new Set(); // JUST IMPLEMENTED FOR SINGLE SAMPLE
+
+  /* Master Audio Nodes */
   private masterGain: GainNode;
   private output: AudioNode;
-  private externalOutputs: Set<AudioNode>;
-
+  private externalOutputs: Set<AudioNode> = new Set();
   private compressorLimiter: DynamicsCompressorNode;
 
   /* Constructor */
-
   private constructor(audioCtx: AudioContext | null) {
     // Todo: Remove audioctx parameter? (use audioctcx utils?)
     if (!audioCtx) {
@@ -61,7 +60,6 @@ export default class SamplerEngine {
     }
     this.audioCtx = audioCtx;
     this.output = this.audioCtx.destination;
-    this.externalOutputs = new Set();
 
     this.masterGain = this.audioCtx?.createGain();
     this.masterGain.gain.value = 0.8;
@@ -85,13 +83,17 @@ export default class SamplerEngine {
 
   /* Sample Engine instance */
 
-  public static getInstance(audioCtx: AudioContext): SamplerEngine {
-    if (!SamplerEngine.instance) {
+  public static getInstance(audioCtx?: AudioContext): SamplerEngine {
+    if (audioCtx && !SamplerEngine.instance) {
       SamplerEngine.instance = new SamplerEngine(audioCtx);
       console.log('new SamplerEngine instance created');
+    } else if (!SamplerEngine.instance) {
+      throw new Error('SamplerEngine not initialized');
     }
     return SamplerEngine.instance;
   }
+
+  //__________________________ MASTER BUS __________________________ //
 
   // TODO: move to audioctx utils - along with all other audioctx related functions
   private initializeCompressorLimiter(
@@ -140,10 +142,12 @@ export default class SamplerEngine {
     return SingleUseVoice.isHolding();
   }
 
-  setSampleLoopLocked(sampleId: string, lock: boolean): void {
-    const loadedSample = this.loadedSamples.get(sampleId);
-    if (loadedSample) {
-      loadedSample.sample_settings.loopLocked = lock;
+  setSampleLoopLock(sampleId: string, lock: boolean): void {
+    const settings = this.sampleSettings.get(sampleId);
+    if (!settings || settings.locks.loop === lock) {
+      return;
+    } else {
+      settings.locks.loop = lock;
       // this.updateActiveLoopLocks(sampleId);
     }
   }
@@ -153,11 +157,6 @@ export default class SamplerEngine {
   getAudioFormat(): FormatKey {
     return this.audioFormatKey;
   }
-
-  // TODO: implement (with AudioRecorder)
-  // setAudioFormat(formatKey: FormatKey): void {
-  //   this.audioFormatKey = formatKey;
-  // }
 
   /* Sample Manager */
 
@@ -196,107 +195,171 @@ export default class SamplerEngine {
     masterOut.connect(this.audioCtx.destination);
   }
 
-  // createSampleFile ?
-  // createSampleRecord ?
-
   loadSample(record: SampleRecord, buffer: AudioBuffer): void {
     const settings = record.sample_settings;
-    const zeroCrossings = findZeroCrossings(buffer);
+    const zeroCrossings = findZeroCrossings(buffer); // Todo: VALIDATE zeroCrossings is valid
 
-    const sampleGain = this.createGain(settings.sampleVolume);
+    const sampleGain = this.createGain(settings.volume.sampleVolume);
 
     const { lowCut, highCut } = this.createFilters(
-      settings.lowCutoff,
-      settings.highCutoff
+      settings.filters.lowCutoff,
+      settings.filters.highCutoff
     );
 
     this.connectSampleAudioNodes(sampleGain, lowCut, highCut);
     const sampleNodes = { sampleGain, lowCut, highCut };
 
-    const loadedSample: LoadedSample = {
-      id: record.id,
-      name: record.name,
-      slug: record.slug,
-      buffer: buffer,
-      zeroCrossings: zeroCrossings,
-      sample_settings: settings,
-      sampleNodes: sampleNodes,
-    };
+    this.sampleIds.add(record.id);
+    this.buffers.set(record.id, buffer);
+    this.sampleNodes.set(record.id, sampleNodes);
+    this.zeroCrossings.set(record.id, zeroCrossings);
+    this.sampleSettings.set(record.id, settings);
 
-    this.loadedSamples.set(loadedSample.id, loadedSample);
+    // TODO: remove duplication of data !
+    SingleUseVoice.zeroCrossings.set(record.id, zeroCrossings);
+    SingleUseVoice.sampleSettings.set(record.id, record.sample_settings);
 
-    SingleUseVoice.zeroCrossings.set(record.id, zeroCrossings); // VALIDATE zeroCrossings is ok
-
-    SingleUseVoice.sampleSettings.set(
-      loadedSample.id,
-      loadedSample.sample_settings
+    console.log(
+      'Loaded record:',
+      record,
+      'ids:',
+      this.sampleIds,
+      'buffers:',
+      this.buffers,
+      'sampleNodes:',
+      this.sampleNodes,
+      'zeroCrossings:',
+      this.zeroCrossings,
+      'sampleSettings:',
+      this.sampleSettings
     );
-
-    console.log('Loaded sample:', loadedSample);
-
-    // return loadedSample;
   }
 
   unloadSample(id: string): void {
-    this.loadedSamples.delete(id);
+    this.zeroCrossings.delete(id);
+    this.sampleSettings.delete(id);
+    this.buffers.delete(id);
+    this.sampleNodes.delete(id);
+    this.sampleIds.delete(id);
+
+    // TODO: remove duplication of data !
     SingleUseVoice.sampleSettings.delete(id);
     SingleUseVoice.zeroCrossings.delete(id);
   }
 
-  // getUpdatedSamples(): Sample_db[] {
-  //   const updatedSamples = [...this.updatedSamples.values()];
-  //   this.updatedSamples = new Map();
-  //   return updatedSamples;
-  // }
-
-  // addBufferDurationToLoadedSamples(): void {
-  //   // remove function if redundant, else add zeroCrossings
-  //   this.loadedSamples.forEach((loadedSample, key) => {
-  //     if (loadedSample.buffer && loadedSample.buffer.duration) {
-  //       loadedSample.sample.bufferDuration = loadedSample.buffer.duration;
-  //       this.loadedSamples.set(key, loadedSample);
-  //     }
-  //   });
-  // }
-
   setSampleVolume(sampleId: string, volume: number) {
-    const loaded = this.loadedSamples.get(sampleId);
-    if (loaded) {
-      loaded.sampleNodes.sampleGain.gain.setValueAtTime(
-        volume,
-        this.audioCtx.currentTime
-      );
-      loaded.sample_settings.sampleVolume = volume;
+    if (!volume || volume < 0 || volume > 1) {
+      throw new Error('Invalid volume value');
     }
+
+    if (
+      !(this.sampleNodes.has(sampleId) && this.sampleSettings.has(sampleId))
+    ) {
+      throw new Error('Sample not loaded');
+    }
+    const gainNode = this.sampleNodes.get(sampleId)?.sampleGain;
+    const settings = this.sampleSettings.get(sampleId);
+
+    if (!(gainNode && settings)) return;
+
+    gainNode.gain.setTargetAtTime(volume, this.audioCtx.currentTime, 0.1); // not tested time constant value 0.1 ! Create global variable
+    settings.volume.sampleVolume = volume;
   }
 
-  removeSample(id: string): void {
-    this.loadedSamples.delete(id);
-    this.selectedSampleIds.delete(id);
-  }
-
-  isSampleLoaded(id: string): boolean {
-    const sample = this.loadedSamples.get(id);
-
+  isLoaded(id: string): boolean {
     return (
-      (sample && sample.buffer && sample.sampleNodes.sampleGain) !== undefined
+      this.sampleIds.has(id) &&
+      this.buffers.has(id) &&
+      this.sampleNodes.has(id) &&
+      this.sampleSettings.has(id) &&
+      this.zeroCrossings.has(id)
     );
   }
 
-  isSampleSelected(id: string): boolean {
-    return this.selectedSampleIds.has(id);
+  isSelectedForPlayback(id: string): boolean {
+    return this.selectedForPlayback.has(id);
   }
 
-  setSelectedSampleIds(ids: string[]): void {
-    this.selectedSampleIds = new Set(ids);
+  isSelectedForSettings(id: string): boolean {
+    return this.selectedForSettings.has(id);
+  }
 
-    ids.forEach((id) => {
-      if (this.loadedSamples.has(id)) {
-        this.selectedSampleIds.add(id);
-      } else {
-        console.error(`Sample ${id} not loaded`);
-      }
-    });
+  selectForPlayback(id: string): void {
+    this.selectedForPlayback.add(id);
+  }
+
+  deselectForPlayback(id: string): void {
+    this.selectedForPlayback.delete(id);
+  }
+
+  selectForSettings(id: string): void {
+    this.selectedForSettings.add(id);
+  }
+
+  deselectForSettings(id: string): void {
+    this.selectedForSettings.delete(id);
+  }
+
+  getSelectedForPlayback(): string[] {
+    return Array.from(this.selectedForPlayback);
+  }
+
+  getBufferForPlayback(id: string): AudioBuffer | null {
+    return this.buffers.get(id) || null;
+  }
+
+  getSelectedForSettings(): string[] {
+    if (this.selectedForSettings.size === 1) {
+      return [this.selectedForSettings.values().next().value];
+    } else {
+      return Array.from(this.selectedForSettings);
+    }
+  }
+
+  getBufferForSettings(id: string): AudioBuffer | null {
+    return this.buffers.get(id) || null;
+  }
+
+  getSampleSettings(
+    id: string,
+    type: 'Time' | 'Volume' | 'Tuning' | 'Filter' | 'Lock' | 'All' = 'All'
+  ):
+    | Time_settings
+    | Volume_settings
+    | Tuning_settings
+    | Filter_settings
+    | Lock_settings
+    | Sample_settings
+    | null {
+    const settings = this.sampleSettings.get(id);
+
+    if (!settings) {
+      console.error(`Sample ${id} not loaded`);
+      return null;
+    }
+
+    switch (type) {
+      case 'Time':
+        return (settings.time as Time_settings) ?? null;
+
+      case 'Volume':
+        return (settings.volume as Volume_settings) ?? null;
+
+      case 'Tuning':
+        return (settings.tune as Tuning_settings) ?? null;
+
+      case 'Filter':
+        return (settings.filters as Filter_settings) ?? null;
+
+      case 'Lock':
+        return (settings.locks as Lock_settings) ?? null;
+
+      case 'All':
+        return settings as Sample_settings;
+
+      default:
+        return settings as Sample_settings;
+    }
   }
 
   isPlaying(): boolean {
@@ -307,121 +370,93 @@ export default class SamplerEngine {
     return SingleUseVoice.getCurrentPlayheadPosition();
   }
 
-  getSelectedSampleIds(): string[] {
-    return Array.from(this.selectedSampleIds);
-  }
+  /* Individual Sample Settings */
 
-  // getSelectedSampleRecords(): SampleRecord[] {
-  //   if (this.selectedSampleIds.size === 0) {
-  //     return [];
-  //   }
-  //   return Array.from(this.selectedSampleIds)
-  //     .map((id) => this.loadedSamples.get(id)?.sample)
-  //     .filter((sample): sample is SampleRecord => sample !== undefined);
-  // }
-
-  getLoadedSamples(): LoadedSample[] {
-    return Array.from(this.loadedSamples.values());
-  }
-
-  getSelectedLoadedSamples(): LoadedSample[] {
-    return Array.from(this.loadedSamples.values()).filter((loadedSample) =>
-      this.selectedSampleIds.has(loadedSample.id)
-    );
-  }
-
-  updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
-    try {
-      const loadedSample = this.loadedSamples.get(id);
-
-      if (loadedSample) {
-        if (settings.lowCutoff !== undefined) {
-          loadedSample.sampleNodes.lowCut.frequency.setValueAtTime(
-            settings.lowCutoff,
-            this.audioCtx.currentTime
-          );
-          loadedSample.sample_settings.lowCutoff = settings.lowCutoff;
-        }
-        if (settings.highCutoff !== undefined) {
-          loadedSample.sampleNodes.highCut.frequency.setValueAtTime(
-            settings.highCutoff,
-            this.audioCtx.currentTime
-          );
-          loadedSample.sample_settings.highCutoff = settings.highCutoff;
-        }
-        if (settings.startPoint !== undefined && loadedSample.zeroCrossings) {
-          const snapped = snapToNearestZeroCrossing(
-            settings.startPoint,
-            loadedSample.zeroCrossings
-          );
-          loadedSample.sample_settings.startPoint = snapped;
-        }
-        if (settings.endPoint !== undefined && loadedSample.zeroCrossings) {
-          const snapped = snapToNearestZeroCrossing(
-            settings.endPoint,
-            loadedSample.zeroCrossings
-          );
-          loadedSample.sample_settings.endPoint = snapped;
-        }
-
-        if (settings.transposition !== undefined) {
-          loadedSample.sample_settings.transposition = settings.transposition;
-        }
-
-        if (settings.tuneOffset !== undefined) {
-          loadedSample.sample_settings.tuneOffset = settings.tuneOffset;
-        }
-
-        // const newLoadedSample = {
-        //   // WHY???
-        //   ...loadedSample,
-        //   sample_settings: {
-        //     ...loadedSample.sample_settings,
-        //     ...settings,
-        //   },
-        // };
-
-        SingleUseVoice.sampleSettings.set(
-          loadedSample.id,
-          loadedSample.sample_settings
-        );
-
-        console.log(
-          'Updated sample settings:',
-          loadedSample.sample_settings.transposition,
-          loadedSample.sample_settings.tuneOffset,
-          loadedSample.sample_settings.lowCutoff
-        );
-
-        if (
-          'loopStart' in settings ||
-          'loopEnd' in settings ||
-          'tuneOffset' in settings ||
-          'transposition' in settings ||
-          'sampleVolume' in settings ||
-          'loopVolume' in settings
-        ) {
-          SingleUseVoice.updateActiveVoices(id, settings);
-        }
-      }
-    } catch (error) {
-      console.error(`Error updating sample ${id}:`, error);
+  updateTimeSettings(id: string, settings: Partial<Time_settings>) {
+    // change to key and value
+    if (
+      !(
+        this.selectedForSettings.size === 1 &&
+        this.selectedForSettings.has(id) &&
+        this.sampleSettings.has(id) &&
+        this.zeroCrossings.has(id)
+      )
+    ) {
+      throw new Error('Invalid sample selection for updating time settings');
     }
+
+    const prevSettings = this.sampleSettings.get(id);
+    const zeroCrossings = this.zeroCrossings.get(id);
+
+    if (!prevSettings || !zeroCrossings) throw new Error('Sample not loaded');
+
+    let updatedSettings: Time_settings = { ...prevSettings.time };
+
+    for (const [key, value] of Object.entries(settings)) {
+      const snapped = snapToNearestZeroCrossing(value, zeroCrossings);
+      updatedSettings = { ...updatedSettings, [key]: snapped };
+    }
+
+    let newSettings = { ...prevSettings, ...updatedSettings };
+    this.sampleSettings.set(id, newSettings);
+
+    SingleUseVoice.sampleSettings.set(id, newSettings);
+
+    SingleUseVoice.updateActiveVoices(id, newSettings);
+
+    console.log('Updated time settings:', newSettings);
+  }
+
+  updateEnvelopeSettings(id: string, settings: Partial<Volume_settings>) {
+    // change to key and value
+    if (
+      !(
+        this.selectedForSettings.size === 1 &&
+        this.selectedForSettings.has(id) &&
+        this.sampleSettings.has(id)
+      )
+    ) {
+      throw new Error(
+        'Invalid sample selection for updating envelope settings'
+      );
+    }
+
+    const prevSettings = this.sampleSettings.get(id);
+
+    if (!prevSettings) throw new Error('Sample not loaded');
+
+    let updatedSettings: Volume_settings = { ...prevSettings.volume };
+
+    for (const [key, value] of Object.entries(settings)) {
+      updatedSettings = { ...updatedSettings, [key]: value };
+    }
+
+    let newSettings = { ...prevSettings, volume: updatedSettings };
+    this.sampleSettings.set(id, newSettings);
+
+    SingleUseVoice.sampleSettings.set(id, newSettings);
+
+    SingleUseVoice.updateActiveVoices(id, newSettings);
+
+    console.log('Updated envelope settings:', newSettings);
   }
 
   /* Playback */
 
   playNote(midiNote: number): void {
-    const selected = this.getSelectedLoadedSamples();
+    for (const id of this.selectedForPlayback) {
+      const buffer = this.buffers.get(id);
+      const sampleNodes = this.sampleNodes.get(id);
 
-    // can this be done in paralell instead of sequentially?
-    selected.forEach((s) => {
-      if (s && s.buffer) {
-        const voice = new SingleUseVoice(this.audioCtx, s.buffer, s.id);
-        voice.getVoiceGain().connect(s.sampleNodes.sampleGain);
+      console.log('Playing note:', midiNote, 'for sample:', id);
+
+      if (buffer && sampleNodes) {
+        const voice = new SingleUseVoice(this.audioCtx, buffer, id);
+        voice.getVoiceGain().connect(sampleNodes.sampleGain);
+
         voice.start(midiNote);
       }
-    });
+    }
   }
 
   releaseNote(midiNote: number): void {
@@ -435,7 +470,6 @@ export default class SamplerEngine {
   /* Master Volume */
 
   setMasterVolume(volume: number) {
-    // add ramp?
     this.masterGain.gain.setTargetAtTime(
       volume,
       this.audioCtx.currentTime + 0.01,
@@ -450,6 +484,132 @@ export default class SamplerEngine {
     return this.masterGain.gain.value;
   }
 }
+
+// updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
+//   // Replace Sample_settings with Time_settings etc..
+//   try {
+//     if (loadedSample) {
+//       if (settings.lowCutoff !== undefined) {
+//         loadedSample.sampleNodes.lowCut.frequency.setValueAtTime(
+//           settings.lowCutoff,
+//           this.audioCtx.currentTime
+//         );
+//         loadedSample.sample_settings.lowCutoff = settings.lowCutoff;
+//       }
+//       if (settings.highCutoff !== undefined) {
+//         loadedSample.sampleNodes.highCut.frequency.setValueAtTime(
+//           settings.highCutoff,
+//           this.audioCtx.currentTime
+//         );
+//         loadedSample.sample_settings.highCutoff = settings.highCutoff;
+//       }
+//       if (settings.startPoint !== undefined && loadedSample.zeroCrossings) {
+//         const snapped = snapToNearestZeroCrossing(
+//           settings.startPoint,
+//           loadedSample.zeroCrossings
+//         );
+//         loadedSample.sample_settings.startPoint = snapped;
+//       }
+//       if (settings.endPoint !== undefined && loadedSample.zeroCrossings) {
+//         const snapped = snapToNearestZeroCrossing(
+//           settings.endPoint,
+//           loadedSample.zeroCrossings
+//         );
+//         loadedSample.sample_settings.endPoint = snapped;
+//       }
+
+//       if (settings.transposition !== undefined) {
+//         loadedSample.sample_settings.transposition = settings.transposition;
+//       }
+
+//       if (settings.tuneOffset !== undefined) {
+//         loadedSample.sample_settings.tuneOffset = settings.tuneOffset;
+//       }
+
+//       // const newLoadedSample = {
+//       //   // WHY???
+//       //   ...loadedSample,
+//       //   sample_settings: {
+//       //     ...loadedSample.sample_settings,
+//       //     ...settings,
+//       //   },
+//       // };
+
+//       SingleUseVoice.sampleSettings.set(
+//         loadedSample.id,
+//         loadedSample.sample_settings
+//       );
+
+//       console.log(
+//         'Updated sample settings:',
+//         loadedSample.sample_settings.transposition,
+//         loadedSample.sample_settings.tuneOffset,
+//         loadedSample.sample_settings.lowCutoff
+//       );
+
+//       if (
+//         'loopStart' in settings ||
+//         'loopEnd' in settings ||
+//         'tuneOffset' in settings ||
+//         'transposition' in settings ||
+//         'sampleVolume' in settings ||
+//         'loopVolume' in settings
+//       ) {
+//         SingleUseVoice.updateActiveVoices(id, settings);
+//       }
+//     }
+//   } catch (error) {
+//     console.error(`Error updating sample ${id}:`, error);
+//   }
+// }
+
+// createSampleFile ?
+// createSampleRecord ?
+
+// TODO: implement (with AudioRecorder)
+// setAudioFormat(formatKey: FormatKey): void {
+//   this.audioFormatKey = formatKey;
+// }
+
+// REMOVE REST WHEN FIXED
+// const loaded = this.loadedSamples.get(sampleId);
+// if (loaded) {
+//   loaded.sampleNodes.sampleGain.gain.setValueAtTime(
+//     volume,
+//     this.audioCtx.currentTime
+//   );
+//   loaded.sample_settings.sampleVolume = volume;
+// }
+
+// isSampleLoaded(id: string): boolean {
+//   const sample = this.loadedSamples.get(id);
+
+//   return (
+//     (sample && sample.buffer && sample.sampleNodes.sampleGain) !== undefined
+//   );
+// }
+
+// const loadedSample: LoadedSample = {
+//   id: record.id,
+//   name: record.name,
+//   slug: record.slug,
+//   buffer: buffer,
+//   zeroCrossings: zeroCrossings,
+//   sample_settings: settings,
+//   sampleNodes: sampleNodes,
+// };
+
+// this.loadedSamples.set(loadedSample.id, loadedSample);
+
+// addBufferDurationToLoadedSamples(): void {
+//   // remove function if redundant, else add zeroCrossings
+//   this.loadedSamples.forEach((loadedSample, key) => {
+//     if (loadedSample.buffer && loadedSample.buffer.duration) {
+//       loadedSample.sample.bufferDuration = loadedSample.buffer.duration;
+//       this.loadedSamples.set(key, loadedSample);
+//     }
+//   });
+// }
 
 /* Recording */
 
@@ -758,3 +918,47 @@ export default class SamplerEngine {
 //     }
 //   });
 // }
+
+// selectForPlayback(ids: string[]): void {
+//   this.selectedForPlayback = new Set(ids);
+
+//   ids.forEach((id) => {
+//     if (this.loadedSamples.has(id)) {
+//       this.selectedForPlayback.add(id);
+//     } else {
+//       console.error(`Sample ${id} not loaded`);
+//     }
+//   });
+// }
+
+// deselectForPlayback(ids: string[]): void {
+//   ids.forEach((id) => {
+//     this.selectedForPlayback.delete(id);
+//   });
+// }
+
+// selectForSettings(ids: string[]): void {
+//   this.selectedForSettings = new Set(ids);
+
+//   ids.forEach((id) => {
+//     if (this.loadedSamples.has(id)) {
+//       this.selectedForSettings.add(id);
+//     } else {
+//       console.error(`Sample ${id} not loaded`);
+//     }
+//   });
+// }
+
+// type LoadedSample = {
+//   // TODO: Remove this. Use buffer[], zeroCrossings[], sample_settings[] etc.. instead
+//   id: string;
+//   name: string;
+//   slug: string;
+
+//   buffer: AudioBuffer;
+//   zeroCrossings: number[];
+//   sample_settings: Sample_settings;
+
+//   sampleNodes: SampleNodes;
+// };
+// private loadedSamples: Map<string, LoadedSample> = new Map(); // REMOVE!

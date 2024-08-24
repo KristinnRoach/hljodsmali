@@ -1,0 +1,113 @@
+'use client';
+
+import React from 'react';
+
+import Auth from '../Auth/Auth';
+
+import AudioDeviceSelector from './AudioDeviceSelector';
+import SampleSettings from './SampleSettings';
+import Recorder from './Recorder';
+import useKeyboard from '../../hooks/useKeyboard';
+
+import LinkList from '../UI/LinkList';
+
+import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
+
+import WaveformContainer from '../UI/WaveForms/WaveformContainer';
+import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
+import Shapes from '../UI/Shapes/Shapes'; // TODO: Resolve "Multiple instances of Three.js being imported" warning (if persists)
+
+// import { useSamplerCtx } from '../../contexts/SamplerCtx';
+import { useLibraryCtx } from '../../contexts/LibraryCtx';
+import { SAMPLES_PER_PAGE } from '../../types/constants/constants';
+
+import styles from './Sampler.module.scss';
+import Tuner from './Tuner';
+import { SampleRecord } from '../../types/samples';
+
+export default function Sampler() {
+  useKeyboard();
+
+  const {
+    sampleRecords,
+    deleteSample,
+    updateSample,
+    isLoading,
+    // hasUnsavedSamples,
+    // saveAll,
+    // isLooping,
+    // toggleLoop,
+    // isHolding,
+    // toggleHold,
+    // transposition,
+    // tuneOffset,
+  } = useLibraryCtx();
+
+  return (
+    <div className={styles.sampler}>
+      <section className={styles.topBar}>
+        <Auth className={styles.loginContainer} />
+        <Shapes className={styles.shapesContainer} />
+        <AudioDeviceSelector className={styles.deviceSelectorContainer} />
+      </section>
+      <section className={styles.controlsContainer}>
+        {/* <button onClick={saveAll} disabled={!hasUnsavedSamples}>
+            Save All
+          </button> */}
+        {/* <Tuner
+            className={styles.tuner}
+            transposition={transposition ?? 0}
+            tuneOffset={tuneOffset ?? 0}
+          /> */}
+
+        <Recorder resamplerMode={true} />
+        <Recorder />
+
+        {/* <Toggle
+            label='Loop'
+            isOn={isLooping}
+            onToggle={toggleLoop}
+            type='loop'
+          />
+          <Toggle
+            label='Hold'
+            isOn={isHolding}
+            onToggle={toggleHold}
+            type='hold'
+          /> */}
+      </section>
+
+      <section className={styles.waveformContainer}>
+        <ToggleMenu label='Waveform'>
+          <WaveformContainer />
+        </ToggleMenu>
+      </section>
+
+      <section className={styles.keyboardContainer}>
+        <ToggleMenu label='Keyboard'>
+          <KeyboardGUI />
+        </ToggleMenu>
+      </section>
+
+      <section className={styles.samplesContainer}>
+        <ToggleMenu label={isLoading ? 'Loading...' : 'Samples'}>
+          {!isLoading && sampleRecords.length > 0 && (
+            <LinkList
+              items={sampleRecords}
+              title='Samples'
+              // paramName='samples'
+              itemsPerPage={SAMPLES_PER_PAGE}
+              onDelete={(id: string) => deleteSample(id)}
+              onSave={(id: string, updates: Partial<SampleRecord>) =>
+                updateSample(id, updates)
+              }
+            />
+          )}
+          {/* <ToggleMenu label='Settings'>
+            <SampleSettings />
+          </ToggleMenu> */}
+        </ToggleMenu>
+      </section>
+    </div>
+  );
+}

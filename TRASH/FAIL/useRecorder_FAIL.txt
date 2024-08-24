@@ -1,4 +1,4 @@
-// hooks/useRecorder.ts
+// src/hooks/useRecorder.ts
 
 import { useState, useCallback } from 'react';
 import { blobToSampleFile, isSampleFile } from '../types/utils';
@@ -6,7 +6,13 @@ import { getHoursMinSec } from '../lib/utils/time-utils';
 import { useAudioCtxUtils, useReactAudioCtx } from '../contexts/ReactAudioCtx';
 import { createNewSampleRecord } from '../lib/db/pocketbase';
 import { getInitZeroSnappedPoints } from '../lib/audio-utils/zeroCrossingUtils';
-import { normalizeBuffer_RMS } from '../lib/audio-utils/normalize';
+import {
+  normalizeBuffer_RMS,
+  normalizeBuffer_Peak,
+} from '../lib/audio-utils/normalize';
+
+import { useLibraryContext } from '../contexts/LibraryCtx';
+import SamplerEngine from '../lib/SamplerEngine/SamplerEngine';
 
 export const useRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -27,7 +33,7 @@ export const useRecorder = () => {
       const audioBuffer = await decodeAudioData(arrayBuffer);
 
       // Normalize the audio buffer
-      if (audioCtx) normalizeBuffer_RMS(audioCtx, audioBuffer);
+      // if (audioCtx) normalizeBuffer_Peak(audioCtx, audioBuffer);
 
       const bufferDuration = audioBuffer.duration;
 

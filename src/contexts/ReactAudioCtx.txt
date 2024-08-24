@@ -1,0 +1,125 @@
+// src/contexts/ReactAudioCtx.tsx
+
+'use client';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+import * as audioUtils from '../lib/audio-utils/audioCtx-utils';
+
+type ReactAudioCtxType = {
+  audioCtx: AudioContext | null;
+  isAudioReady: boolean;
+  initializeAudio: () => void;
+};
+
+const ReactAudioCtx = createContext<ReactAudioCtxType | undefined>(undefined);
+
+const ReactAudioCtxProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
+
+  const initializeAudio = useCallback(async () => {
+    if (audioCtx) return; // Already initialized
+    try {
+      const ctx = audioUtils.initializeAudioContext();
+      await audioUtils.resumeAudioContext();
+      setAudioCtx(ctx);
+      setIsAudioReady(true);
+    } catch (error) {
+      console.error('Failed to initialize audio context:', error);
+      setIsAudioReady(false);
+    }
+  }, [audioCtx]);
+
+  useEffect(() => {
+    initializeAudio();
+    return () => {
+      if (audioCtx) {
+        audioUtils.closeAudioContext();
+      }
+    };
+  }, [initializeAudio, audioCtx]);
+
+  const contextValue: ReactAudioCtxType = {
+    audioCtx,
+    isAudioReady,
+    initializeAudio,
+  };
+
+  return (
+    <ReactAudioCtx.Provider value={contextValue}>
+      {children}
+    </ReactAudioCtx.Provider>
+  );
+};
+
+export default ReactAudioCtxProvider;
+
+export const useReactAudioCtx = () => {
+  const context = useContext(ReactAudioCtx);
+  if (!context) {
+    throw new Error(
+      'useReactAudioCtx must be used within a ReactAudioCtxProvider'
+    );
+  }
+  return context;
+};
+
+export const useAudioCtxUtils = () => {
+  const { audioCtx, isAudioReady, initializeAudio } = useReactAudioCtx();
+
+  const getAudioCtx = useCallback(() => {
+    if (!isAudioReady) {
+      initializeAudio();
+    }
+    return audioCtx;
+  }, [isAudioReady, initializeAudio, audioCtx]);
+
+  return {
+    getAudioCtx,
+    createGainNode: () => {
+      const ctx = getAudioCtx();
+      return ctx ? audioUtils.createGainNode() : null;
+    },
+    createOscillator: () => {
+      const ctx = getAudioCtx();
+      return ctx ? audioUtils.createOscillator() : null;
+    },
+    createBufferSource: () => {
+      const ctx = getAudioCtx();
+      return ctx ? audioUtils.createBufferSource() : null;
+    },
+    decodeAudioData: async (arrayBuffer: ArrayBuffer) => {
+      const ctx = getAudioCtx();
+      return ctx ? await audioUtils.decodeAudioData(arrayBuffer) : null;
+    },
+  };
+};
+
+// useEffect(() => {
+//   const initAudio = async () => {
+//     const ctx = audioUtils.initializeAudioContext();
+
+//     await audioUtils.resumeAudioContext();
+//     setAudioCtx(ctx);
+//     setIsAudioReady(true);
+//   };
+
+//   initAudio();
+
+//   return () => {
+//     audioUtils.closeAudioContext();
+//   };
+// }, []);
+
+// const contextValue: ReactAudioCtxType = {
+//   audioCtx,
+//   isAudioReady,
+//   ...audioUtils,
+// };

@@ -8,6 +8,7 @@ interface KnobProps {
   label?: string;
   value: number;
   onChange: (value: number) => void;
+  defaultValue?: number;
   size?: 'xs' | 's' | 'm' | 'l';
   className?: string;
   style?: React.CSSProperties;
@@ -21,6 +22,7 @@ const Knob: React.FC<KnobProps> = ({
   label = '',
   value,
   onChange,
+  defaultValue = min + (max - min) / 2,
   size = 'medium',
   className = '',
   style = {},
@@ -83,6 +85,7 @@ const Knob: React.FC<KnobProps> = ({
         className={styles.knob}
         onMouseDown={handleMouseDown}
         onWheel={handleWheel}
+        onDoubleClick={() => onChange(defaultValue)}
         tabIndex={0}
       >
         <div

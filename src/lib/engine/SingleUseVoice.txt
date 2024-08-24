@@ -1,4 +1,6 @@
-import { Sample_settings } from '../../types/samples';
+// src/lib/engine/SingleUseVoice.ts
+
+import { Sample_settings, Time_settings } from '../../types/samples';
 import { snapToNearestZeroCrossing } from '../audio-utils/zeroCrossingUtils';
 import {
   snapDurationToNote,
@@ -50,7 +52,7 @@ export default class SingleUseVoice {
     this.voiceGain.gain.value = 0;
     this.source.connect(this.voiceGain);
 
-    this.source.loop = SingleUseVoice.globalLoop || this.settings.loopLocked;
+    this.source.loop = SingleUseVoice.globalLoop || this.settings.locks.loop;
 
     this.sampleId = sampleId;
     this.setLoop();
@@ -122,17 +124,6 @@ export default class SingleUseVoice {
     });
   }
 
-  // static updateSampleSettings( // if set does not work in samplerengine
-  //   sampleId: string,
-  //   settings: Partial<Sample_settings>
-  // ) {
-  //   SingleUseVoice.sampleSettings.set(sampleId, {
-  //     ...SingleUseVoice.sampleSettings.get(sampleId)!,
-  //     ...settings,
-  //   });
-  //   SingleUseVoice.updateActiveVoices(sampleId, settings);
-  // }
-
   now() {
     return this.audioCtx.currentTime;
   }
@@ -149,20 +140,20 @@ export default class SingleUseVoice {
     const midiRate = this.semitoneToRate(1, midiNote - MIDDLE_C_MIDI);
     const transposedRate = this.semitoneToRate(
       midiRate,
-      this.settings.transposition
+      this.settings.tune.transposition
     );
     const tunedRate = this.semitoneToRate(
       transposedRate,
-      this.settings.tuneOffset
+      this.settings.tune.tuneOffset
     );
     this.source.playbackRate.value = tunedRate;
 
     this.source.start(
       0,
-      this.settings.startPoint,
+      this.settings.time.startPoint,
       this.source.loop // sets end point only if not looping
         ? undefined
-        : this.settings.endPoint - this.settings.startPoint
+        : this.settings.time.endPoint - this.settings.time.startPoint
     );
 
     // if (this.source.loop) {
@@ -181,7 +172,8 @@ export default class SingleUseVoice {
   }
 
   loopEnvelope() {
-    const { attackTime, releaseTime, loopStart, loopEnd } = this.settings;
+    const { attackTime, releaseTime } = this.settings.volume;
+    const { loopStart, loopEnd } = this.settings.time;
     const loopDuration = loopEnd - loopStart;
     const now = this.now();
     this.voiceGain.gain.setValueAtTime(0, now);
@@ -192,8 +184,8 @@ export default class SingleUseVoice {
 
   triggerAttack() {
     this.voiceGain.gain.linearRampToValueAtTime(
-      this.settings.sampleVolume,
-      this.now() + this.settings.attackTime
+      this.settings.volume.sampleVolume,
+      this.now() + this.settings.volume.attackTime
     );
     this.trigger = this.now();
     // if (this.source.loop) {
@@ -207,15 +199,16 @@ export default class SingleUseVoice {
 
     this.voiceGain.gain.linearRampToValueAtTime(
       0,
-      this.now() + this.settings.releaseTime / this.source.playbackRate.value
+      this.now() +
+        this.settings.volume.releaseTime / this.source.playbackRate.value
     );
     this.held = this.now() - this.trigger; // not using !!
 
-    this.source.stop(this.now() + this.settings.releaseTime + 1);
+    this.source.stop(this.now() + this.settings.volume.releaseTime + 1);
   }
 
   setLoop(isLoopOn: boolean = SingleUseVoice.globalLoop) {
-    if (this.settings.loopLocked) return;
+    if (this.settings.locks.loop) return;
 
     if (isLoopOn) {
       this.calculateLoopPoints();
@@ -227,7 +220,7 @@ export default class SingleUseVoice {
   }
 
   setLoopLock(isLocked: boolean) {
-    this.settings.loopLocked = isLocked;
+    this.settings.locks.loop = isLocked;
   }
 
   static updateActiveVoices(
@@ -250,7 +243,7 @@ export default class SingleUseVoice {
   static tuneActiveVoices(sampleId: string, tuneOffset: number) {
     SingleUseVoice.allVoices.forEach((voice) => {
       if (voice.sampleId === sampleId) {
-        voice.settings.tuneOffset = tuneOffset;
+        voice.settings.tune.tuneOffset = tuneOffset;
         voice.source.playbackRate.value = voice.semitoneToRate(
           voice.source.playbackRate.value,
           tuneOffset
@@ -262,7 +255,7 @@ export default class SingleUseVoice {
   static transposeActiveVoices(sampleId: string, transposition: number) {
     SingleUseVoice.allVoices.forEach((voice) => {
       if (voice.sampleId === sampleId) {
-        voice.settings.transposition = transposition;
+        voice.settings.tune.transposition = transposition;
         voice.source.playbackRate.value = voice.semitoneToRate(
           voice.source.playbackRate.value,
           transposition
@@ -279,10 +272,12 @@ export default class SingleUseVoice {
     this.source.loopEnd = newLoopEnd;
   }
 
-  calculateLoopPoints(updated: Partial<Sample_settings> = this.settings) {
+  calculateLoopPoints(updated: Partial<Time_settings> = this.settings.time) {
     // SHOULD BE STATIC?!
-    let loopStart = updated.loopStart ?? this.settings.loopStart;
-    let loopEnd = updated.loopEnd ?? this.settings.loopEnd;
+    let loopStart = updated.loopStart;
+    let loopEnd = updated.loopEnd;
+
+    if (!loopStart || !loopEnd) return; // Temp fix
 
     const initLoopLength = loopEnd - loopStart;
     // console.log('init looplength:', initLoopLength);
@@ -325,9 +320,20 @@ export default class SingleUseVoice {
   }
 
   setLoopVolume(volume: number) {
-    this.settings.loopVolume = volume;
+    this.settings.volume.loopVolume = volume;
   }
 }
+
+  // static updateSampleSettings( // if set does not work in samplerengine
+  //   sampleId: string,
+  //   settings: Partial<Sample_settings>
+  // ) {
+  //   SingleUseVoice.sampleSettings.set(sampleId, {
+  //     ...SingleUseVoice.sampleSettings.get(sampleId)!,
+  //     ...settings,
+  //   });
+  //   SingleUseVoice.updateActiveVoices(sampleId, settings);
+  // }
 
 // C0 (16.35 Hz):
 // (1 / 16.35) * 1000 = 61.1620795107034 ms

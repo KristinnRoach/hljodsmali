@@ -1,0 +1,126 @@
+// WaveformRenderer.tsx
+import React, { useRef, useEffect, useCallback } from 'react';
+
+interface WaveformRendererProps {
+  width: number;
+  height: number;
+  buffer: AudioBuffer | null;
+  color?: string;
+  backgroundColor?: string;
+  showCenterLine?: boolean;
+  markers: {
+    startPoint: number;
+    endPoint: number;
+    loopStart: number;
+    loopEnd: number;
+  };
+}
+
+const WaveformRenderer: React.FC<WaveformRendererProps> = ({
+  width,
+  height,
+  buffer,
+  color = '#3498db',
+  backgroundColor = 'transparent',
+  showCenterLine = true,
+  markers,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const normalizeData = useCallback((data: Float32Array): Float32Array => {
+    const maxVal = Math.max(...data.map(Math.abs));
+    return maxVal === 0 ? data : data.map((val) => val / maxVal);
+  }, []);
+
+  const drawWaveform = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !buffer) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas dimensions
+    canvas.width = width;
+    canvas.height = height;
+
+    // Clear canvas
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw the waveform
+    const data = normalizeData(buffer.getChannelData(0));
+    const step = Math.ceil(data.length / width);
+    const amp = height / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(0, amp);
+
+    for (let i = 0; i < width; i++) {
+      let min = 1.0;
+      let max = -1.0;
+      for (let j = 0; j < step; j++) {
+        const datum = data[i * step + j];
+        if (datum < min) min = datum;
+        if (datum > max) max = datum;
+      }
+      ctx.lineTo(i, (1 + min) * amp);
+      ctx.lineTo(i, (1 + max) * amp);
+    }
+
+    ctx.strokeStyle = color;
+    ctx.stroke();
+
+    // Draw center line if enabled
+    if (showCenterLine) {
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.stroke();
+    }
+
+    // Draw markers
+    const drawMarker = (
+      position: number,
+      markerColor: string,
+      label: string
+    ) => {
+      const x = position * width;
+      ctx.fillStyle = markerColor;
+      ctx.fillRect(x - 1, 0, 2, height);
+
+      ctx.font = '12px Arial';
+      ctx.fillStyle = markerColor;
+      ctx.fillText(label, x + 5, 15);
+    };
+
+    drawMarker(markers.startPoint, 'red', 'Start');
+    drawMarker(markers.endPoint, 'red', 'End');
+    drawMarker(markers.loopStart, 'green', 'Loop-Start');
+    drawMarker(markers.loopEnd, 'green', 'Loop-End');
+  }, [
+    width,
+    height,
+    color,
+    backgroundColor,
+    showCenterLine,
+    buffer,
+    markers,
+    normalizeData,
+  ]);
+
+  useEffect(() => {
+    drawWaveform();
+  }, [drawWaveform]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
+      style={{ border: '1px solid #ccc' }}
+    />
+  );
+};
+
+export default WaveformRenderer;

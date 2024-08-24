@@ -1,0 +1,345 @@
+// src/contexts/SamplerEngineContext.tsx
+'use client';
+
+import React, {
+  createContext,
+  useContext,
+  useRef,
+  useMemo,
+  useEffect,
+  useState,
+} from 'react';
+import { SettingsManager } from '../lib/engine/SampleManager';
+import { LoopHoldManager } from '../lib/engine/GlobalAudioState';
+import { SingleUseVoice } from '../lib/engine/SingleUseVoice';
+import { findZeroCrossings } from '../lib/audio-utils/zeroCrossingUtils';
+import {
+  SampleNodes,
+  SampleRecord,
+  Sample_settings,
+  Time_settings,
+  Pitch_settings,
+  Volume_settings,
+} from '../types/samples';
+import * as auCtxUtils from '../lib/audio-utils/audioCtx-utils';
+import * as auNodeUtils from '../lib/audio-utils/node-utils';
+
+interface SamplerEngineContextValue {
+  audioCtx: AudioContext | null;
+  connectToExternalOutput: (destination: AudioNode) => void;
+  disconnectExternalOutput: (destination: AudioNode) => void;
+  loadSample: (record: SampleRecord, buffer: AudioBuffer) => void;
+  unloadSample: (id: string) => void;
+  setSampleVolume: (sampleId: string, volume: number) => void;
+  selectForPlayback: (id: string, replaceOrAdd?: 'replace' | 'add') => void;
+  deselectForPlayback: (id: string) => void;
+  selectForSettings: (id: string, replaceOrAdd?: 'replace' | 'add') => void;
+  deselectForSettings: (id: string) => void;
+  selectedForPlayback: string[];
+  selectedForSettings: string[];
+  getSelectedBuffers: (
+    playbackOrSettings: 'playback' | 'settings'
+  ) => AudioBuffer[];
+  getBufferDuration: (id: string) => number;
+  getSampleSettings: (
+    id: string,
+    type?: 'Time' | 'Volume' | 'Pitch' | 'Filter' | 'Lock' | 'All'
+  ) => any;
+  updateTimeSettings: (id: string, settings: Partial<Time_settings>) => void;
+  updatePitchSettings: (id: string, settings: Partial<Pitch_settings>) => void;
+  updateEnvelopeSettings: (
+    id: string,
+    settings: Partial<Volume_settings>
+  ) => void;
+  playNote: (midiNote: number) => void;
+  releaseNote: (midiNote: number) => void;
+  stopAllVoices: () => void;
+  setMasterVolume: (volume: number) => void;
+  getMasterVolume: () => number;
+  toggleLoop: () => boolean;
+  isLooping: () => boolean;
+  toggleHold: () => boolean;
+  isHolding: () => boolean;
+  isPlaying: () => boolean;
+  getCurrentPlayheadPosition: () => number;
+}
+
+const SamplerEngineContext = createContext<SamplerEngineContextValue | null>(
+  null
+);
+
+const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
+  const sampleManager = useMemo(() => SettingsManager.getInstance(), []);
+  const globalAudioState = useMemo(() => LoopHoldManager.getInstance(), []);
+
+  const externalOutputs = useRef<Set<AudioNode>>(new Set());
+  const masterGainRef = useRef<GainNode | null>(null);
+  const buffersRef = useRef<Map<string, AudioBuffer>>(new Map());
+  const sampleNodesRef = useRef<Map<string, SampleNodes>>(new Map());
+
+  const [audioCtx] = useState(
+    () => new (window.AudioContext || (window as any).webkitAudioContext)()
+  );
+  const [selectedForPlayback, setSelectedForPlayback] = useState<string[]>([]);
+  const [selectedForSettings, setSelectedForSettings] = useState<string[]>([]);
+
+  useEffect(() => {
+    audioCtx.resume().catch(console.error);
+  }, [audioCtx]);
+
+  const contextValue = useMemo(
+    () => ({
+      audioCtx,
+      connectToExternalOutput: (destination: AudioNode) => {
+        if (!audioCtx || !masterGainRef.current) {
+          console.warn(
+            'Audio context or master gain not ready in connectToExternalOutput'
+          );
+          return;
+        }
+        if (!externalOutputs.current.has(destination)) {
+          masterGainRef.current.connect(destination);
+          externalOutputs.current.add(destination);
+        }
+      },
+      disconnectExternalOutput: (destination: AudioNode) => {
+        if (!audioCtx || !masterGainRef.current) {
+          console.warn(
+            'Audio context or master gain not ready in disconnectExternalOutput'
+          );
+          return;
+        }
+        if (externalOutputs.current.has(destination)) {
+          masterGainRef.current.disconnect(destination);
+          externalOutputs.current.delete(destination);
+        }
+      },
+      loadSample: (record: SampleRecord, buffer: AudioBuffer) => {
+        if (!audioCtx) {
+          console.error('Audio context not ready in loadSample');
+          return;
+        }
+        const { id, sample_settings } = record;
+        const zeroCrossings = findZeroCrossings(buffer);
+        sampleManager.setSampleSettings(id, sample_settings);
+        sampleManager.setZeroCrossings(id, zeroCrossings);
+        try {
+          const sampleGain = auCtxUtils.createGainNode(
+            audioCtx,
+            sample_settings.volume.sampleVolume
+          );
+          const lowCut = auCtxUtils.createBiquadFilter(
+            audioCtx,
+            'highpass',
+            sample_settings.filters.lowCutoff
+          );
+          const highCut = auCtxUtils.createBiquadFilter(
+            audioCtx,
+            'lowpass',
+            sample_settings.filters.highCutoff
+          );
+          if (!masterGainRef.current || !sampleGain || !lowCut || !highCut) {
+            throw new Error('Failed to create audio nodes');
+          }
+          auNodeUtils.connectNodeChain([
+            sampleGain,
+            lowCut,
+            highCut,
+            masterGainRef.current,
+          ]);
+          const sampleNodes = { sampleGain, lowCut, highCut };
+          buffersRef.current.set(id, buffer);
+          sampleNodesRef.current.set(id, sampleNodes);
+        } catch (error) {
+          console.error('Error loading sample:', error);
+        }
+      },
+      unloadSample: (id: string) => {
+        sampleManager.removeSampleSettings(id);
+        sampleManager.removeZeroCrossings(id);
+        buffersRef.current.delete(id);
+        sampleNodesRef.current.delete(id);
+      },
+      setSampleVolume: (sampleId: string, volume: number) => {
+        if (!audioCtx) {
+          console.error('Audio context not ready in setSampleVolume');
+          return;
+        }
+        const sampleNodes = sampleNodesRef.current.get(sampleId);
+        const settings = sampleManager.getSampleSettings(sampleId);
+        if (!sampleNodes || !settings) throw new Error('Sample not loaded');
+        sampleNodes.sampleGain.gain.setTargetAtTime(
+          volume,
+          audioCtx.currentTime,
+          0.1
+        );
+        settings.volume.sampleVolume = volume;
+        sampleManager.updateSampleSettings(sampleId, {
+          volume: settings.volume,
+        });
+      },
+      selectForPlayback: (
+        id: string,
+        replaceOrAdd: 'replace' | 'add' = 'replace'
+      ) => {
+        setSelectedForPlayback((prev) =>
+          replaceOrAdd === 'replace' ? [id] : [...prev, id]
+        );
+      },
+      deselectForPlayback: (id: string) => {
+        setSelectedForPlayback((prev) =>
+          prev.filter((sampleId) => sampleId !== id)
+        );
+      },
+      selectForSettings: (
+        id: string,
+        replaceOrAdd: 'replace' | 'add' = 'replace'
+      ) => {
+        setSelectedForSettings((prev) =>
+          replaceOrAdd === 'replace' ? [id] : [...prev, id]
+        );
+      },
+      deselectForSettings: (id: string) => {
+        setSelectedForSettings((prev) =>
+          prev.filter((sampleId) => sampleId !== id)
+        );
+      },
+      selectedForPlayback,
+      selectedForSettings,
+      getSelectedBuffers: (playbackOrSettings: 'playback' | 'settings') => {
+        const selectedIds =
+          playbackOrSettings === 'playback'
+            ? selectedForPlayback
+            : selectedForSettings;
+        return selectedIds
+          .map((id) => buffersRef.current.get(id))
+          .filter((buffer): buffer is AudioBuffer => buffer !== undefined);
+      },
+      getBufferDuration: (id: string) => {
+        const buffer = buffersRef.current.get(id);
+        return buffer ? buffer.duration : 0;
+      },
+      getSampleSettings: (
+        id: string,
+        type: 'Time' | 'Volume' | 'Pitch' | 'Filter' | 'Lock' | 'All' = 'All'
+      ) => {
+        const settings = sampleManager.getSampleSettings(id);
+        if (!settings) {
+          console.error(`Sample ${id} not loaded`);
+          return null;
+        }
+        switch (type) {
+          case 'Time':
+            return settings.time;
+          case 'Volume':
+            return settings.volume;
+          case 'Pitch':
+            return settings.pitch;
+          case 'Filter':
+            return settings.filters;
+          case 'Lock':
+            return settings.locks;
+          case 'All':
+          default:
+            return settings;
+        }
+      },
+      updateTimeSettings: (id: string, settings: Partial<Time_settings>) => {
+        const currentSettings = sampleManager.getSampleSettings(id);
+        if (!currentSettings) return;
+        const updatedSettings = { ...currentSettings.time, ...settings };
+        sampleManager.updateSampleSettings(id, { time: updatedSettings });
+        SingleUseVoice.updateActiveVoices(id, (voice) => {
+          voice.updateTimeSettings(settings);
+        });
+      },
+      updatePitchSettings: (id: string, settings: Partial<Pitch_settings>) => {
+        const currentSettings = sampleManager.getSampleSettings(id);
+        if (!currentSettings) throw new Error('Sample not loaded');
+        const updatedSettings = { ...currentSettings.pitch, ...settings };
+        sampleManager.updateSampleSettings(id, { pitch: updatedSettings });
+      },
+      updateEnvelopeSettings: (
+        id: string,
+        settings: Partial<Volume_settings>
+      ) => {
+        const currentSettings = sampleManager.getSampleSettings(id);
+        if (!currentSettings) return;
+        const updatedSettings = { ...currentSettings.volume, ...settings };
+        sampleManager.updateSampleSettings(id, { volume: updatedSettings });
+      },
+      playNote: (midiNote: number) => {
+        if (audioCtx.state !== 'running') {
+          audioCtx
+            .resume()
+            .then(() => contextValue.playNote(midiNote))
+            .catch(console.error);
+          return;
+        }
+        selectedForPlayback.forEach((id) => {
+          const buffer = buffersRef.current.get(id);
+          const sampleNodes = sampleNodesRef.current.get(id);
+          if (buffer && sampleNodes) {
+            const voice = new SingleUseVoice(audioCtx, buffer, id);
+            voice.getVoiceGain().connect(sampleNodes.sampleGain);
+            voice.start(midiNote);
+          }
+        });
+      },
+      releaseNote: (midiNote: number) => {
+        SingleUseVoice.releaseNote(midiNote);
+      },
+      stopAllVoices: () => {
+        SingleUseVoice.panic();
+      },
+      setMasterVolume: (volume: number) => {
+        if (!audioCtx || !masterGainRef.current) {
+          console.error(
+            'Audio context or master gain not ready in setMasterVolume'
+          );
+          return;
+        }
+        masterGainRef.current.gain.setTargetAtTime(
+          volume,
+          audioCtx.currentTime + 0.01,
+          0.5
+        );
+      },
+      getMasterVolume: () => {
+        return masterGainRef.current ? masterGainRef.current.gain.value : 0;
+      },
+      toggleLoop: () => globalAudioState.toggleLoop(),
+      isLooping: () => globalAudioState.globalLoop,
+      toggleHold: () => globalAudioState.toggleHold(),
+      isHolding: () => globalAudioState.hold,
+      isPlaying: () => SingleUseVoice.isPlaying(),
+      getCurrentPlayheadPosition: () =>
+        SingleUseVoice.getCurrentPlayheadPosition(),
+    }),
+    [
+      audioCtx,
+      selectedForPlayback,
+      selectedForSettings,
+      sampleManager,
+      globalAudioState,
+    ]
+  );
+
+  return (
+    <SamplerEngineContext.Provider value={contextValue}>
+      {children}
+    </SamplerEngineContext.Provider>
+  );
+};
+
+export default SamplerProvider;
+
+export const useSamplerEngine = () => {
+  const context = useContext(SamplerEngineContext);
+  if (!context) {
+    throw new Error(
+      'useSamplerEngine must be used within a SamplerEngineProvider'
+    );
+  }
+  return context;
+};

@@ -5,25 +5,25 @@ import React from 'react';
 type BasicSliderProps = {
   label: string;
   value: number;
+  onChange: (value: number) => void;
   min: number;
   max: number;
+  ceiling?: number;
+  floor?: number;
   step?: number;
-  onChange: (value: number) => void;
   isLogarithmic?: boolean;
-  maxDynamic?: number;
-  minDynamic?: number;
 };
 
 const BasicSlider: React.FC<BasicSliderProps> = ({
   label,
   value,
+  onChange,
   min,
   max,
+  ceiling,
+  floor,
   step,
-  onChange,
   isLogarithmic = false,
-  maxDynamic,
-  minDynamic,
 }) => {
   const logToLinear = (logValue: number) => {
     const minLog = Math.log(min);
@@ -44,16 +44,13 @@ const BasicSlider: React.FC<BasicSliderProps> = ({
     if (isLogarithmic) {
       newValue = logToLinear(newValue);
     }
-    if (maxDynamic !== undefined) {
-      newValue = Math.min(newValue, maxDynamic);
-    }
-    if (minDynamic !== undefined) {
-      newValue = Math.max(newValue, minDynamic);
-    }
+    newValue = Math.min(Math.max(newValue, floor ?? min), ceiling ?? max);
     onChange(newValue);
   };
 
   const displayValue = isLogarithmic ? linearToLog(value) : value;
+  // const effectiveMin = floor !== undefined ? Math.max(min, floor) : min;
+  // const effectiveMax = ceiling !== undefined ? Math.min(max, ceiling) : max;
 
   return (
     <div style={{ margin: '20px 0' }}>

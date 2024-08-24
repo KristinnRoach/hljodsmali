@@ -1,0 +1,440 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+
+let globalAudioCtx: AudioContext | null = null;
+
+export function useAudioCtx() {
+  if (typeof window === 'undefined') {
+    console.error('No window object found');
+    return;
+  }
+  const AudioContextClass =
+    window.AudioContext ||
+    ((window as any).webkitAudioContext as typeof AudioContext);
+
+  // const audioCtxRef = useRef<AudioContext | null>(null);
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
+
+  useEffect(() => {
+    if (!globalAudioCtx) {
+      globalAudioCtx = new AudioContextClass({ latencyHint: 0.0001 });
+    }
+    setAudioCtx(globalAudioCtx);
+    // audioCtxRef.current = globalAudioCtx;
+
+    // return () => { // cleanup // skipping for now until everything is working
+    //   if (globalAudioCtx && globalAudioCtx.state !== 'closed') {
+    //     globalAudioCtx.close();
+    //   }
+    // };
+  }, []);
+
+  return audioCtx;
+}
+
+export const useAudioCtxUtils = () => {
+  const audioCtx = globalAudioCtx;
+
+  console.log('useAudioCtxUtils called, audioContext:', audioCtx);
+
+  const connectNodeToAudioCtx = (node: AudioNode) => {
+    if (!audioCtx) return null;
+
+    node.connect(audioCtx.destination);
+  };
+
+  const disconnectNodeFromAudioCtx = (node: AudioNode) => {
+    if (!audioCtx) return null;
+
+    node.disconnect(audioCtx.destination);
+  };
+
+  const createGainNode = (initialGain = 1) => {
+    if (!audioCtx) return null;
+
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(initialGain, audioCtx.currentTime);
+    return gainNode;
+  };
+
+  const createOscillator = (frequency = 440, type: OscillatorType = 'sine') => {
+    if (!audioCtx) return null;
+
+    const oscillator = audioCtx.createOscillator();
+    oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+    oscillator.type = type;
+    return oscillator;
+  };
+
+  const createBiquadFilter = (
+    type: BiquadFilterType = 'lowpass',
+    frequency = 1000
+  ) => {
+    if (!audioCtx) return null;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+    return filter;
+  };
+
+  const decodeAudioData = async (
+    arrayBuffer: ArrayBuffer
+  ): Promise<AudioBuffer | null> => {
+    if (!audioCtx) return null;
+
+    try {
+      return await audioCtx.decodeAudioData(arrayBuffer);
+    } catch (error) {
+      console.error('Error decoding audio data:', error);
+      return null;
+    }
+  };
+
+  return {
+    connectNodeToAudioCtx,
+    disconnectNodeFromAudioCtx,
+    createGainNode,
+    createOscillator,
+    createBiquadFilter,
+    decodeAudioData,
+  };
+};
+
+// const ensureAudioContext = useCallback(async () => {
+//   if (!isAudioReady) {
+//     await resumeAudioContext();
+//   }
+//   return audioCtx;
+// }, [isAudioReady, resumeAudioContext, audioCtx]);
+
+// // src/contexts/AudioCtxContext.tsx
+// 'use client';
+
+// import React, {
+//   createContext,
+//   useContext,
+//   useEffect,
+//   useState,
+//   useRef,
+//   useCallback,
+// } from 'react';
+
+// interface AudioContextValue {
+//   audioCtx: AudioContext;
+//   isAudioReady: boolean;
+//   resumeAudioContext: () => Promise<void>;
+// }
+
+// const initAudioCtx = (): AudioContext => {
+//   const ctx = new AudioContext();
+//   console.log('AudioContext created:', ctx);
+//   return ctx;
+// };
+
+// const AudioCtxContext = createContext<AudioContextValue>({
+//   audioCtx: initAudioCtx(),
+//   isAudioReady: false,
+//   resumeAudioContext: null,
+// });
+
+// const AudioContextProvider: React.FC<{ children: React.ReactNode }> = ({
+//   children,
+// }) => {
+//   // let audioContextRef: AudioContext | null = null;
+
+//   const createAudioContext = () => {
+//     if (
+//       (typeof window !== 'undefined' && !audioContextRef.current) ||
+//       audioContextRef?.current.state === 'closed'
+//     ) {
+//       const AudioContextClass =
+//         window.AudioContext || (window as any).webkitAudioContext;
+//       audioContextRef.current = new AudioContextClass({
+//         latencyHint: 0.0001,
+//       });
+//       setIsAudioReady(false);
+
+//       console.log('AudioContext created: ', audioContextRef.current);
+//       return audioContextRef.current;
+//     }
+//   };
+
+//   const audioContextRef = useRef<AudioContext | null>(null);
+//   const [isAudioReady, setIsAudioReady] = useState(false);
+
+//   const resumeAudioContext = useCallback(async () => {
+//     if (
+//       !audioContextRef.current ||
+//       audioContextRef.current.state === 'closed'
+//     ) {
+//       createAudioContext();
+//     }
+
+//     if (
+//       audioContextRef.current &&
+//       audioContextRef.current.state === 'suspended'
+//     ) {
+//       try {
+//         await audioContextRef.current.resume();
+
+//         console.log('AudioContext resumed: ', audioContextRef.current);
+//       } catch (error) {
+//         console.error('Failed to resume AudioContext:', error);
+//         setIsAudioReady(false);
+//       }
+//     } else if (audioContextRef.current.state === 'running') {
+//       setIsAudioReady(true);
+//     }
+//   }, [createAudioContext]);
+
+//   const handleInteraction = useCallback(() => {
+//     console.log('handleInteraction called');
+
+//     resumeAudioContext();
+//     window.removeEventListener('click', handleInteraction);
+//     window.removeEventListener('mousemove', handleInteraction);
+//   }, [resumeAudioContext]);
+
+//   useEffect(() => {
+//     const initializeAudio = async () => {
+//       await resumeAudioContext();
+//     };
+//     if (
+//       !audioContextRef.current ||
+//       audioContextRef.current.state !== 'running'
+//     ) {
+//       initializeAudio();
+//     }
+//     console.log('state: ', audioContextRef.current?.state);
+//   }, []);
+
+//   window.addEventListener('click', handleInteraction);
+//   window.addEventListener('mousemove', handleInteraction);
+
+//   const value = {
+//     audioCtx: audioContextRef.current,
+//     isAudioReady,
+//     resumeAudioContext,
+//   };
+
+//   return (
+//     <AudioCtxContext.Provider value={value}>
+//       {children}
+//     </AudioCtxContext.Provider>
+//   );
+// };
+
+// export default AudioContextProvider;
+
+// export const useAudioCtx = () => {
+//   const context = useContext(AudioCtxContext);
+//   if (!context) {
+//     throw new Error('useAudioCtx must be used within an AudioContext provider');
+//   }
+//   return context;
+// };
+
+// export const useAudioCtxUtils = () => {
+//   const { audioCtx, isAudioReady, resumeAudioContext } = useAudioCtx();
+
+//   console.log(
+//     'useAudioCtxUtils called, audioCtx:',
+//     audioCtx,
+//     'isAudioReady:',
+//     isAudioReady
+//   );
+
+//   const ensureAudioContext = useCallback(async () => {
+//     if (!isAudioReady) {
+//       await resumeAudioContext();
+//     }
+//     return audioCtx;
+//   }, [isAudioReady, resumeAudioContext, audioCtx]);
+
+//   const connectNodeToAudioCtx = useCallback(
+//     async (node: AudioNode) => {
+//       const ctx = await ensureAudioContext();
+//       if (!ctx) return null;
+
+//       node.connect(ctx.destination);
+//     },
+//     [ensureAudioContext]
+//   );
+
+//   const disconnectNodeFromAudioCtx = useCallback(
+//     async (node: AudioNode) => {
+//       const ctx = await ensureAudioContext();
+//       if (!ctx) return null;
+
+//       node.disconnect(ctx.destination);
+//     },
+//     [ensureAudioContext]
+//   );
+
+//   const createGainNode = useCallback(
+//     async (initialGain = 1) => {
+//       const ctx = await ensureAudioContext();
+//       if (!ctx) return null;
+
+//       const gainNode = ctx.createGain();
+//       gainNode.gain.setValueAtTime(initialGain, ctx.currentTime);
+//       return gainNode;
+//     },
+//     [ensureAudioContext]
+//   );
+
+//   const createOscillator = useCallback(
+//     async (frequency = 440, type: OscillatorType = 'sine') => {
+//       const ctx = await ensureAudioContext();
+//       if (!ctx) return null;
+
+//       const oscillator = ctx.createOscillator();
+//       oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+//       oscillator.type = type;
+//       return oscillator;
+//     },
+//     [ensureAudioContext]
+//   );
+
+//   const createBiquadFilter = useCallback(
+//     async (type: BiquadFilterType = 'lowpass', frequency = 1000) => {
+//       const ctx = await ensureAudioContext();
+//       if (!ctx) return null;
+
+//       const filter = ctx.createBiquadFilter();
+//       filter.type = type;
+//       filter.frequency.setValueAtTime(frequency, ctx.currentTime);
+//       return filter;
+//     },
+//     [ensureAudioContext]
+//   );
+
+//   const decodeAudioData = useCallback(
+//     async (arrayBuffer: ArrayBuffer): Promise<AudioBuffer | null> => {
+//       const ctx = await ensureAudioContext();
+//       if (!ctx) return null;
+
+//       try {
+//         return await ctx.decodeAudioData(arrayBuffer);
+//       } catch (error) {
+//         console.error('Error decoding audio data:', error);
+//         return null;
+//       }
+//     },
+//     [ensureAudioContext]
+//   );
+
+//   return {
+//     ensureAudioContext,
+//     connectNodeToAudioCtx,
+//     disconnectNodeFromAudioCtx,
+//     createGainNode,
+//     createOscillator,
+//     createBiquadFilter,
+//     decodeAudioData,
+//   };
+// };
+
+// // src/contexts/AudioCtxContext.tsx
+// // 'use client';
+
+// // import React, {
+// //   useState,
+// //   useCallback,
+// //   useEffect,
+// //   createContext,
+// //   useContext,
+// // } from 'react';
+// // import * as audioUtils from '../lib/audio-utils/audioCtx-utils';
+
+// // interface AudioContextValue {
+// //   audioCtx: AudioContext | null;
+// //   isAudioReady: boolean;
+// // }
+
+// // const AudioContext = createContext<AudioContextValue | undefined>(undefined);
+
+// // const AudioContextProvider: React.FC<{ children: React.ReactNode }> = ({
+// //   children,
+// // }) => {
+// //   const audioContextValue = useAudioCtxInternal();
+
+// //   return (
+// //     <AudioContext.Provider value={audioContextValue}>
+// //       {children}
+// //     </AudioContext.Provider>
+// //   );
+// // };
+
+// // export default AudioContextProvider;
+
+// // const useAudioCtxInternal = (): AudioContextValue => {
+// //   const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
+// //   const [isAudioReady, setIsAudioReady] = useState(false);
+
+// //   const initializeAudio = useCallback(async () => {
+// //     if (typeof window === 'undefined' || isAudioReady) return;
+
+// //     try {
+// //       const ctx = audioUtils.getAudioContext();
+// //       await audioUtils.resumeAudioContext();
+// //       setAudioCtx(ctx);
+// //       setIsAudioReady(true);
+// //     } catch (error) {
+// //       console.error('Failed to initialize audio context:', error);
+// //       setIsAudioReady(false);
+// //     }
+// //   }, [isAudioReady]);
+
+// //   useEffect(() => {
+// //     setIsAudioReady(!!audioCtx);
+// //   }, [audioCtx]);
+
+// //   useEffect(() => {
+// //     const resumeAudioContext = async () => {
+// //       if (audioCtx && audioCtx.state === 'suspended') {
+// //         await audioUtils.resumeAudioContext();
+// //       }
+// //     };
+// //     resumeAudioContext();
+// //   }, [audioCtx]);
+
+// //   const cleanup = useCallback(() => {
+// //     audioUtils.closeAudioContext();
+// //     setIsAudioReady(false);
+// //     setAudioCtx(null);
+// //   }, []);
+
+// //   useEffect(() => {
+// //     initializeAudio();
+// //     return () => {
+// //       cleanup();
+// //     };
+// //   }, []);
+
+// //   return {
+// //     audioCtx,
+// //     isAudioReady,
+// //   };
+// // };
+
+// // export const useAudioCtx = (): AudioContextValue => {
+// //   const context = useContext(AudioContext);
+// //   if (context === undefined) {
+// //     throw new Error('useAudioCtx must be used within an AudioContextProvider');
+// //   }
+// //   return context;
+// // };
+// // TODO: add mouse move event listener
+// // Add event listener to create the initial audio context
+
+// // return () => {
+// //   window.removeEventListener('click', handleInteraction);
+// //   window.removeEventListener('mousemove', handleInteraction);
+
+// //   if (audioContextRef.current) {
+// //     audioContextRef.current.close();
+// //   }
+// // };

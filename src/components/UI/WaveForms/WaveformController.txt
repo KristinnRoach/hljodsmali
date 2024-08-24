@@ -1,0 +1,52 @@
+// WaveformController.tsx
+import React, { useState, useEffect } from 'react';
+import { useSamplerEngine } from '../../../contexts/EngineContext';
+import WaveformRenderer from './WaveformRenderer';
+
+interface WaveformControllerProps {
+  width: number;
+  height: number;
+}
+
+const WaveformController: React.FC<WaveformControllerProps> = ({
+  width,
+  height,
+}) => {
+  const { selectedForSettings, getSelectedBuffers, getSampleSettings } =
+    useSamplerEngine();
+
+  const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
+  const [markers, setMarkers] = useState({
+    startPoint: 0,
+    endPoint: 1,
+    loopStart: 0,
+    loopEnd: 1,
+  });
+
+  useEffect(() => {
+    const selected = selectedForSettings[0];
+    const selectedBuffer = getSelectedBuffers('settings')[0];
+    const settings = getSampleSettings(selected, 'Time');
+
+    if (selectedBuffer && settings) {
+      setBuffer(selectedBuffer);
+      setMarkers({
+        startPoint: settings.startPoint / selectedBuffer.duration,
+        endPoint: settings.endPoint / selectedBuffer.duration,
+        loopStart: settings.loopStart / selectedBuffer.duration,
+        loopEnd: settings.loopEnd / selectedBuffer.duration,
+      });
+    }
+  }, [selectedForSettings, getSelectedBuffers, getSampleSettings]);
+
+  return (
+    <WaveformRenderer
+      width={width}
+      height={height}
+      buffer={buffer}
+      markers={markers}
+    />
+  );
+};
+
+export default WaveformController;

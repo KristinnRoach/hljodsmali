@@ -1,16 +1,12 @@
 /* __________________  CONNECT / DISCONNECT NODES __________________  */
 
-export const connectNodes = (
-  nodes: AudioNode[],
-  destination: AudioNode
-): void => {
+export const connectNodeChain = (nodes: AudioNode[]): void => {
   if (nodes.length === 0) {
     throw new Error('Nodes array is empty!');
   }
   for (let i = 0; i < nodes.length - 1; i++) {
     nodes[i].connect(nodes[i + 1]);
   }
-  nodes[nodes.length - 1].connect(destination);
 };
 
 export const disconnectNodes = (nodes: AudioNode[]): void => {
@@ -18,7 +14,7 @@ export const disconnectNodes = (nodes: AudioNode[]): void => {
 };
 
 // Connects multiple audio nodes directly to a single destination node in parallel without chaining them.
-export const connectNodesToDestination = (
+export const connectNodesParalell = (
   nodes: AudioNode[],
   destination: AudioNode
 ): void => {

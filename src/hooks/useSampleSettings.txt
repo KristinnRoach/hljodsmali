@@ -1,27 +1,39 @@
 // hooks/useSampleSettings.ts
 import { useCallback } from 'react';
 import { useSamplerCtx } from '../contexts/SamplerCtx';
-import { Sample_settings } from '../types/samples';
+import {
+  Time_settings,
+  Volume_settings,
+  Sample_settings,
+} from '../types/samples';
 
 export const useSampleSettings = () => {
-  const { latestSelectedSample, updateSampleSettings } = useSamplerCtx();
+  const { latestSelectedSample, updateTimeSettings, updateEnvelopeSettings } =
+    useSamplerCtx();
 
   const handleSettingChange = useCallback(
-    (settingKey: keyof Sample_settings, value: number) => {
-      if (!latestSelectedSample) return; // throw new Error('No sample selected');
+    (settingKey: string, value: number) => {
+      if (!latestSelectedSample) return; // Consider throwing an error here if appropriate
 
       try {
-        updateSampleSettings(latestSelectedSample.id, { [settingKey]: value });
+        if (
+          settingKey ===
+          ('startPoint' || 'endPoint' || 'loopStart' || 'loopEnd')
+        ) {
+          updateTimeSettings(latestSelectedSample.id, settingKey, value);
+        }
+        if (settingKey === ('attackTime' || 'releaseTime')) {
+          updateEnvelopeSettings(latestSelectedSample.id, settingKey, value);
+        }
       } catch (error) {
         console.error('Error updating sample settings:', error);
       }
     },
-    [latestSelectedSample, updateSampleSettings]
+    [latestSelectedSample, updateTimeSettings, updateEnvelopeSettings]
   );
 
   return { handleSettingChange };
 };
-
 // const C5_DURATION_SEC = 0.00191117077819399; // just a constant for now
 
 // const { sample_settings: settings } = latestSelectedSample; // deconstruct or not??

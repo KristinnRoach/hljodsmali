@@ -1,0 +1,446 @@
+// src/lib/SamplerEngine.tsx // ts or tsx !?
+import SingleUseVoice from './SingleUseVoice';
+import {
+  SampleRecord,
+  Sample_settings,
+  getDefaultSampleSettings,
+} from '../../types/samples';
+
+import {
+  findZeroCrossings,
+  snapToNearestZeroCrossing,
+} from '../audio-utils/zeroCrossingUtils';
+
+import {
+  FormatKey,
+  APP_FORMATS,
+  AudioFormat,
+} from '../../types/constants/mimeTypes';
+
+export type SampleNodes = {
+  sampleGain: GainNode;
+  lowCut: BiquadFilterNode;
+  highCut: BiquadFilterNode;
+};
+
+export type LoadedSample = {
+  id: string;
+  name: string;
+  slug: string;
+
+  buffer: AudioBuffer;
+  zeroCrossings: number[];
+  sample_settings: Sample_settings;
+
+  sampleNodes: SampleNodes;
+};
+
+/* Singleton class for managing audio playback and recording */
+
+export default class SamplerEngine {
+  private static instance: SamplerEngine | null = null;
+
+  private audioCtx: AudioContext;
+  private audioFormatKey: FormatKey = 'WEBM';
+
+  private loadedSamples: Map<string, LoadedSample> = new Map(); // should be Set or Map for efficient lookup?
+  private selectedSampleIds: Set<string> = new Set();
+
+  private masterGain: GainNode;
+  private output: AudioNode;
+  private externalOutputs: Set<AudioNode>;
+
+  private compressorLimiter: DynamicsCompressorNode;
+
+  /* Constructor */
+
+  private constructor(audioCtx: AudioContext | null) {
+    // Todo: Remove audioctx parameter? (use audioctcx utils?)
+    if (!audioCtx) {
+      throw new Error('Audio context not set up');
+    }
+    this.audioCtx = audioCtx;
+    this.output = this.audioCtx.destination;
+    this.externalOutputs = new Set();
+
+    this.masterGain = this.audioCtx?.createGain();
+    this.masterGain.gain.value = 0.8;
+    this.compressorLimiter = this.initializeCompressorLimiter(
+      -3,
+      6,
+      3,
+      0.01,
+      0.25
+    );
+    this.masterGain.connect(this.compressorLimiter);
+    this.compressorLimiter.connect(this.output);
+    // this.masterGain.connect(this.output); // if need to remove compressorLimiter for debugging
+
+    console.log('Sampler Engine context: ', this.audioCtx);
+
+    console.log('MIME type: ', APP_FORMATS[this.audioFormatKey]);
+
+    SingleUseVoice.initialize(this.audioCtx.sampleRate);
+  }
+
+  /* Sample Engine instance */
+
+  public static getInstance(initCtx?: AudioContext): SamplerEngine {
+    if (!SamplerEngine.instance && initCtx) {
+      SamplerEngine.instance = new SamplerEngine(initCtx);
+      console.log('new SamplerEngine instance created');
+    }
+    if (!SamplerEngine.instance) {
+      throw new Error('SamplerEngine not initialized');
+    }
+
+    return SamplerEngine.instance;
+  }
+
+  // TODO: move to audioctx utils - along with all other audioctx related functions
+  private initializeCompressorLimiter(
+    threshold: number = -10,
+    knee: number = 0,
+    ratio: number = 20,
+    attack: number = 0.003,
+    release: number = 0.25
+  ): DynamicsCompressorNode {
+    const compressor = this.audioCtx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(threshold, this.audioCtx.currentTime);
+    compressor.knee.setValueAtTime(knee, this.audioCtx.currentTime);
+    compressor.ratio.setValueAtTime(ratio, this.audioCtx.currentTime);
+    compressor.attack.setValueAtTime(attack, this.audioCtx.currentTime);
+    compressor.release.setValueAtTime(release, this.audioCtx.currentTime);
+    return compressor;
+  }
+
+  connectToExternalOutput(destination: AudioNode): void {
+    if (!this.externalOutputs.has(destination)) {
+      this.masterGain.connect(destination);
+      this.externalOutputs.add(destination);
+    }
+  }
+
+  disconnectExternalOutput(destination: AudioNode): void {
+    this.masterGain.disconnect(destination);
+    this.externalOutputs.delete(destination);
+  }
+
+  /* Loop and Hold state manager */
+
+  toggleLoop(): void {
+    SingleUseVoice.toggleLoop();
+  }
+
+  public isLooping(): boolean {
+    return SingleUseVoice.isLooping();
+  }
+
+  toggleHold(): void {
+    SingleUseVoice.toggleHold();
+  }
+
+  isHolding(): boolean {
+    return SingleUseVoice.isHolding();
+  }
+
+  setSampleLoopLocked(sampleId: string, lock: boolean): void {
+    const loadedSample = this.loadedSamples.get(sampleId);
+    if (loadedSample) {
+      loadedSample.sample_settings.loopLocked = lock;
+      // this.updateActiveLoopLocks(sampleId);
+    }
+  }
+
+  /* Engine Settings */
+
+  getAudioFormat(): FormatKey {
+    return this.audioFormatKey;
+  }
+
+  // TODO: implement (with AudioRecorder)
+  // setAudioFormat(formatKey: FormatKey): void {
+  //   this.audioFormatKey = formatKey;
+  // }
+
+  /* Sample Manager */
+
+  createGain(volume: number): GainNode {
+    const newGain = this.audioCtx.createGain();
+    newGain.gain.value = volume;
+    return newGain;
+  }
+
+  createFilters(
+    lowCutoff?: number,
+    highCutoff?: number
+  ): { lowCut: BiquadFilterNode; highCut: BiquadFilterNode } {
+    const lowCut = this.audioCtx.createBiquadFilter();
+    lowCut.type = 'highpass';
+    lowCut.frequency.value = lowCutoff || 40;
+
+    const highCut = this.audioCtx.createBiquadFilter();
+    highCut.type = 'lowpass';
+    highCut.frequency.value = highCutoff || 20000;
+
+    return { lowCut: lowCut, highCut: highCut };
+  }
+
+  connectSampleAudioNodes(
+    sampleGain: GainNode,
+    lowCut: BiquadFilterNode,
+    highCut: BiquadFilterNode,
+    masterOut: GainNode = this.masterGain
+  ): void {
+    if (!masterOut) throw new Error('Master output not set up');
+
+    sampleGain.connect(lowCut);
+    lowCut.connect(highCut);
+    highCut.connect(masterOut);
+    masterOut.connect(this.audioCtx.destination);
+  }
+
+  // createSampleFile ?
+  // createSampleRecord ?
+
+  loadSample(record: SampleRecord, buffer: AudioBuffer): void {
+    const settings = record.sample_settings;
+    const zeroCrossings = findZeroCrossings(buffer);
+
+    const sampleGain = this.createGain(settings.sampleVolume);
+
+    const { lowCut, highCut } = this.createFilters(
+      settings.lowCutoff,
+      settings.highCutoff
+    );
+
+    this.connectSampleAudioNodes(sampleGain, lowCut, highCut);
+    const sampleNodes = { sampleGain, lowCut, highCut };
+
+    const loadedSample: LoadedSample = {
+      id: record.id,
+      name: record.name,
+      slug: record.slug,
+      buffer: buffer,
+      zeroCrossings: zeroCrossings,
+      sample_settings: settings,
+      sampleNodes: sampleNodes,
+    };
+
+    this.loadedSamples.set(loadedSample.id, loadedSample);
+
+    SingleUseVoice.zeroCrossings.set(record.id, zeroCrossings); // VALIDATE zeroCrossings is ok
+
+    SingleUseVoice.sampleSettings.set(
+      loadedSample.id,
+      loadedSample.sample_settings
+    );
+
+    console.log('Loaded sample:', loadedSample);
+
+    // return loadedSample;
+  }
+
+  unloadSample(id: string): void {
+    this.loadedSamples.delete(id);
+    SingleUseVoice.sampleSettings.delete(id);
+    SingleUseVoice.zeroCrossings.delete(id);
+  }
+
+  // getUpdatedSamples(): Sample_db[] {
+  //   const updatedSamples = [...this.updatedSamples.values()];
+  //   this.updatedSamples = new Map();
+  //   return updatedSamples;
+  // }
+
+  setSampleVolume(sampleId: string, volume: number) {
+    const loaded = this.loadedSamples.get(sampleId);
+    if (loaded) {
+      loaded.sampleNodes.sampleGain.gain.setValueAtTime(
+        volume,
+        this.audioCtx.currentTime
+      );
+      loaded.sample_settings.sampleVolume = volume;
+    }
+  }
+
+  removeSample(id: string): void {
+    this.loadedSamples.delete(id);
+    this.selectedSampleIds.delete(id);
+  }
+
+  isSampleLoaded(id: string): boolean {
+    const sample = this.loadedSamples.get(id);
+
+    return (
+      (sample && sample.buffer && sample.sampleNodes.sampleGain) !== undefined
+    );
+  }
+
+  isSampleSelected(id: string): boolean {
+    return this.selectedSampleIds.has(id);
+  }
+
+  setSelectedSampleIds(ids: string[]): void {
+    this.selectedSampleIds = new Set(ids);
+
+    ids.forEach((id) => {
+      if (this.loadedSamples.has(id)) {
+        this.selectedSampleIds.add(id);
+      } else {
+        console.error(`Sample ${id} not loaded`);
+      }
+    });
+  }
+
+  isPlaying(): boolean {
+    return SingleUseVoice.isPlaying();
+  }
+
+  getCurrentPlayheadPosition(): number {
+    return SingleUseVoice.getCurrentPlayheadPosition();
+  }
+
+  getSelectedSampleIds(): string[] {
+    return Array.from(this.selectedSampleIds);
+  }
+
+  // getSelectedSampleRecords(): SampleRecord[] {
+  //   if (this.selectedSampleIds.size === 0) {
+  //     return [];
+  //   }
+  //   return Array.from(this.selectedSampleIds)
+  //     .map((id) => this.loadedSamples.get(id)?.sample)
+  //     .filter((sample): sample is SampleRecord => sample !== undefined);
+  // }
+
+  getLoadedSamples(): LoadedSample[] {
+    return Array.from(this.loadedSamples.values());
+  }
+
+  getSelectedLoadedSamples(): LoadedSample[] {
+    return Array.from(this.loadedSamples.values()).filter((loadedSample) =>
+      this.selectedSampleIds.has(loadedSample.id)
+    );
+  }
+
+  updateSampleSettings(id: string, settings: Partial<Sample_settings>) {
+    try {
+      const loadedSample = this.loadedSamples.get(id);
+
+      if (loadedSample) {
+        if (settings.lowCutoff !== undefined) {
+          loadedSample.sampleNodes.lowCut.frequency.setValueAtTime(
+            settings.lowCutoff,
+            this.audioCtx.currentTime
+          );
+          loadedSample.sample_settings.lowCutoff = settings.lowCutoff;
+        }
+        if (settings.highCutoff !== undefined) {
+          loadedSample.sampleNodes.highCut.frequency.setValueAtTime(
+            settings.highCutoff,
+            this.audioCtx.currentTime
+          );
+          loadedSample.sample_settings.highCutoff = settings.highCutoff;
+        }
+        if (settings.startPoint !== undefined && loadedSample.zeroCrossings) {
+          const snapped = snapToNearestZeroCrossing(
+            settings.startPoint,
+            loadedSample.zeroCrossings
+          );
+          loadedSample.sample_settings.startPoint = snapped;
+        }
+        if (settings.endPoint !== undefined && loadedSample.zeroCrossings) {
+          const snapped = snapToNearestZeroCrossing(
+            settings.endPoint,
+            loadedSample.zeroCrossings
+          );
+          loadedSample.sample_settings.endPoint = snapped;
+        }
+
+        if (settings.transposition !== undefined) {
+          loadedSample.sample_settings.transposition = settings.transposition;
+        }
+
+        if (settings.tuneOffset !== undefined) {
+          loadedSample.sample_settings.tuneOffset = settings.tuneOffset;
+        }
+
+        // const newLoadedSample = {
+        //   // WHY???
+        //   ...loadedSample,
+        //   sample_settings: {
+        //     ...loadedSample.sample_settings,
+        //     ...settings,
+        //   },
+        // };
+
+        SingleUseVoice.sampleSettings.set(
+          loadedSample.id,
+          loadedSample.sample_settings
+        );
+
+        console.log(
+          'Updated sample settings:',
+          loadedSample.sample_settings.transposition,
+          loadedSample.sample_settings.tuneOffset,
+          loadedSample.sample_settings.lowCutoff
+        );
+
+        if (
+          'loopStart' in settings ||
+          'loopEnd' in settings ||
+          'tuneOffset' in settings ||
+          'transposition' in settings ||
+          'sampleVolume' in settings ||
+          'loopVolume' in settings
+        ) {
+          SingleUseVoice.updateActiveVoices(id, settings);
+        }
+      }
+    } catch (error) {
+      console.error(`Error updating sample ${id}:`, error);
+    }
+  }
+
+  /* Playback */
+
+  playNote(midiNote: number): void {
+    const selected = this.getSelectedLoadedSamples();
+
+    // can this be done in paralell instead of sequentially?
+    selected.forEach((s) => {
+      if (s && s.buffer) {
+        const voice = new SingleUseVoice(this.audioCtx, s.buffer, s.id);
+        voice.getVoiceGain().connect(s.sampleNodes.sampleGain);
+        voice.start(midiNote);
+      }
+    });
+  }
+
+  releaseNote(midiNote: number): void {
+    SingleUseVoice.releaseNote(midiNote);
+  }
+
+  stopAllVoices(): void {
+    SingleUseVoice.panic();
+  }
+
+  /* Master Volume */
+
+  setMasterVolume(volume: number) {
+    // add ramp?
+    this.masterGain.gain.setTargetAtTime(
+      volume,
+      this.audioCtx.currentTime + 0.01,
+      0.5
+    ); //not tested time constant value
+  }
+
+  getMasterVolume(): number {
+    if (!this.masterGain.gain.value) {
+      throw new Error('Master gain node not set up');
+    }
+    return this.masterGain.gain.value;
+  }
+}

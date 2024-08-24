@@ -1,0 +1,82 @@
+
+  return (
+    <div className={styles.sampler}>
+      <section className={styles.topBar}>
+        <Auth className={styles.loginContainer} />
+        <Shapes className={styles.shapesContainer} />
+        <AudioDeviceSelector className={styles.deviceSelectorContainer} />
+      </section>
+
+      {/* {isAudioReady && ( */}
+      <>
+        <section className={styles.controlsContainer}>
+          {selectedForSettings[0] && <Tuner className={styles.tuner} />}
+
+          <Recorder resamplerMode={true} />
+          <Recorder />
+
+          <Toggle
+            label='Loop'
+            isOn={isSpacebarPressed ? !loopState : loopState}
+            onToggle={handleToggleLoop}
+            type='loop'
+          />
+          <Toggle
+            label='Hold'
+            isOn={isSpacebarPressed ? !holdState : holdState}
+            onToggle={handleToggleHold}
+            type='hold'
+          />
+        </section>
+
+        {/* {selectedForSettings[0] &&
+          getBufferDuration(selectedForSettings[0]) > 0 && ( */}
+        <>
+          <section className={styles.waveformContainer}>
+            <ToggleMenu label='Waveform'>
+              <Waveform
+                sampleId={selectedForSettings[0]}
+                buffer={getSelectedBuffers('settings')[0]}
+                className={styles.waveform}
+                showCenterLine={true}
+              />
+              {/* <WaveformEditor sampleId={selectedForSettings[0]} /> */}
+            </ToggleMenu>
+          </section>
+
+          <section className={styles.envelopeContainer}>
+            <ToggleMenu label='Envelope'>
+              <AmpEnvelopeControls />
+            </ToggleMenu>
+          </section>
+        </>
+        {/* )} */}
+      </>
+      {/* )} */}
+      {/*
+      <section className={styles.keyboardContainer}>
+        <ToggleMenu label='Keyboard'>
+          <KeyboardGUI />
+        </ToggleMenu>
+      </section>
+
+      <section className={styles.samplesContainer}>
+        <ToggleMenu label={isLoading ? 'Loading...' : 'Samples'}>
+          {!isLoading && sampleRecords.length > 0 && (
+            <List
+              items={sampleRecords}
+              title='Samples'
+              paramName='samples'
+              itemsPerPage={constants.SAMPLES_PER_PAGE}
+              onDelete={(id: string) => deleteSample(id)}
+              onSave={(id: string) => updateSample(id)}
+            />
+          )}
+           <ToggleMenu label='Settings'>
+            <SampleSettings />
+          </ToggleMenu> 
+        </ToggleMenu>  */}
+      </section>
+    </div>
+  );
+}

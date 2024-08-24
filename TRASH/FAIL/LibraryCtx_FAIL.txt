@@ -1,0 +1,390 @@
+// src/contexts/LibraryCtx.tsx
+
+'use client';
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from 'react';
+import { SampleRecord, Sample_settings, Sample_file } from '../types/samples';
+import { getDefaultSampleSettings } from '../types/samples';
+
+import {
+  fetchSamples,
+  createNewSampleRecord,
+  updateDB_SampleRecord,
+  deleteSampleRecord,
+} from '../lib/db/pocketbase';
+
+type LibraryContextType = {
+  sampleRecords: SampleRecord[];
+  selectedSampleIds: string[];
+  isLoading: boolean;
+  unsavedSampleIds: Set<string>;
+  selectSample: (id: string) => void;
+  deselectSample: (id: string) => void;
+  toggleSampleSelection: (id: string) => void;
+  addSample: (sample: Omit<SampleRecord, 'id'>) => void;
+  updateSample: (id: string, updates: Partial<SampleRecord>) => void;
+  updateSampleSettings: (
+    id: string,
+    settings: Partial<Sample_settings>
+  ) => void;
+  deleteSample: (id: string) => void;
+  saveChanges: () => Promise<void>;
+  getSelectedSamples: () => SampleRecord[];
+};
+
+const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
+
+export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [sampleRecords, setSampleRecords] = useState<SampleRecord[]>([]);
+  const [selectedSampleIds, setSelectedSampleIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [unsavedSampleIds, setUnsavedSampleIds] = useState<Set<string>>(
+    new Set()
+  );
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetchSamples()
+      .then(setSampleRecords)
+      .catch((error) => console.error('Error fetching samples:', error))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const selectSample = useCallback((id: string) => {
+    setSelectedSampleIds((prev) => [...prev, id]);
+  }, []);
+
+  const deselectSample = useCallback((id: string) => {
+    setSelectedSampleIds((prev) => prev.filter((sampleId) => sampleId !== id));
+  }, []);
+
+  const toggleSampleSelection = useCallback((id: string) => {
+    setSelectedSampleIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((sampleId) => sampleId !== id)
+        : [...prev, id]
+    );
+  }, []);
+
+  const addSample = useCallback((newSample: Omit<SampleRecord, 'id'>) => {
+    const id = Math.random().toString(36).slice(2, 11);
+    const sample: SampleRecord = {
+      ...newSample,
+      id,
+      sample_settings: getDefaultSampleSettings(
+        newSample.bufferDuration || 0,
+        newSample.sample_settings
+      ),
+    };
+    setSampleRecords((prev) => [...prev, sample]);
+    setUnsavedSampleIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  const updateSample = useCallback(
+    (id: string, updates: Partial<SampleRecord>) => {
+      setSampleRecords((prevSamples) =>
+        prevSamples.map((sample) =>
+          sample.id === id ? { ...sample, ...updates } : sample
+        )
+      );
+      setUnsavedSampleIds((prev) => new Set(prev).add(id));
+    },
+    []
+  );
+
+  const updateSampleSettings = useCallback(
+    (id: string, settingsUpdates: Partial<Sample_settings>) => {
+      setSampleRecords((prevSamples) =>
+        prevSamples.map((sample) =>
+          sample.id === id
+            ? {
+                ...sample,
+                sample_settings: {
+                  ...sample.sample_settings,
+                  ...settingsUpdates,
+                },
+              }
+            : sample
+        )
+      );
+      setUnsavedSampleIds((prev) => new Set(prev).add(id));
+    },
+    []
+  );
+
+  const getSelectedSamples = useCallback(
+    () =>
+      sampleRecords.filter((sample) => selectedSampleIds.includes(sample.id)),
+    [sampleRecords, selectedSampleIds]
+  );
+
+  const deleteSample = useCallback((id: string) => {
+    setSampleRecords((prev) => prev.filter((sample) => sample.id !== id));
+    setSelectedSampleIds((prev) => prev.filter((sampleId) => sampleId !== id));
+    setUnsavedSampleIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
+    deleteSampleRecord(id).catch((error) =>
+      console.error(`Error deleting sample ${id}:`, error)
+    );
+  }, []);
+
+  const saveChanges = useCallback(async () => {
+    const savePromises = Array.from(unsavedSampleIds).map((id) => {
+      const sample = sampleRecords.find((s) => s.id === id);
+      if (sample) {
+        return updateDB_SampleRecord(id, sample);
+      }
+      return Promise.resolve();
+    });
+
+    await Promise.all(savePromises);
+    setUnsavedSampleIds(new Set());
+  }, [sampleRecords, unsavedSampleIds]);
+
+  return (
+    <LibraryContext.Provider
+      value={{
+        sampleRecords,
+        selectedSampleIds,
+        isLoading,
+        unsavedSampleIds,
+        selectSample,
+        deselectSample,
+        toggleSampleSelection,
+        addSample,
+        updateSample,
+        updateSampleSettings,
+        deleteSample,
+        saveChanges,
+        getSelectedSamples,
+      }}
+    >
+      {children}
+    </LibraryContext.Provider>
+  );
+};
+
+export const useLibraryCtx = () => {
+  const context = useContext(LibraryContext);
+  if (context === undefined) {
+    throw new Error('useLibraryContext must be used within a LibraryProvider');
+  }
+  return context;
+};
+
+// // src/contexts/LibraryContext.tsx
+
+// import React, {
+//   createContext,
+//   useContext,
+//   useState,
+//   useCallback,
+//   useEffect,
+// } from 'react';
+// import { SampleRecord } from '../types/samples';
+// import {
+//   fetchSamples,
+//   createNewSampleRecord,
+//   updateDB_SampleRecord,
+//   deleteSampleRecord,
+// } from '../lib/db/pocketbase';
+
+// type LibraryCtxType = {
+//   samples: SampleRecord[];
+//   selectedSamples: string[];
+//   isLoading: boolean;
+//   unsavedSampleIds: Set<string>;
+//   selectSample: (id: string) => void;
+//   deselectSample: (id: string) => void;
+//   toggleSample: (id: string) => void;
+//   addSample: (record: SampleRecord) => void;
+//   updateSample: (id: string, updates: Partial<SampleRecord>) => void;
+//   deleteSample: (id: string) => void;
+//   saveChanges: () => Promise<void>;
+// };
+
+// const LibraryCtx = createContext<LibraryCtxType | undefined>(undefined);
+
+// const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
+//   children,
+// }) => {
+//   const [samples, setSamples] = useState<SampleRecord[]>([]);
+//   const [selectedSamples, setSelectedSamples] = useState<string[]>([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [unsavedSampleIds, setUnsavedSampleIds] = useState<Set<string>>(
+//     new Set()
+//   );
+
+//   useEffect(() => {
+//     setIsLoading(true);
+//     fetchSamples()
+//       .then(setSamples)
+//       .catch((error) => console.error('Error fetching samples:', error))
+//       .finally(() => setIsLoading(false));
+//   }, []);
+
+//   const selectSample = useCallback((id: string) => {
+//     setSelectedSamples((prev) => [...prev, id]);
+//   }, []);
+
+//   const deselectSample = useCallback((id: string) => {
+//     setSelectedSamples((prev) => prev.filter((sampleId) => sampleId !== id));
+//   }, []);
+
+//   const toggleSample = useCallback((id: string) => {
+//     setSelectedSamples((prev) =>
+//       prev.includes(id)
+//         ? prev.filter((sampleId) => sampleId !== id)
+//         : [...prev, id]
+//     );
+//   }, []);
+
+//   const addSample = useCallback((record: SampleRecord) => {
+//     setSamples((prev) => [...prev, record]);
+//     setUnsavedSampleIds((prev) => new Set(prev).add(record.id));
+//   }, []);
+
+//   const updateSample = useCallback(
+//     (id: string, updates: Partial<SampleRecord>) => {
+//       setSamples((prev) =>
+//         prev.map((sample) =>
+//           sample.id === id ? { ...sample, ...updates } : sample
+//         )
+//       );
+//       setUnsavedSampleIds((prev) => new Set(prev).add(id));
+//     },
+//     []
+//   );
+
+//   const deleteSample = useCallback((id: string) => {
+//     setSamples((prev) => prev.filter((sample) => sample.id !== id));
+//     setSelectedSamples((prev) => prev.filter((sampleId) => sampleId !== id));
+//     setUnsavedSampleIds((prev) => {
+//       const newSet = new Set(prev);
+//       newSet.delete(id);
+//       return newSet;
+//     });
+//     deleteSampleRecord(id).catch((error) =>
+//       console.error(`Error deleting sample ${id}:`, error)
+//     );
+//   }, []);
+
+//   const saveChanges = useCallback(async () => {
+//     const savePromises = Array.from(unsavedSampleIds).map((id) => {
+//       const sample = samples.find((s) => s.id === id);
+//       if (sample) {
+//         return updateDB_SampleRecord(id, sample);
+//       }
+//       return Promise.resolve();
+//     });
+
+//     await Promise.all(savePromises);
+//     setUnsavedSampleIds(new Set());
+//   }, [samples, unsavedSampleIds]);
+
+//   return (
+//     <LibraryCtx.Provider
+//       value={{
+//         samples,
+//         selectedSamples,
+//         isLoading,
+//         unsavedSampleIds,
+//         selectSample,
+//         deselectSample,
+//         toggleSample,
+//         addSample,
+//         updateSample,
+//         deleteSample,
+//         saveChanges,
+//       }}
+//     >
+//       {children}
+//     </LibraryCtx.Provider>
+//   );
+// };
+
+// export default LibraryProvider;
+
+// export const useLibraryCtx = () => {
+//   const context = useContext(LibraryCtx);
+//   if (context === undefined) {
+//     throw new Error('useLibraryCtx must be used within a LibraryProvider');
+//   }
+//   return context;
+// };
+
+// import React, { createContext, useContext, useState, useCallback } from 'react';
+
+// type Sample = {
+//   id: string;
+//   name: string;
+//   slug: string;
+// };
+
+// type LibraryCtxType = {
+//   samples: Sample[];
+//   selectedSamples: string[];
+//   selectSample: (id: string) => void;
+//   deselectSample: (id: string) => void;
+//   toggleSample: (id: string) => void;
+// };
+
+// const LibraryCtx = createContext<LibraryCtxType | undefined>(undefined);
+
+// const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({
+//   children,
+// }) => {
+//   const [samples, setSamples] = useState<Sample[]>([]);
+//   const [selectedSamples, setSelectedSamples] = useState<string[]>([]);
+
+//   const selectSample = useCallback((id: string) => {
+//     setSelectedSamples((prev) => [...prev, id]);
+//   }, []);
+
+//   const deselectSample = useCallback((id: string) => {
+//     setSelectedSamples((prev) => prev.filter((sampleId) => sampleId !== id));
+//   }, []);
+
+//   const toggleSample = useCallback((id: string) => {
+//     setSelectedSamples((prev) =>
+//       prev.includes(id)
+//         ? prev.filter((sampleId) => sampleId !== id)
+//         : [...prev, id]
+//     );
+//   }, []);
+
+//   return (
+//     <LibraryCtx.Provider
+//       value={{
+//         samples,
+//         selectedSamples,
+//         selectSample,
+//         deselectSample,
+//         toggleSample,
+//       }}
+//     >
+//       {children}
+//     </LibraryCtx.Provider>
+//   );
+// };
+
+// export default LibraryProvider;
+
+// export const useLibraryCtx = () => {
+//   const context = useContext(LibraryCtx);
+//   if (context === undefined) {
+//     throw new Error('useLibraryCtx must be used within a LibraryProvider');
+//   }
+//   return context;
+// };

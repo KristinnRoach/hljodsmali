@@ -7,6 +7,8 @@ function AudioDeviceSelector({ className }: { className?: string }) {
   const { inputs, outputs, inputID, outputID, setInputID, setOutputID } =
     useAudioDeviceCtx();
 
+  // TODO: re-render when input devices change
+
   return (
     <div className={className}>
       {/* <p>Input Device: </p> */}
