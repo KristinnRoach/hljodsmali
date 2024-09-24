@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import pb from '../lib/db/pocketbase';
+import pb from '../../lib/db/pocketbase';
 
 export default function useLogout() {
   const [loggedOut, setLoggedOut] = useState(false); // dummy for triggering rerender

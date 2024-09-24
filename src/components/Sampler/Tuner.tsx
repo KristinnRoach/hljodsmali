@@ -8,7 +8,9 @@ import Knob from '../UI/Basic/Knob';
 import TestTone from './TestTone';
 
 import { getFrequency } from '../../types/constants/note-utils';
-import { Pitch_settings } from '../../types/samples';
+import { Pitch_settings } from '../../types/types';
+
+import { useDraggable } from '@dnd-kit/core';
 
 type TunerProps = {
   className?: string;
@@ -17,18 +19,31 @@ type TunerProps = {
 function Tuner(props: TunerProps) {
   // const { handleSettingChange } = useSampleSettings();
   // const { transposition, tuneOffset } = props;
-  const { selectedForSettings, getSampleSettings, updatePitchSettings } =
-    useSamplerEngine();
+  const {
+    focusedSettings: selectedForSettings,
+    getSampleSettings,
+    updatePitchParam,
+  } = useSamplerEngine();
 
   const [transposition, setTransposition] = useState<number>(0);
   const [tuneOffset, setTuneOffset] = useState<number>(0);
   const [oscFrequency, setOscFrequency] = useState(getFrequency('C4'));
 
-  useEffect(() => {
-    if (selectedForSettings.length === 0) return;
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: 'draggable',
+  });
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
 
+  useEffect(() => {
     const sampleId = selectedForSettings[0]; // We know there's at least one selected sample because of conditional rendering in parent component
-    const settings = getSampleSettings(sampleId, 'Pitch') as Pitch_settings;
+    if (!sampleId) return;
+
+    const settings = getSampleSettings(sampleId, 'pitch') as Pitch_settings;
+    if (!(settings && settings.transposition && settings.tuneOffset)) return;
 
     setTransposition(settings.transposition ?? 0);
     setTuneOffset(settings.tuneOffset ?? 0);
@@ -36,48 +51,48 @@ function Tuner(props: TunerProps) {
 
   const handleTransposition = (newValue: number) => {
     setTransposition(newValue);
-    const sampleId = selectedForSettings[0];
-    if (!sampleId) return;
-    updatePitchSettings(sampleId, { transposition: newValue });
+    updatePitchParam('transposition', newValue || 0);
   };
 
   const handleTuneOffset = (newValue: number) => {
     setTuneOffset(newValue);
     const sampleId = selectedForSettings[0];
     if (!sampleId) return;
-    updatePitchSettings(sampleId, { tuneOffset: newValue });
+    updatePitchParam('tuneOffset', newValue || 0);
   };
 
   return (
-    <div className={props.className || ''}>
-      {selectedForSettings.length > 0 && (
-        <Knob
-          label={'Transpose'}
-          value={transposition ?? 0}
-          min={-24}
-          max={24}
-          step={1}
-          onChange={(value) => handleTransposition(value)}
-          size='m'
-        />
-      )}
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div className={props.className || ''}>
+        {selectedForSettings.length > 0 && (
+          <Knob
+            label={'Transpose'}
+            value={transposition ?? 0}
+            min={-24}
+            max={24}
+            step={1}
+            onChange={(value) => handleTransposition(value)}
+            size='m'
+          />
+        )}
 
-      <TestTone
-        frequency={oscFrequency || 261.626}
-        className={'styles.testTone'}
-      />
-
-      {selectedForSettings.length > 0 && (
-        <Knob
-          label={'Detune'}
-          value={tuneOffset ?? 0}
-          min={-1.0}
-          max={1.0}
-          step={0.01}
-          onChange={(value) => handleTuneOffset(value)}
-          size='m'
+        <TestTone
+          frequency={oscFrequency || 261.626}
+          className={'styles.testTone'}
         />
-      )}
+
+        {selectedForSettings.length > 0 && (
+          <Knob
+            label={'Detune'}
+            value={tuneOffset ?? 0}
+            min={-1.0}
+            max={1.0}
+            step={0.01}
+            onChange={(value) => handleTuneOffset(value)}
+            size='m'
+          />
+        )}
+      </div>
     </div>
   );
 }

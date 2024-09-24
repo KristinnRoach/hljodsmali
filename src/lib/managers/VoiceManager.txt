@@ -1,0 +1,189 @@
+// src/lib/engine/VoiceManager.ts
+import SingleUseVoice from '../SingleUseVoice';
+import LoopHoldManager from './LoopHoldManager';
+import SampleSettingsManager from './SettingsManager';
+import ZeroCrossingManager from './ZeroCrossingManager';
+
+export default class VoiceManager {
+  private static instance: VoiceManager;
+  private allVoices: Set<SingleUseVoice> = new Set();
+
+  private constructor() {}
+
+  static getInstance(): VoiceManager {
+    if (!VoiceManager.instance) {
+      VoiceManager.instance = new VoiceManager();
+    }
+    return VoiceManager.instance;
+  }
+
+  addVoice(voice: SingleUseVoice): void {
+    this.allVoices.add(voice);
+  }
+
+  removeVoice(voice: SingleUseVoice): void {
+    this.allVoices.delete(voice);
+  }
+
+  getVoicesForSample(sampleId: string): SingleUseVoice[] {
+    return Array.from(this.allVoices).filter(
+      (voice) => voice.getSampleId() === sampleId
+    );
+  }
+
+  releaseNote(midiNote: number): void {
+    const globalState = LoopHoldManager.getInstance(); // ok to have a field variable or potential for stale state?
+    this.allVoices.forEach((voice) => {
+      if (voice.getMidiNote() === midiNote && !globalState.hold) {
+        voice.triggerRelease();
+      }
+    });
+  }
+
+  // is any voice playing?
+  hasPlayingVoices(): boolean {
+    return this.allVoices.size > 0;
+  }
+
+  numberOfPlayingVoices(): number {
+    return this.allVoices.size;
+  }
+
+  getCurrentPlayheadPosition(): number {
+    if (this.allVoices.size === 0) return 0;
+    const voice = Array.from(this.allVoices)[0];
+    return voice.getTriggerTime() > 0
+      ? voice.getVoiceGain().context.currentTime - voice.getTriggerTime()
+      : 0;
+  }
+
+  releaseAllVoices(): void {
+    this.allVoices.forEach((voice) => voice.triggerRelease());
+    this.allVoices.clear();
+  }
+
+  panic(): void {
+    this.allVoices.forEach((voice) => voice.stop());
+    LoopHoldManager.getInstance().globalLoop = false;
+    this.allVoices.clear();
+  }
+
+  updateActiveVoices_LoopPoints(
+    sampleId: string,
+    newStart: number,
+    newEnd: number,
+    prevStart: number,
+    prevEnd: number
+  ) {
+    this.allVoices.forEach((voice) => {
+      if (voice.getSampleId() === sampleId) {
+        voice.updateLoopPoints(newStart, newEnd, prevStart, prevEnd);
+      }
+    });
+  }
+}
+
+// updateActiveVoices(
+//   sampleId: string,
+//   updateFn: (voice: SingleUseVoice) => void
+// ): void {
+//   this.allVoices.forEach((voice) => {
+//     if (voice.getSampleId() === sampleId) {
+//       updateFn(voice);
+//     }
+//   });
+// }
+
+// private updateHoldState(): void {
+//   const globalState = LoopHoldManager.getInstance();
+//   this.allVoices.forEach((voice) => {
+//     voice.setHold(globalState.hold);
+//   });
+// }
+
+// // ____________  TESTING ____________
+
+// // ________ MOVE STATIC STUFF TO VOICE MANAGER ________
+
+// static updateActiveVoices(
+//   sampleId: string,
+//   updateFn: (voice: SingleUseVoice) => void
+// ): void {
+//   SingleUseVoice.allVoices.forEach((voice) => {
+//     if (voice.sampleId === sampleId) {
+//       updateFn(voice);
+//     }
+//   });
+// }
+
+// private updateLoopPoints(
+//   newStart: number,
+//   newEnd: number,
+//   prevStart: number,
+//   prevEnd: number
+// ): void {
+//   const newLoopLength = newEnd - newStart;
+//   if (newLoopLength <= C5_DURATION_SEC) return;
+
+//   let calcStart = snapToNearestZeroCrossing(newStart, zeroCrossings);
+//   let calcEnd = snapToNearestZeroCrossing(newEnd, zeroCrossings);
+
+//   const zeroSnapLength = calcEnd - calcStart;
+//   if (zeroSnapLength > 0.015) {
+//     this.setLoopStart(calcStart);
+//     this.setLoopEnd(calcEnd);
+//     return;
+//   }
+
+//   // _____________ optimize above and below when working ______________________
+
+//   const prevLoopLength = prevEnd - prevStart;
+
+//   const nearestNote = snapDurationToNote(
+//     zeroSnapLength,
+//     ['C'],
+//     'C',
+//     'C',
+//     0,
+//     7,
+//     'sec'
+//   );
+
+//   interpolateDurationToNote(
+//     prevLoopLength,
+//     nearestNote,
+//     ['C'],
+//     'C',
+//     'C',
+//     0,
+//     7,
+//     'sec',
+//     500, // animation duration in ms,
+//     (interpolatedLength: number) => {
+//       // console.log(interpolatedLength);
+
+//       // Update your state or UI with the interpolated duration
+//       const newEnd = calcStart + interpolatedLength;
+//       this.setLoopStart(calcStart);
+//       this.setLoopEnd(newEnd);
+//     }
+//   );
+// }
+
+// private setLoop(): void {
+//   const isLoopOn = LoopHoldManager.getInstance().globalLoop;
+
+//   const sampleManager = SettingsManager.getInstance();
+//   const settings = sampleManager.getSampleSettings(this.sampleId)!;
+
+//   if (settings.locks.loop) return;
+
+//   if (!isLoopOn) {
+//     this.triggerRelease();
+//     return;
+//   }
+//   this.source.loopStart = settings.time.loopStart;
+//   this.source.loopEnd = settings.time.loopEnd;
+//   this.source.loop = isLoopOn;
+//   // this.calculateLoopPoints(); // test !
+// }

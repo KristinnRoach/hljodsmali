@@ -1,0 +1,173 @@
+// src/lib/managers/SettingsManager.ts
+import {
+  Sample_settings,
+  Filter_settings,
+  Lock_settings,
+  Pitch_settings,
+  Time_settings,
+  AmpEnv,
+  Volume_settings,
+  SettingsType,
+  TimeParam,
+  AmpEnvParam,
+  FilterParam,
+  LockParam,
+  PitchParam,
+  VolumeParam,
+} from '../../types/samples';
+
+import VoiceManager from './VoiceManager';
+import ZeroCrossingManager from './ZeroCrossingManager';
+
+export default class SampleSettingsManager {
+  private static instance: SampleSettingsManager;
+  private sampleSettings: Map<string, Sample_settings>;
+  private zeroCrossingManager: ZeroCrossingManager;
+  private voiceManager: VoiceManager;
+
+  private constructor() {
+    this.sampleSettings = new Map();
+    this.zeroCrossingManager = ZeroCrossingManager.getInstance();
+    this.voiceManager = VoiceManager.getInstance();
+  }
+
+  static getInstance(): SampleSettingsManager {
+    if (!SampleSettingsManager.instance) {
+      SampleSettingsManager.instance = new SampleSettingsManager();
+    }
+    return SampleSettingsManager.instance;
+  }
+
+  setSampleSettings(sampleId: string, settings: Sample_settings): void {
+    this.sampleSettings.set(sampleId, settings);
+  }
+
+  removeSampleSettings(sampleId: string): void {
+    this.sampleSettings.delete(sampleId);
+  }
+
+  hasSampleSettings(sampleId: string): boolean {
+    return this.sampleSettings.has(sampleId);
+  }
+
+  getSampleSettings(
+    id: string,
+    type?: SettingsType
+  ): Sample_settings | Sample_settings[SettingsType] | null {
+    if (this.sampleSettings === undefined || this.sampleSettings.size === 0)
+      return null;
+
+    if (!this.hasSampleSettings(id)) {
+      console.error(`Sample ${id} not loaded`);
+      return null;
+    }
+
+    const settings = this.sampleSettings.get(id);
+
+    if (!settings) {
+      console.error(`Sample ${id} not loaded`);
+      return null;
+    }
+
+    return type ? settings[type] : settings;
+  }
+
+  updateTimeParam(sampleId: string, param: TimeParam, newValue: number): void {
+    const currentSettings = this.getSampleSettings(
+      sampleId,
+      'time'
+    ) as Time_settings;
+
+    const snappedValue = this.zeroCrossingManager.snapToZeroCrossing(
+      newValue,
+      sampleId
+    );
+
+    if (!snappedValue) return; // needed?
+
+    // update the samples settings for already playing voices
+    if (param === 'loopStart') {
+      this.voiceManager.updateActiveVoices_LoopPoints(
+        sampleId,
+        snappedValue,
+        currentSettings.loopEnd,
+        currentSettings.loopStart,
+        currentSettings.loopEnd
+      );
+    } // TODO: clean up these duplicates
+
+    if (param === 'loopEnd') {
+      this.voiceManager.updateActiveVoices_LoopPoints(
+        sampleId,
+        currentSettings.loopStart,
+        snappedValue,
+        currentSettings.loopStart,
+        currentSettings.loopEnd
+      );
+    }
+
+    // update the samples settings for future voices
+    currentSettings[param] = snappedValue;
+  }
+
+  updateAmpEnvParam(
+    sampleId: string,
+    param: AmpEnvParam,
+    newValue: number
+  ): void {
+    const currentSettings = this.getSampleSettings(
+      sampleId,
+      'ampEnv'
+    ) as AmpEnv;
+
+    currentSettings[param] = newValue;
+  }
+
+  updateVolumeParam(
+    sampleId: string,
+    param: VolumeParam,
+    newValue: number
+  ): void {
+    const currentSettings = this.getSampleSettings(
+      sampleId,
+      'volume'
+    ) as Volume_settings;
+
+    currentSettings[param] = newValue;
+  }
+
+  updatePitchParam(
+    sampleId: string,
+    param: PitchParam,
+    newValue: number
+  ): void {
+    const currentSettings = this.getSampleSettings(
+      sampleId,
+      'pitch'
+    ) as Pitch_settings;
+
+    currentSettings[param] = newValue;
+  }
+
+  updateFilterParam(
+    sampleId: string,
+    param: FilterParam,
+    newValue: number
+  ): void {
+    const currentSettings = this.getSampleSettings(
+      sampleId,
+      'filters'
+    ) as Filter_settings;
+
+    currentSettings[param] = newValue;
+  }
+
+  toggleLock(sampleId: string, param: LockParam): void {
+    const currentSettings = this.getSampleSettings(
+      sampleId,
+      'locks'
+    ) as Lock_settings;
+
+    currentSettings[param] = !currentSettings[param];
+  }
+}

@@ -5,7 +5,42 @@ import {
   // AUDIO_TYPE_EXT_ENUM,
 } from './constants/enums';
 import { APP_FORMATS, AudioFormat, FormatKey } from './constants/mimeTypes';
-import { Sample_file } from './samples';
+import { Sample_file, Sample_settings, Time_settings } from './types';
+
+export function getDefaultSampleSettings(
+  bufferDuration: number,
+  initTimePoints?: Time_settings
+): Sample_settings {
+  const defaultSettings: Sample_settings = {
+    time: {
+      startPoint: initTimePoints.startPoint ?? 0,
+      endPoint: initTimePoints.endPoint ?? bufferDuration,
+      loopStart: initTimePoints.loopStart ?? 0,
+      loopEnd: initTimePoints.loopEnd ?? bufferDuration,
+    },
+    volume: {
+      sampleVolume: 1,
+      loopVolume: 0.8,
+    },
+    ampEnv: {
+      attackTime: 0.02,
+      releaseTime: 0.2,
+    },
+    pitch: {
+      transposition: 0,
+      tuneOffset: 0,
+    },
+    filters: {
+      lowCutoff: 40,
+      highCutoff: 20000,
+    },
+    locks: {
+      loop: false,
+    },
+  };
+
+  return defaultSettings;
+}
 
 export async function blobToString(blob: Blob): Promise<string> {
   return await blob.text();

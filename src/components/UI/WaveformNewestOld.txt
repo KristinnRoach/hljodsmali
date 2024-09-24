@@ -1,0 +1,556 @@
+'use client';
+
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { Time_settings } from '../../types/samples';
+import { useSamplerEngine } from '../../contexts/EngineContext';
+
+type settingKey = 'startPoint' | 'endPoint' | 'loopStart' | 'loopEnd';
+
+// TODO: move markers to separate component overlayed on waveform
+// no need to redraw waveform on every marker change
+
+interface WaveformProps {
+  sampleId: string;
+  buffer: AudioBuffer | null;
+  className?: string;
+  color?: string;
+  backgroundColor?: string;
+  showCenterLine?: boolean;
+}
+
+const PADDING_FACTOR = 1.1; // 10% extra space
+
+function calculateWidth(
+  bufferDuration: number,
+  baseWidth: number = 800,
+  pixelsPerSecond: number = 200
+): number {
+  const calculatedWidth = Math.max(
+    baseWidth,
+    Math.ceil(bufferDuration * pixelsPerSecond)
+  );
+  return Math.ceil(calculatedWidth * PADDING_FACTOR);
+}
+
+const Waveform: React.FC<WaveformProps> = ({
+  sampleId,
+  buffer,
+  className = '',
+  color = '#3498db',
+  backgroundColor = 'transparent',
+  showCenterLine = false,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pixelRatioRef = useRef(window.devicePixelRatio || 1);
+  const MIN_MARKER_DISTANCE = 0.0008;
+
+  const [width, setWidth] = useState(800); // * PADDING_FACTOR);
+  const [height, setHeight] = useState(200);
+  const [mouseStyle, setMouseStyle] = useState('default');
+
+  const { updateTimeSettings, getSampleSettings } = useSamplerEngine();
+
+  const [startPoint, setStartPoint] = useState<number | null>(null);
+  const [endPoint, setEndPoint] = useState<number | null>(null);
+  const [loopStart, setLoopStart] = useState<number | null>(null);
+  const [loopEnd, setLoopEnd] = useState<number | null>(null);
+
+  const [dragState, setDragState] = useState<{
+    type: 'marker' | 'label' | null;
+    key: settingKey | null;
+    offset: number | null; // should be null?
+    initialPosition: number | null;
+  }>({ type: null, key: null, offset: 0, initialPosition: 0 });
+
+  const normalizeBuffer = useCallback((data: Float32Array): Float32Array => {
+    let maxVal = 0;
+    for (let i = 0; i < data.length; i++) {
+      const absVal = Math.abs(data[i]);
+      if (absVal > maxVal) {
+        maxVal = absVal;
+      }
+    }
+
+    if (maxVal === 0) return data;
+
+    const normalizedData = new Float32Array(data.length);
+    for (let i = 0; i < data.length; i++) {
+      normalizedData[i] = data[i] / maxVal;
+    }
+
+    return normalizedData;
+  }, []);
+
+  const normalizePoint = useCallback(
+    (point: number) => {
+      if (!buffer) {
+        console.error('No buffer available for normalization');
+        return 0;
+      }
+      return point / buffer.duration;
+    },
+    [buffer]
+  );
+
+  const getNormalizedPosition = useCallback(
+    (pixelX: number) => {
+      return pixelX / width;
+    },
+    [width]
+  );
+
+  useEffect(() => {
+    const settings = getSampleSettings(sampleId, 'Time') as Time_settings;
+    console.log('Initial settings:', settings); // Log initial settings
+
+    if (!(settings && buffer)) {
+      console.error('No settings or buffer available');
+      return;
+    }
+
+    setStartPoint(normalizePoint(settings.startPoint));
+    setEndPoint(normalizePoint(settings.endPoint));
+    setLoopStart(normalizePoint(settings.loopStart));
+    setLoopEnd(normalizePoint(settings.loopEnd));
+
+    // const width = 800 * PADDING_FACTOR * pixelRatioRef.current;
+    const calcWidth = calculateWidth(buffer.duration, 800, 200);
+    setWidth(calcWidth);
+  }, [sampleId, buffer]); // getSampleSettings
+
+  const getMarkerPixelPosition = useCallback(
+    (normalizedValue: number) => {
+      return Math.round(normalizedValue * width);
+    },
+    [width]
+  );
+
+  const getMarkerAtPosition = useCallback(
+    (
+      normalizedX: number,
+      normalizedY: number
+    ): { type: 'marker' | 'label'; key: settingKey } | null => {
+      const markers = [
+        { key: 'startPoint' as settingKey, value: startPoint, label: 'Start' },
+        { key: 'endPoint' as settingKey, value: endPoint, label: 'End' },
+        {
+          key: 'loopStart' as settingKey,
+          value: loopStart,
+          label: 'Loop-Start',
+        },
+        { key: 'loopEnd' as settingKey, value: loopEnd, label: 'Loop-End' },
+      ];
+
+      const ctx = canvasRef.current!.getContext('2d')!;
+      ctx.font = '12px Arial';
+
+      for (const marker of markers) {
+        const pixelX = getMarkerPixelPosition(marker.value);
+        const normalizedMarkerX = getNormalizedPosition(pixelX);
+        const labelWidth = ctx.measureText(marker.label).width / width;
+        const labelHeight = 20 / height;
+
+        if (
+          normalizedX >= normalizedMarkerX + 0.01 &&
+          normalizedX <= normalizedMarkerX + 0.01 + labelWidth &&
+          normalizedY >= 0 &&
+          normalizedY <= labelHeight
+        ) {
+          setMouseStyle('pointer');
+          return { type: 'label', key: marker.key };
+        }
+
+        if (Math.abs(normalizedX - normalizedMarkerX) < 0.01) {
+          setMouseStyle('cursor');
+          return { type: 'marker', key: marker.key };
+        }
+      }
+      setMouseStyle('default');
+      return null;
+    },
+    [
+      startPoint,
+      endPoint,
+      loopStart,
+      loopEnd,
+      getMarkerPixelPosition,
+      getNormalizedPosition,
+      width,
+      height,
+    ]
+  );
+
+  const getMarkerValue = (key: string): number => {
+    if (!buffer) throw new Error('No settings');
+
+    switch (key) {
+      case 'startPoint':
+        return startPoint;
+      case 'endPoint':
+        return endPoint;
+      case 'loopStart':
+        return loopStart;
+      case 'loopEnd':
+        return loopEnd;
+      default:
+        return 0;
+    }
+  };
+
+  const handleDrag = useCallback(
+    (x: number, dragType: 'marker' | 'label') => {
+      if (!(dragState.key && sampleId && buffer)) return;
+
+      let normalizedValue = x;
+
+      console.log('Drag event:', { x, dragType, normalizedValue });
+
+      // Apply constraints
+      switch (dragState.key) {
+        case 'startPoint':
+          normalizedValue = Math.min(
+            normalizedValue,
+            endPoint - MIN_MARKER_DISTANCE
+          );
+          break;
+        case 'endPoint':
+          normalizedValue = Math.max(
+            normalizedValue,
+            startPoint + MIN_MARKER_DISTANCE
+          );
+          break;
+        case 'loopStart':
+          normalizedValue = Math.min(
+            normalizedValue,
+            loopEnd - MIN_MARKER_DISTANCE
+          );
+          break;
+        case 'loopEnd':
+          normalizedValue = Math.max(
+            normalizedValue,
+            loopStart + MIN_MARKER_DISTANCE
+          );
+          break;
+      }
+
+      const realValue = normalizedValue * buffer.duration;
+
+      // Update actual value - Denormalized!
+      updateTimeSettings(sampleId, {
+        [dragState.key]: realValue,
+      });
+
+      console.log('Updating time settings:', {
+        [dragState.key]: realValue,
+      });
+
+      // Update react state - Normalized values for react state / UI.
+      switch (dragState.key) {
+        case 'startPoint':
+          setStartPoint(normalizedValue);
+          break;
+        case 'endPoint':
+          setEndPoint(normalizedValue);
+          break;
+        case 'loopStart':
+          setLoopStart(normalizedValue);
+          break;
+        case 'loopEnd':
+          setLoopEnd(normalizedValue);
+          break;
+      }
+    },
+    [
+      dragState,
+      // width,
+      sampleId,
+      buffer,
+      startPoint,
+      endPoint,
+      loopStart,
+      loopEnd,
+      updateTimeSettings,
+    ]
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const normalizedX = (e.clientX - rect.left) / rect.width;
+      const normalizedY = (e.clientY - rect.top) / rect.height;
+
+      const hitResult = getMarkerAtPosition(normalizedX, normalizedY);
+      console.log('Mouse down event:', {
+        x: normalizedX,
+        y: normalizedY,
+        hitResult,
+      });
+
+      if (hitResult) {
+        const markerValue = getMarkerValue(hitResult.key);
+        const markerX = getMarkerPixelPosition(markerValue);
+        const offset = hitResult.type === 'label' ? normalizedX - markerX : 0;
+
+        console.log('Setting drag state:', {
+          type: hitResult.type,
+          key: hitResult.key,
+          offset: offset,
+          initialPosition: normalizedX,
+        });
+
+        setDragState({
+          type: hitResult.type,
+          key: hitResult.key,
+          offset: offset,
+          initialPosition: normalizedX,
+        });
+      }
+    },
+    [getMarkerAtPosition] //  width, getMarkerPixelPosition, getMarkerValue]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width; //* width;
+      const y = e.clientY - rect.top;
+
+      getMarkerAtPosition(x, y);
+
+      if (!dragState.type) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      setMouseStyle('grabbing');
+
+      console.log('Mouse move event:', { x, y, dragState });
+
+      handleDrag(x, dragState.type);
+    },
+    [dragState, handleDrag, width, getMarkerAtPosition]
+  );
+
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      console.log('Mouse up event, resetting drag state');
+
+      setDragState({ type: null, key: null, offset: 0, initialPosition: 0 });
+      setMouseStyle('default');
+    },
+    []
+  );
+
+  const drawMarker = useCallback(
+    (markerValue: number, markerColor: string, label: string) => {
+      if (!buffer) return; // No sample available
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      let labelPadding = 0;
+      if (label === 'Start') labelPadding = -30;
+      if (label === 'End') labelPadding = 5;
+      if (label === 'Loop-Start') labelPadding = -60;
+      if (label === 'Loop-End') labelPadding = 5;
+
+      const markerWidth = 2;
+      const labelHeight = 20;
+      const labelWidth = ctx.measureText(label).width + labelPadding * 2;
+
+      const pixelX = Math.min(
+        width - 1,
+        Math.max(0, getMarkerPixelPosition(markerValue))
+      );
+
+      ctx.fillStyle = markerColor;
+      ctx.fillRect(pixelX - markerWidth / 2, 0, markerWidth, height);
+
+      ctx.fillStyle = 'transparent';
+      ctx.fillRect(pixelX + labelPadding, 0, labelWidth, labelHeight);
+
+      let posY = 0;
+      if (label === 'Start' || label === 'End') posY = 15;
+      if (label === 'Loop-Start' || label === 'Loop-End') posY = 190;
+
+      ctx.font = '12px Arial';
+      ctx.fillStyle = markerColor;
+      ctx.fillText(label, pixelX + labelPadding, posY);
+    },
+    [height, getMarkerPixelPosition, width]
+  );
+
+  const drawWaveform = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+
+    if (!(canvas && ctx && buffer)) return;
+
+    const pxr = pixelRatioRef.current;
+    canvas.width = width * pxr;
+    canvas.height = height * pxr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    ctx.scale(pxr, pxr);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, width, height);
+
+    const normalizedData = normalizeBuffer(buffer.getChannelData(0));
+    const samplesPerPixel = Math.ceil(normalizedData.length / width);
+
+    ctx.beginPath();
+    ctx.moveTo(0, height / 2);
+
+    for (let x = 0; x < width; x++) {
+      let min = 1.0;
+      let max = -1.0;
+      const startSample = x * samplesPerPixel;
+      const endSample = Math.min(
+        (x + 1) * samplesPerPixel,
+        normalizedData.length
+      );
+
+      for (let i = startSample; i < endSample; i++) {
+        const sample = normalizedData[i];
+        if (sample < min) min = sample;
+        if (sample > max) max = sample;
+      }
+
+      const y1 = ((1 + min) / 2) * height;
+      const y2 = ((1 + max) / 2) * height;
+
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x, y2);
+    }
+
+    ctx.strokeStyle = color;
+    ctx.stroke();
+
+    if (showCenterLine) {
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.stroke();
+    }
+
+    if (startPoint !== undefined) drawMarker(startPoint, 'red', 'Start');
+    if (endPoint !== undefined) drawMarker(endPoint, 'red', 'End');
+    if (loopStart !== undefined) drawMarker(loopStart, 'green', 'Loop-Start');
+    if (loopEnd !== undefined) drawMarker(loopEnd, 'green', 'Loop-End');
+  }, [
+    width,
+    height,
+    color,
+    buffer,
+    drawMarker,
+    backgroundColor,
+    showCenterLine,
+    normalizeBuffer,
+    startPoint,
+    endPoint,
+    loopStart,
+    loopEnd,
+  ]);
+
+  useEffect(() => {
+    if (buffer) {
+      console.log('Draw waveform useEffect runs');
+      drawWaveform();
+    }
+  }, [drawWaveform, buffer, startPoint, endPoint, loopStart, loopEnd]);
+
+  return (
+    <canvas
+      className={className}
+      ref={canvasRef}
+      width={width}
+      height={height}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      style={{ cursor: mouseStyle }}
+    />
+  );
+};
+
+export default Waveform;
+
+// useEffect(() => {
+//   if (!startPoint) return;
+//   clearMarker('startPoint');
+//   drawMarker(startPoint, 'red', 'Start');
+// }, [startPoint]);
+
+// const getMarkerPixelPosition = useCallback(
+//   (markerValue: number) => {
+//     // Ensure markerValue is within [0, 1] range
+//     const clampedValue = Math.max(0, Math.min(1, markerValue));
+//     // Account for potential padding or borders
+//     const drawableWidth = width / PADDING_FACTOR; // - 2; // Subtract 2 for left and right 1px borders
+//     return Math.round(clampedValue * drawableWidth) + 1; // Add 1 to account for left border
+//   },
+//   [width]
+// );
+
+// const getMarkerAtPosition = useCallback(
+//   (
+//     x: number,
+//     y: number
+//   ): {
+//     type: 'marker' | 'label';
+//     key: settingKey;
+//   } | null => {
+//     const markers = [
+//       { key: 'startPoint' as settingKey, value: startPoint, label: 'Start' },
+//       { key: 'endPoint' as settingKey, value: endPoint, label: 'End' },
+//       {
+//         key: 'loopStart' as settingKey,
+//         value: loopStart,
+//         label: 'Loop-Start',
+//       },
+//       { key: 'loopEnd' as settingKey, value: loopEnd, label: 'Loop-End' },
+//     ];
+
+//     const ctx = canvasRef.current!.getContext('2d')!;
+//     ctx.font = '12px Arial';
+
+//     for (const marker of markers) {
+//       if (marker.value !== undefined) {
+//         const pixelX = getMarkerPixelPosition(marker.value);
+//         const labelWidth = ctx.measureText(marker.label).width + 10;
+//         const labelHeight = 20;
+
+//         if (
+//           x >= pixelX + 5 &&
+//           x <= pixelX + 5 + labelWidth &&
+//           y >= 0 &&
+//           y <= labelHeight
+//         ) {
+//           setMouseStyle('pointer');
+//           return { type: 'label', key: marker.key };
+//         }
+
+//         if (Math.abs(x - pixelX) < 5) {
+//           setMouseStyle('cursor');
+//           return { type: 'marker', key: marker.key };
+//         }
+//       }
+//     }
+//     setMouseStyle('default');
+//     return null;
+//   },
+//   [startPoint, endPoint, loopStart, loopEnd, getMarkerPixelPosition]
+// );

@@ -1,6 +1,4 @@
 import React from 'react';
-// import 'server-only';
-
 import Sampler from '../components/Sampler/Sampler';
 
 import styles from '../styles/page.module.scss';

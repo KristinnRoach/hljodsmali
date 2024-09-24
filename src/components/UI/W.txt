@@ -1,0 +1,241 @@
+'use client';
+
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { Time_settings } from '../../../types/samples';
+import { useSamplerEngine } from '../../../contexts/EngineContext';
+
+type settingKey = 'startPoint' | 'endPoint' | 'loopStart' | 'loopEnd';
+
+interface WaveformProps {
+  sampleId: string;
+  buffer: AudioBuffer | null;
+  className?: string;
+  color?: string;
+  backgroundColor?: string;
+  showCenterLine?: boolean;
+}
+
+const PADDING_FACTOR = 1.1; // 10% extra space
+
+function calculateWidth(
+  bufferDuration: number,
+  baseWidth: number = 800,
+  pixelsPerSecond: number = 200
+): number {
+  const calculatedWidth = Math.max(
+    baseWidth,
+    Math.ceil(bufferDuration * pixelsPerSecond)
+  );
+  // Apply PADDING_FACTOR here
+  return Math.ceil(calculatedWidth * PADDING_FACTOR);
+}
+
+const Waveform: React.FC<WaveformProps> = ({
+  sampleId,
+  buffer,
+  className = '',
+  color = '#3498db',
+  backgroundColor = 'transparent',
+  showCenterLine = true,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pixelRatioRef = useRef(window.devicePixelRatio || 1);
+  const MIN_MARKER_DISTANCE = 0.0008;
+
+  // Apply PADDING_FACTOR to the initial width
+  const [width, setWidth] = useState(800 * PADDING_FACTOR);
+  const [height, setHeight] = useState(200);
+  const [mouseStyle, setMouseStyle] = useState('default');
+
+  const { updateTimeSettings, getSampleSettings } = useSamplerEngine();
+
+  const [startPoint, setStartPoint] = useState(0);
+  const [endPoint, setEndPoint] = useState(1);
+  const [loopStart, setLoopStart] = useState(0);
+  const [loopEnd, setLoopEnd] = useState(1);
+
+  useEffect(() => {
+    const settings = getSampleSettings(sampleId, 'Time') as Time_settings;
+    console.log('Initial settings:', settings);
+
+    if (settings && buffer) {
+      const newStartPoint = settings.startPoint / buffer.duration;
+      const newEndPoint = settings.endPoint / buffer.duration;
+      const newLoopStart = settings.loopStart / buffer.duration;
+      const newLoopEnd = settings.loopEnd / buffer.duration;
+
+      console.log('Updating state with new values:', {
+        startPoint: newStartPoint,
+        endPoint: newEndPoint,
+        loopStart: newLoopStart,
+        loopEnd: newLoopEnd
+      });
+
+      setStartPoint(newStartPoint);
+      setEndPoint(newEndPoint);
+      setLoopStart(newLoopStart);
+      setLoopEnd(newLoopEnd);
+
+      // Apply PADDING_FACTOR when setting the width
+      setWidth(calculateWidth(buffer.duration, 800, 200));
+    }
+  }, [sampleId, getSampleSettings, buffer]);
+
+  // ... (other functions remain the same)
+
+  const getMarkerPixelPosition = useCallback(
+    (markerValue: number) => {
+      // Ensure markerValue is within [0, 1] range
+      const clampedValue = Math.max(
+        0,
+        Math.min(1, markerValue / (buffer?.duration || 1))
+      );
+      // Apply PADDING_FACTOR to the drawable width
+      const drawableWidth = width / PADDING_FACTOR;
+      return Math.round(clampedValue * drawableWidth) + 1;
+    },
+    [width, buffer]
+  );
+
+  const handleDrag = useCallback(
+    (x: number, dragType: 'marker' | 'label') => {
+      if (!(dragState.key && sampleId && buffer)) return;
+
+      // Apply PADDING_FACTOR when calculating the new value
+      let newValue = Math.max(0, Math.min(1, (x / width) * PADDING_FACTOR));
+
+      console.log('Drag event:', { x, dragType, newValue });
+
+      // Apply constraints
+      switch (dragState.key) {
+        case 'startPoint':
+          newValue = Math.min(newValue, endPoint - MIN_MARKER_DISTANCE);
+          break;
+        case 'endPoint':
+          newValue = Math.max(newValue, startPoint + MIN_MARKER_DISTANCE);
+          break;
+        case 'loopStart':
+          newValue = Math.min(newValue, loopEnd - MIN_MARKER_DISTANCE);
+          break;
+        case 'loopEnd':
+          newValue = Math.max(newValue, loopStart + MIN_MARKER_DISTANCE);
+          break;
+      }
+
+      console.log('New value after constraints:', newValue);
+
+      // Update actual value
+      updateTimeSettings(sampleId, {
+        [dragState.key]: newValue,
+      });
+
+      console.log('Updating time settings:', { [dragState.key]: newValue });
+
+      // Update react state
+      switch (dragState.key) {
+        case 'startPoint':
+          setStartPoint(newValue);
+          break;
+        case 'endPoint':
+          setEndPoint(newValue);
+          break;
+        case 'loopStart':
+          setLoopStart(newValue);
+          break;
+        case 'loopEnd':
+          setLoopEnd(newValue);
+          break;
+      }
+
+      console.log('Updated state:', { startPoint, endPoint, loopStart, loopEnd });
+    },
+    [
+      dragState,
+      width,
+      sampleId,
+      buffer,
+      startPoint,
+      endPoint,
+      loopStart,
+      loopEnd,
+      updateTimeSettings
+    ]
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = canvasRef.current!.getBoundingClientRect();
+      // Apply PADDING_FACTOR when calculating the x position
+      const x = ((e.clientX - rect.left) / rect.width) * width * PADDING_FACTOR;
+      const y = e.clientY - rect.top;
+
+      const hitResult = getMarkerAtPosition(x, y);
+      console.log('Mouse down event:', { x, y, hitResult });
+
+      if (hitResult) {
+        const markerValue = getMarkerValue(hitResult.key);
+        const markerX = getMarkerPixelPosition(markerValue);
+        const offset = hitResult.type === 'label' ? x - markerX : 0;
+
+        console.log('Setting drag state:', {
+          type: hitResult.type,
+          key: hitResult.key,
+          offset: offset,
+          initialPosition: x
+        });
+
+        setDragState({
+          type: hitResult.type,
+          key: hitResult.key,
+          offset: offset,
+          initialPosition: x,
+        });
+      }
+    },
+    [getMarkerAtPosition, width, getMarkerPixelPosition, getMarkerValue]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      // Apply PADDING_FACTOR when calculating the x position
+      const x = ((e.clientX - rect.left) / rect.width) * width * PADDING_FACTOR;
+      const y = e.clientY - rect.top;
+
+      getMarkerAtPosition(x, y);
+
+      if (!dragState.type) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      setMouseStyle('grabbing');
+
+      console.log('Mouse move event:', { x, y, dragState });
+
+      handleDrag(x, dragState.type);
+    },
+    [dragState, handleDrag, width, getMarkerAtPosition]
+  );
+
+  // ... (rest of the component remains the same)
+
+  return (
+    <canvas
+      className={className}
+      ref={canvasRef}
+      width={width}
+      height={height}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      style={{ cursor: mouseStyle }}
+    />
+  );
+};
+
+export default Waveform;

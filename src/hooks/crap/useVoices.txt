@@ -1,0 +1,107 @@
+import { useState, useCallback, useMemo } from 'react';
+import useLoopHold from './useLoopHold';
+
+export type Voice = {
+  getSampleId: () => string;
+  getMidiNote: () => number;
+  triggerRelease: () => void;
+  getTriggerTime: () => number;
+  getVoiceGain: () => { context: { currentTime: number } };
+  stop: () => void;
+  updateLoopPoints: (
+    newStart: number,
+    newEnd: number,
+    prevStart: number,
+    prevEnd: number
+  ) => void;
+};
+
+export default function useVoices() {
+  const [allVoices, setAllVoices] = useState<Set<Voice>>(new Set());
+  const loopHoldManager = useLoopHold();
+
+  const addVoice = useCallback((voice: Voice) => {
+    setAllVoices((prev) => new Set(prev).add(voice));
+  }, []);
+
+  const removeVoice = useCallback((voice: Voice) => {
+    setAllVoices((prev) => {
+      const newVoices = new Set(prev);
+      newVoices.delete(voice);
+      return newVoices;
+    });
+  }, []);
+
+  const getVoicesForSample = useCallback(
+    (sampleId: string): Voice[] => {
+      return Array.from(allVoices).filter(
+        (voice) => voice.getSampleId() === sampleId
+      );
+    },
+    [allVoices]
+  );
+
+  const releaseNote = useCallback(
+    (midiNote: number) => {
+      allVoices.forEach((voice) => {
+        if (voice.getMidiNote() === midiNote && !loopHoldManager.hold) {
+          voice.triggerRelease();
+        }
+      });
+    },
+    [allVoices, loopHoldManager.hold]
+  );
+
+  const hasPlayingVoices = useMemo(() => allVoices.size > 0, [allVoices]);
+
+  const numberOfPlayingVoices = useMemo(() => allVoices.size, [allVoices]);
+
+  const getCurrentPlayheadPosition = useCallback(() => {
+    if (allVoices.size === 0) return 0;
+    const voice = Array.from(allVoices)[0];
+    return voice.getTriggerTime() > 0
+      ? voice.getVoiceGain().context.currentTime - voice.getTriggerTime()
+      : 0;
+  }, [allVoices]);
+
+  const releaseAllVoices = useCallback(() => {
+    allVoices.forEach((voice) => voice.triggerRelease());
+    setAllVoices(new Set());
+  }, [allVoices]);
+
+  const panic = useCallback(() => {
+    allVoices.forEach((voice) => voice.stop());
+    loopHoldManager.setGlobalLoop(false);
+    setAllVoices(new Set());
+  }, [allVoices, loopHoldManager]);
+
+  const updateActiveVoices_LoopPoints = useCallback(
+    (
+      sampleId: string,
+      newStart: number,
+      newEnd: number,
+      prevStart: number,
+      prevEnd: number
+    ) => {
+      allVoices.forEach((voice) => {
+        if (voice.getSampleId() === sampleId) {
+          voice.updateLoopPoints(newStart, newEnd, prevStart, prevEnd);
+        }
+      });
+    },
+    [allVoices]
+  );
+
+  return {
+    addVoice,
+    removeVoice,
+    getVoicesForSample,
+    releaseNote,
+    hasPlayingVoices,
+    numberOfPlayingVoices,
+    getCurrentPlayheadPosition,
+    releaseAllVoices,
+    panic,
+    updateActiveVoices_LoopPoints,
+  };
+}

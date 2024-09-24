@@ -5,8 +5,10 @@ import {
   SampleRecord,
   Sample_file,
   Sample_settings,
-  getDefaultSampleSettings,
-} from '../../types/samples';
+  Time_settings,
+} from '../../types/types';
+
+import { getDefaultSampleSettings } from '../../types/utils';
 // import { getHoursMinSec } from '../utils/time-utils';
 // import { blobToSampleFile, isSampleFile } from '../../types/utils';
 // import { FormatKey, APP_FORMATS, AudioFormat } from '../../types/mimeTypes';
@@ -18,28 +20,29 @@ pb.autoCancellation(false);
 
 export default pb;
 
-// Create a new SampleRecord object from a Blob
+// Create a new SampleRecord object from a 'Sample_file' (which is just a File object currently)
 export async function createNewSampleRecord(
   name: string,
   sample_file: Sample_file,
   bufferDuration: number,
-  existingSettings?: Partial<Sample_settings>
+  initTimeSettings?: Time_settings
+  // existingSampleSettings?: Partial<Sample_settings>
 ): Promise<SampleRecord> {
   const sampleSettings = getDefaultSampleSettings(
     bufferDuration,
-    existingSettings // undefined if not provided
+    initTimeSettings
   );
 
+  const tempId = `unsaved-sample-${crypto.randomUUID()}`;
+
   const record: SampleRecord = {
-    id: name,
+    id: tempId,
     name: name,
     slug: generateSlug(name),
     sample_file: sample_file,
     bufferDuration: bufferDuration,
     sample_settings: sampleSettings,
     user: pb.authStore.model?.id,
-    // created: timeNow,
-    // updated: timeNow,
   };
 
   return record;

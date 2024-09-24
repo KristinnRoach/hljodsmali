@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+import { Sample_settings, Time_settings } from '../../types/types';
 import VolumeMonitor from '../../lib/audio-utils/VolumeMonitor';
+
 import Toggle, { ToggleMultiState } from '../UI/Basic/Toggle';
 
 import { useSamplerEngine } from '../../contexts/EngineContext';
-// import { useAudioCtx } from '../../hooks/AudioCtxContext';
+import useZeroCrossings from '../../hooks/useZeroCrossings';
 
 import { getHoursMinSec } from '../../lib/utils/time-utils';
 import { blobToSampleFile, isSampleFile } from '../../types/utils';
-import { getInitZeroSnappedPoints } from '../../lib/audio-utils/zeroCrossingUtils';
 import { createNewSampleRecord } from '../../lib/db/pocketbase';
 
 interface RecorderProps {
@@ -24,8 +26,8 @@ const Recorder: React.FC<RecorderProps> = ({
   const {
     audioCtx: ctx,
     loadSample,
-    selectForPlayback,
-    selectForSettings,
+    selectSample: selectForPlayback,
+    selectFocusedSettings: selectForSettings,
     connectToExternalOutput,
     disconnectExternalOutput,
   } = useSamplerEngine();
@@ -37,12 +39,12 @@ const Recorder: React.FC<RecorderProps> = ({
   }, [ctx]);
 
   const [audioFormat, setAudioFormat] = useState<'wav' | 'webm'>('webm'); // TODO: Add support for other formats
-  const [includeVideo, setIncludeVideo] = useState<boolean>(false);
+  const [includeVideo, setIncludeVideo] = useState<boolean>(false); // TODO: Add support for video
 
   const [recorderState, setRecorderState] = useState<
     'idle' | 'armed' | 'recording'
   >('idle');
-  const [streamVolume, setStreamVolume] = useState<number | null>(null);
+  const [streamVolume, setStreamVolume] = useState<number | null>(null); // TODO: use streamVolume for visual feedback
   const [label, setLabel] = useState<string>('');
 
   const recStateRef = useRef(recorderState); // do we need the useState also?
@@ -55,6 +57,8 @@ const Recorder: React.FC<RecorderProps> = ({
   const stopThreshold = resamplerMode ? -95 : -40; // dB // REMOVE IF calibrate replaces
   const silenceDelay = resamplerMode ? 50 : 200; // ms
   const silenceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const zeroCrossings = useZeroCrossings();
 
   const handleNewRecording = useCallback(
     async (blob: Blob) => {
@@ -82,11 +86,19 @@ const Recorder: React.FC<RecorderProps> = ({
       // Normalize the audio buffer
       // if (audioCtx) normalizeBuffer_Peak(audioCtx, audioBuffer);
 
+      /* TODO: Move init settings and zeroCrossing function to 
+      engine or more appropriate place (no need for useZeroCrossing elsewhere
+      in this component) */
+
       const bufferDuration = audioBuffer.duration;
 
       // create the initial start, end, loopstart and loopend points
       // and snap them to the buffers zero-crossings to avoid clicks
-      const initZeroSnapped = getInitZeroSnappedPoints(audioBuffer);
+      const initZeroSnapped = zeroCrossings.getInitZeroSnappedPoints(
+        audioBuffer
+      ) as Time_settings;
+
+      console.log('initZeroSnapped:', initZeroSnapped);
 
       const record = await createNewSampleRecord(
         tempName,
@@ -94,6 +106,8 @@ const Recorder: React.FC<RecorderProps> = ({
         bufferDuration,
         initZeroSnapped
       );
+
+      console.log('Created new sample record:', record.sample_settings.time);
 
       if (!record || !record.sample_settings) {
         throw new Error('Failed to create Sample from recording');
@@ -126,8 +140,6 @@ const Recorder: React.FC<RecorderProps> = ({
         if (result) {
           const { record, audioBuffer } = result;
           loadSample(record, audioBuffer);
-
-          console.log('Calling selectForPlayback with id:', record.id);
 
           selectForPlayback(record.id, 'replace');
           selectForSettings(record.id, 'replace');

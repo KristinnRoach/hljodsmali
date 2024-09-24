@@ -1,5 +1,5 @@
-// LoopHoldManager.ts
-export class LoopHoldManager {
+// src/lib/managers/LoopHoldManager.ts
+export default class LoopHoldManager {
   private static instance: LoopHoldManager;
   private _globalLoop: boolean = false;
   private _hold: boolean = false;

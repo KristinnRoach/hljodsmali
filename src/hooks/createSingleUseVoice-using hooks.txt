@@ -1,0 +1,248 @@
+import useSampleSettings from './useSampleSettings';
+import useLoopHold from './useLoopHold';
+import {
+  AmpEnv,
+  Pitch_settings,
+  Sample_settings,
+  Time_settings,
+} from '../types/types';
+import { MIDDLE_C_MIDI } from '../types/constants/constants';
+import {
+  snapDurationToNote,
+  interpolateDurationToNote,
+  C5_DURATION_SEC,
+} from '../types/constants/note-utils';
+
+export default function createSingleUseVoice(
+  audioCtx: AudioContext,
+  buffer: AudioBuffer,
+  sampleId: string,
+
+  // more efficient to pass in parameters to functions when they are needed
+  // and get rid of useSampleSettings and useLoopHold? pros and cons?
+  sampleSettings: ReturnType<typeof useSampleSettings>,
+  loopHold: ReturnType<typeof useLoopHold>
+) {
+  /* FIELDS */
+  let source: AudioBufferSourceNode;
+  let voiceGain: GainNode;
+
+  let startPoint: number = 0;
+  let endPoint: number = 0;
+  let playDuration: number = 0;
+  let midiNote: number = -1;
+  let ctxTimeStarted: number = -1;
+
+  // State
+  let isPlaying: boolean = false;
+  let isReleasing: boolean = false;
+
+  const initialize = (settings: Sample_settings): void => {
+    if (!audioCtx) return;
+
+    source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    voiceGain = audioCtx.createGain();
+    voiceGain.gain.value = 0;
+    source.connect(voiceGain);
+
+    startPoint = settings.time.startPoint;
+    endPoint = settings.time.endPoint;
+    playDuration = endPoint - startPoint;
+
+    console.log(loopHold.isLooping, source.loop);
+
+    source.loop = loopHold.isLooping || settings.locks.loop;
+    if (source.loop) {
+      source.loopStart = settings.time.loopStart;
+      source.loopEnd = settings.time.loopEnd;
+    }
+
+    console.log(loopHold.isLooping, source.loop);
+
+    source.onended = () => {
+      stop();
+    };
+  };
+
+  const settings = sampleSettings.getSampleSettings(
+    sampleId
+  ) as Sample_settings;
+
+  if (!settings) {
+    throw new Error('Sample not loaded, id: ' + sampleId);
+  }
+  initialize(settings);
+
+  const getSampleId = (): string => sampleId;
+  const getVoiceGain = (): GainNode => voiceGain;
+  const getTriggerTime = (): number => ctxTimeStarted;
+  const getMidiNote = (): number => midiNote;
+
+  const connect = (destination: AudioNode): void => {
+    voiceGain.connect(destination);
+  };
+
+  const setLoopStart = (loopStart: number): void => {
+    source.loopStart = loopStart;
+  };
+
+  const setLoopEnd = (loopEnd: number): void => {
+    source.loopEnd = loopEnd;
+  };
+
+  // Convert semitones to playback rate
+  const semitoneToRate = (baseRate: number, semitones: number): number => {
+    return baseRate * Math.pow(2, semitones / 12);
+  };
+
+  const setRateFromMidi = (
+    midiNote: number,
+    pitchSettings: Pitch_settings
+  ): void => {
+    const midiRate = semitoneToRate(1, midiNote - MIDDLE_C_MIDI);
+    const transposedRate = semitoneToRate(
+      midiRate,
+      pitchSettings.transposition
+    );
+    const tunedRate = semitoneToRate(transposedRate, pitchSettings.tuneOffset);
+    source.playbackRate.value = tunedRate;
+
+    playDuration = playDuration / source.playbackRate.value;
+  };
+
+  const start = (midiNoteValue: number): void => {
+    console.log('Sample settings:', sampleSettings.getSampleSettings(sampleId));
+
+    const pitchSettings = sampleSettings.getSampleSettings(
+      sampleId,
+      'pitch'
+    ) as Pitch_settings;
+    setRateFromMidi(midiNoteValue, pitchSettings);
+
+    source.start(0, startPoint, source.loop ? undefined : playDuration);
+    ctxTimeStarted = audioCtx.currentTime;
+    isPlaying = true;
+    midiNote = midiNoteValue;
+    triggerAttack();
+  };
+
+  const stop = (): void => {
+    source.stop();
+    source.disconnect();
+    voiceGain.disconnect();
+    isPlaying = false;
+    isReleasing = false;
+  };
+
+  const triggerAttack = (): void => {
+    const settings = sampleSettings.getSampleSettings(
+      sampleId
+    ) as Sample_settings;
+
+    voiceGain.gain.linearRampToValueAtTime(
+      settings.volume.sampleVolume,
+      audioCtx.currentTime + settings.ampEnv.attackTime
+    );
+  };
+
+  const triggerRelease = (): void => {
+    if (ctxTimeStarted <= 0 || loopHold.isHolding) return;
+
+    const settings = sampleSettings.getSampleSettings(
+      sampleId,
+      'ampEnv'
+    ) as AmpEnv;
+
+    const actualReleaseTime = settings.releaseTime / source.playbackRate.value;
+
+    voiceGain.gain.linearRampToValueAtTime(
+      0,
+      audioCtx.currentTime + actualReleaseTime
+    );
+    source.stop(audioCtx.currentTime + actualReleaseTime + 0.5);
+  };
+
+  const updateTuning = (
+    newPitchSettings: Pitch_settings,
+    prevPitchSettings?: Pitch_settings
+  ): void => {
+    // TODO: use prevPitchSettings to implement gliding interpolation
+
+    midiNote !== -1 && setRateFromMidi(midiNote, newPitchSettings);
+  };
+
+  const updateLoopPoints = (
+    param: keyof Time_settings,
+    newValue: number
+  ): void => {
+    const prevSettings =
+      (sampleSettings.getSampleSettings(sampleId, 'time') as Time_settings) ??
+      null;
+
+    if (!prevSettings) {
+      console.error('missing settings when calling voice.updateLoopPoints');
+      return;
+    }
+
+    const loopStart = param === 'loopStart' ? newValue : prevSettings.loopStart;
+    const loopEnd = param === 'loopEnd' ? newValue : prevSettings.loopEnd;
+
+    const newLoopLength = loopEnd - loopStart;
+    if (newLoopLength <= C5_DURATION_SEC) return;
+
+    if (newLoopLength > 0.015) {
+      setLoopStart(loopStart);
+      setLoopEnd(loopEnd);
+      return;
+    }
+
+    const nearestNote = snapDurationToNote(
+      newLoopLength,
+      ['C'],
+      'C',
+      'C',
+      0,
+      7,
+      'sec'
+    );
+
+    const prevLoopLength = prevSettings.loopEnd - prevSettings.loopStart;
+
+    interpolateDurationToNote(
+      prevLoopLength,
+      nearestNote,
+      ['C'],
+      'C',
+      'C',
+      0,
+      7,
+      'sec',
+      500,
+      (interpolatedLength: number) => {
+        const adjustedNewEnd = loopStart + interpolatedLength;
+        setLoopStart(loopStart);
+        setLoopEnd(adjustedNewEnd);
+      }
+    );
+  };
+
+  return {
+    getSampleId,
+    getVoiceGain,
+    getTriggerTime,
+    getMidiNote,
+    setLoopStart,
+    setLoopEnd,
+
+    connect,
+    start,
+    stop,
+
+    triggerAttack,
+    triggerRelease,
+
+    updateLoopPoints,
+    updateTuning,
+  };
+}

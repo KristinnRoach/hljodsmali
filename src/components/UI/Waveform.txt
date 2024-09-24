@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Time_settings } from '../../../types/samples';
-import { useSamplerEngine } from '../../../contexts/EngineContext';
+import { Time_settings } from '../../types/samples';
+import { useSamplerEngine } from '../../contexts/EngineContext';
 
 type settingKey = 'startPoint' | 'endPoint' | 'loopStart' | 'loopEnd';
 

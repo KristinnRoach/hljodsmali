@@ -1,23 +1,33 @@
 // src/lib/engine/SingleUseVoice.ts
+import SampleSettingsManager from './managers/SettingsManager';
+import LoopHoldManager from './managers/LoopHoldManager';
+import ZeroCrossingManager from './managers/ZeroCrossingManager';
 
-import { SettingsManager } from './SampleManager';
-import { LoopHoldManager } from './GlobalAudioState';
+import {
+  AmpEnv,
+  Pitch_settings,
+  Sample_settings,
+  Time_settings,
+} from '../types/samples';
 
-import { Sample_settings, Time_settings } from '../../types/samples';
-import { snapToNearestZeroCrossing } from '../audio-utils/zeroCrossingUtils';
+import { MIDDLE_C_MIDI } from '../types/constants/constants';
+
 import {
   snapDurationToNote,
-  C5_DURATION_SEC,
   interpolateDurationToNote,
-} from '../../types/constants/note-utils';
-import { MIDDLE_C_MIDI } from '../../types/constants/constants';
+  C5_DURATION_SEC,
+} from '../types/constants/note-utils';
 
-export class SingleUseVoice {
-  private static allVoices: Set<SingleUseVoice> = new Set();
-  private static sampleRate: number = 48000;
+export default class SingleUseVoice {
 
   private source: AudioBufferSourceNode;
   private voiceGain: GainNode;
+
+  private startPoint: number = 0;
+  private endPoint: number = 0;
+  private playDuration: number = 0;
+
+  private isPlaying: boolean = false;
   private midiNote: number = -1;
   private trigger: number = -1;
 
@@ -26,121 +36,135 @@ export class SingleUseVoice {
     readonly buffer: AudioBuffer,
     private sampleId: string
   ) {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(sampleId);
+    const sampleManager = SampleSettingsManager.getInstance();
+    const settings = sampleManager.getSampleSettings(
+      sampleId
+    ) as Sample_settings;
 
     if (!settings) {
       throw new Error('Sample not loaded, id: ' + sampleId);
     }
 
-    SingleUseVoice.allVoices.add(this);
+    this.initialize(settings);
+  }
 
+  private initialize(settings: Sample_settings): void {
     this.source = this.audioCtx.createBufferSource();
-    this.source.buffer = buffer;
+    this.source.buffer = this.buffer;
     this.voiceGain = this.audioCtx.createGain();
     this.voiceGain.gain.value = 0;
     this.source.connect(this.voiceGain);
 
-    const globalState = LoopHoldManager.getInstance();
-    this.source.loop = globalState.globalLoop || settings.locks.loop;
+    this.startPoint = settings.time.startPoint;
+    this.endPoint = settings.time.endPoint;
+    this.playDuration = this.endPoint - this.startPoint;
 
-    this.setLoop();
+    const loopHoldManager = LoopHoldManager.getInstance();
+    this.source.loop = loopHoldManager.globalLoop || settings.locks.loop;
+    if (this.source.loop) {
+      this.source.loopStart = settings.time.loopStart;
+      this.source.loopEnd = settings.time.loopEnd;
+    }
 
     this.source.onended = () => {
       this.stop();
     };
   }
-  // ____________  TESTING ____________
 
-  static updateActiveVoices(
-    sampleId: string,
-    updateFn: (voice: SingleUseVoice) => void
-  ): void {
-    SingleUseVoice.allVoices.forEach((voice) => {
-      if (voice.sampleId === sampleId) {
-        updateFn(voice);
-      }
-    });
+  // ____________  GETTERS  ____________
+
+  getSampleId(): string {
+    return this.sampleId;
   }
-
-  updateTimeSettings(settings: Partial<Time_settings>): void {
-    const prevTimeSettings = SettingsManager.getInstance().getSampleSettings(
-      this.sampleId
-    )?.time;
-
-    const { startPoint, endPoint, loopStart, loopEnd } = settings;
-    const zeroCrossings =
-      SettingsManager.getInstance().getZeroCrossings(this.sampleId) ?? [];
-
-    if (startPoint !== undefined) {
-      const snapStart = snapToNearestZeroCrossing(
-        startPoint,
-        zeroCrossings // change to just pass id in!
-      );
-      this.source.loopStart = snapStart;
-    }
-    if (endPoint !== undefined) {
-      const snapEnd = snapToNearestZeroCrossing(
-        endPoint,
-        zeroCrossings // change to just pass id in!
-      );
-      this.source.loopEnd = snapEnd;
-    }
-    if (loopStart !== undefined || loopEnd !== undefined) {
-      this.calculateLoopPoints(
-        prevTimeSettings.loopStart,
-        prevTimeSettings.loopEnd
-      );
-    }
-  }
-
-  // ____________  TESTING ____________
 
   getVoiceGain(): GainNode {
     return this.voiceGain;
   }
 
-  start(midiNote: number): void {
-    const settingsManager = SettingsManager.getInstance();
-    const settings = settingsManager.getSampleSettings(this.sampleId)!;
+  getTriggerTime(): number {
+    return this.trigger;
+  }
 
+  getMidiNote(): number {
+    return this.midiNote;
+  }
+
+  // ____________  SETTERS  ___________________
+
+  setLoopStart(loopStart: number): void {
+    this.source.loopStart = loopStart;
+  }
+
+  setLoopEnd(loopEnd: number): void {
+    this.source.loopEnd = loopEnd;
+  }
+
+  private setPlaybackRate(
+    // move parts to constructor or voice manager to seperate concerns ?
+    midiNote: number,
+    pitchSettings: Pitch_settings
+  ): void {
     const midiRate = this.semitoneToRate(1, midiNote - MIDDLE_C_MIDI);
     const transposedRate = this.semitoneToRate(
       midiRate,
-      settings.pitch.transposition
+      pitchSettings.transposition
     );
     const tunedRate = this.semitoneToRate(
       transposedRate,
-      settings.pitch.tuneOffset
+      pitchSettings.tuneOffset
     );
     this.source.playbackRate.value = tunedRate;
 
-    this.source.start(
-      0,
-      settings.time.startPoint,
-      this.source.loop
-        ? undefined
-        : settings.time.endPoint - settings.time.startPoint
-    );
+    this.playDuration = this.playDuration / this.source.playbackRate.value; // seperate concerns
+  }
+
+  // ____________  METHODS  ___________________
+
+  start(midiNote: number): void {
+    const settingsManager = SampleSettingsManager.getInstance(); // simplify - localize
+    const pitchSettings = settingsManager.getSampleSettings(
+      this.sampleId,
+      'pitch'
+    ) as Pitch_settings;
+
+    this.setPlaybackRate(midiNote, pitchSettings); // also sets playDuration
+
+    this.startSource();
 
     this.triggerAttack();
-    this.midiNote = midiNote;
+    this.midiNote = midiNote; // using?
+  }
+
+  private startSource(): void {
+    this.source.start(
+      0,
+      this.startPoint,
+      this.source.loop
+        ? undefined // no endPoint is set if is looping
+        : this.playDuration // stops the source after the duration of the sample
+    );
+
+    this.isPlaying = true;
   }
 
   stop(): void {
     this.source.stop();
-    SingleUseVoice.allVoices.delete(this);
     this.source.disconnect();
     this.voiceGain.disconnect();
+    this.isPlaying = false;
+
+    // SingleUseVoice.allVoices.delete(this);
   }
 
   triggerAttack(): void {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
+    const sampleManager = SampleSettingsManager.getInstance();
+    const settings = sampleManager.getSampleSettings(
+      this.sampleId
+    ) as Sample_settings;
 
     this.voiceGain.gain.linearRampToValueAtTime(
       settings.volume.sampleVolume,
-      this.audioCtx.currentTime + settings.volume.attackTime
+      this.audioCtx.currentTime + settings.ampEnv.attackTime
     );
     this.trigger = this.audioCtx.currentTime;
   }
@@ -149,62 +173,47 @@ export class SingleUseVoice {
     const globalState = LoopHoldManager.getInstance();
     if (this.trigger <= 0 || globalState.hold) return;
 
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
+    // just pass in the value from the context? Simplify communication between classes
+    const sampleManager = SampleSettingsManager.getInstance();
+    const settings = sampleManager.getSampleSettings(
+      this.sampleId,
+      'ampEnv'
+    ) as AmpEnv;
 
     this.voiceGain.gain.linearRampToValueAtTime(
       0,
       this.audioCtx.currentTime +
-        settings.volume.releaseTime / this.source.playbackRate.value
+        settings.releaseTime / this.source.playbackRate.value
     );
 
-    this.source.stop(
-      this.audioCtx.currentTime + settings.volume.releaseTime + 1
-    );
+    this.source.stop(this.audioCtx.currentTime + settings.releaseTime + 1);
   }
 
-  private setLoop(
-    isLoopOn: boolean = LoopHoldManager.getInstance().globalLoop
+  private semitoneToRate(baseRate: number, semitones: number): number {
+    return baseRate * Math.pow(2, semitones / 12);
+  }
+
+  updateLoopPoints(
+    newStart: number,
+    newEnd: number,
+    prevStart: number,
+    prevEnd: number
   ): void {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
+    const newLoopLength = newEnd - newStart;
+    if (newLoopLength <= C5_DURATION_SEC) return; // lowest allowed value
 
-    if (settings.locks.loop) return;
-
-    if (!isLoopOn) {
-      this.triggerRelease();
-    }
-
-    this.source.loop = isLoopOn;
-    // this.calculateLoopPoints(); // test !
-  }
-
-  private calculateLoopPoints(prevStart: number, prevEnd: number): void {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
-    const zeroCrossings = sampleManager.getZeroCrossings(this.sampleId) ?? [];
-
-    const { loopStart, loopEnd } = settings.time;
-    if (!loopStart || !loopEnd) return;
-
-    const initLoopLength = loopEnd - loopStart;
-    if (initLoopLength <= C5_DURATION_SEC) return;
-
-    let start = snapToNearestZeroCrossing(loopStart, zeroCrossings);
-    let end = snapToNearestZeroCrossing(loopEnd, zeroCrossings);
-
-    const zeroSnapLength = end - start;
-    if (zeroSnapLength > 0.015) {
-      this.updateLoopPoints(start, end);
+    if (newLoopLength > 0.015) {
+      this.setLoopStart(newStart);
+      this.setLoopEnd(newEnd);
       return;
     }
 
-    // _____________ optimize above and below whe working ______________________
+    // ... refactor this part to a helper function
 
     const prevLoopLength = prevEnd - prevStart;
 
     const nearestNote = snapDurationToNote(
-      zeroSnapLength,
+      newLoopLength,
       ['C'],
       'C',
       'C',
@@ -223,57 +232,45 @@ export class SingleUseVoice {
       7,
       'sec',
       500, // animation duration in ms,
-      (interpolatedDuration: number) => {
-        // Update your state or UI with the interpolated duration
-        console.log(interpolatedDuration);
-
-        const newEnd = start + interpolatedDuration;
-        this.updateLoopPoints(start, newEnd);
+      (interpolatedLength: number) => {
+        const adjustedNewEnd = newStart + interpolatedLength;
+        this.setLoopStart(newStart);
+        this.setLoopEnd(adjustedNewEnd);
       }
     );
-    // end = start + snappedLength;
-    // this.updateLoopPoints(start, end);
-  }
-
-  private updateLoopPoints(loopStart: number, loopEnd: number): void {
-    console.log(`Updating loop points: start=${loopStart}, end=${loopEnd}`);
-    this.source.loopStart = loopStart;
-    this.source.loopEnd = loopEnd;
-  }
-
-  private semitoneToRate(baseRate: number, semitones: number): number {
-    return baseRate * Math.pow(2, semitones / 12);
-  }
-
-  static initialize(sampleRate: number = 48000): void {
-    SingleUseVoice.sampleRate = sampleRate;
-  }
-
-  static isPlaying(): boolean {
-    return SingleUseVoice.allVoices.size > 0;
-  }
-
-  static getCurrentPlayheadPosition(): number {
-    if (SingleUseVoice.allVoices.size === 0) return 0;
-    const voice = Array.from(SingleUseVoice.allVoices)[0];
-    return voice.trigger > 0 ? voice.audioCtx.currentTime - voice.trigger : 0;
-  }
-
-  static panic(): void {
-    SingleUseVoice.allVoices.forEach((voice) => voice.stop());
-    LoopHoldManager.getInstance().globalLoop = false;
-    SingleUseVoice.allVoices.clear();
-  }
-
-  static releaseNote(midiNote: number): void {
-    const globalState = LoopHoldManager.getInstance();
-    SingleUseVoice.allVoices.forEach((voice) => {
-      if (voice.midiNote === midiNote && !globalState.hold) {
-        voice.triggerRelease();
-      }
-    });
   }
 }
+
+// static initialize(sampleRate: number = 48000): void {
+//   SingleUseVoice.sampleRate = sampleRate;
+// }
+
+// static isPlaying(): boolean {
+//   return SingleUseVoice.allVoices.size > 0;
+// }
+
+// static getCurrentPlayheadPosition(): number {
+//   if (SingleUseVoice.allVoices.size === 0) return 0;
+//   const voice = Array.from(SingleUseVoice.allVoices)[0];
+//   return voice.trigger > 0 ? voice.audioCtx.currentTime - voice.trigger : 0;
+// }
+
+// static panic(): void {
+//   SingleUseVoice.allVoices.forEach((voice) => voice.stop());
+//   LoopHoldManager.getInstance().globalLoop = false;
+//   SingleUseVoice.allVoices.clear();
+// }
+
+// static releaseNote(midiNote: number): void {
+//   const globalState = LoopHoldManager.getInstance();
+//   SingleUseVoice.allVoices.forEach((voice) => {
+//     if (voice.midiNote === midiNote && !globalState.hold) {
+//       voice.triggerRelease();
+//     }
+//   });
+// }
+
+// Let's refactor our SingleUseVoice so that a new VoiceManager will handle all the static stuff, keeping SingleUseVoice clean and simple.
 
 // export default class SingleUseVoice {
 //   private static sampleRate: number = 48000;

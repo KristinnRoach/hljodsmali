@@ -4,44 +4,130 @@
 import React, { useState, useEffect } from 'react';
 import { useSamplerEngine } from '../../contexts/EngineContext';
 import BasicSlider from '../UI/Basic/BasicSlider';
-import { Volume_settings } from '../../types/samples';
+import { AmpEnv } from '../../types/types';
 import styles from './Sampler.module.scss';
 
 const AmpEnvelopeControls = () => {
   const {
-    selectedForSettings,
+    focusedSettings: selectedForSettings,
     getSampleSettings,
-    updateEnvelopeSettings,
+    updateAmpEnvParam,
     getBufferDuration,
   } = useSamplerEngine();
 
-  const [attackTime, setAttackTime] = useState(0);
-  const [releaseTime, setReleaseTime] = useState(0);
+  const [attackTime, setAttackTime] = useState<number | null>(null);
+  const [releaseTime, setReleaseTime] = useState<number | null>(null);
   const [bufferDuration, setBufferDuration] = useState(0);
 
   useEffect(() => {
-    const sampleId = selectedForSettings[0]; // We know there's at least one selected sample
-    const settings = getSampleSettings(sampleId, 'Volume') as Volume_settings;
-    const duration = getBufferDuration(sampleId);
+    const sampleId = selectedForSettings[0];
+    console.log('Selected sample ID:', sampleId);
 
-    setAttackTime(settings.attackTime);
-    setReleaseTime(settings.releaseTime);
-    setBufferDuration(duration);
-  }, [selectedForSettings, getSampleSettings]);
+    if (!sampleId) {
+      console.log('No sample selected');
+      return;
+    }
+
+    const allSettings = getSampleSettings(sampleId);
+    console.log('All settings:', allSettings);
+
+    const ampEnvSettings = getSampleSettings(sampleId, 'ampEnv');
+    console.log('Raw ampEnv settings:', ampEnvSettings);
+
+    if (
+      ampEnvSettings &&
+      typeof ampEnvSettings === 'object' &&
+      'attackTime' in ampEnvSettings &&
+      'releaseTime' in ampEnvSettings
+    ) {
+      const typedAmpEnvSettings = ampEnvSettings as AmpEnv;
+      console.log('Typed ampEnv settings:', typedAmpEnvSettings);
+
+      setAttackTime(typedAmpEnvSettings.attackTime);
+      setReleaseTime(typedAmpEnvSettings.releaseTime);
+    } else {
+      console.error('Invalid ampEnv settings:', ampEnvSettings);
+      console.error('All settings:', allSettings);
+    }
+
+    const duration = getBufferDuration(sampleId);
+    console.log('Buffer duration:', duration);
+
+    if (duration) {
+      setBufferDuration(duration);
+    }
+  }, [selectedForSettings, getSampleSettings, getBufferDuration]);
+
+  // useEffect(() => {
+  //   const sampleId = selectedForSettings[0];
+  //   console.log('Selected sample ID:', sampleId);
+
+  //   if (!sampleId) {
+  //     console.log('No sample selected');
+  //     return;
+  //   }
+
+  //   const ampEnvSettings = getSampleSettings(sampleId, 'ampEnv');
+  //   console.log('Raw ampEnv settings:', ampEnvSettings);
+
+  //   if (
+  //     ampEnvSettings &&
+  //     typeof ampEnvSettings === 'object' &&
+  //     'attackTime' in ampEnvSettings &&
+  //     'releaseTime' in ampEnvSettings
+  //   ) {
+  //     const typedAmpEnvSettings = ampEnvSettings as AmpEnv;
+  //     console.log('Typed ampEnv settings:', typedAmpEnvSettings);
+
+  //     setAttackTime(typedAmpEnvSettings.attackTime);
+  //     setReleaseTime(typedAmpEnvSettings.releaseTime);
+  //   } else {
+  //     console.error('Invalid ampEnv settings:', ampEnvSettings);
+  //   }
+
+  //   const duration = getBufferDuration(sampleId);
+  //   console.log('Buffer duration:', duration);
+
+  //   if (duration) {
+  //     setBufferDuration(duration);
+  //   }
+  // }, [selectedForSettings, getSampleSettings, getBufferDuration]);
+
+  console.log('Render values:', { attackTime, releaseTime, bufferDuration });
+
+  // useEffect(() => {
+  //   const sampleId = selectedForSettings[0];
+
+  //   console.log('ampEnv sample id: ', sampleId);
+
+  //   if (!sampleId) return;
+
+  //   const settings = getSampleSettings(sampleId, 'ampEnv') as AmpEnv | null;
+
+  //   console.log('ampEnv settings: ', settings);
+
+  //   const duration = getBufferDuration(sampleId);
+
+  //   console.log('ampEnv buffer duration: ', duration);
+
+  //   if (!settings || !duration) return;
+
+  //   setAttackTime(settings.attackTime);
+  //   setReleaseTime(settings.releaseTime);
+  //   setBufferDuration(duration);
+  // }, [selectedForSettings, getSampleSettings, getBufferDuration]);
 
   const handleAttackTimeChange = (newValue: number) => {
     setAttackTime(newValue);
-    const sampleId = selectedForSettings[0];
-    updateEnvelopeSettings(sampleId, { attackTime: newValue });
+    updateAmpEnvParam('attackTime', newValue); // accepts optional sampleId if needed
   };
 
   const handleReleaseTimeChange = (newValue: number) => {
     setReleaseTime(newValue);
-    const sampleId = selectedForSettings[0];
-    updateEnvelopeSettings(sampleId, { releaseTime: newValue });
+    updateAmpEnvParam('releaseTime', newValue);
   };
 
-  return (
+  return attackTime !== null && releaseTime !== null && bufferDuration > 0 ? (
     <>
       <BasicSlider
         label='Attack'
@@ -62,6 +148,8 @@ const AmpEnvelopeControls = () => {
         ceiling={bufferDuration - attackTime}
       />
     </>
+  ) : (
+    <p>Loading...</p>
   );
 };
 

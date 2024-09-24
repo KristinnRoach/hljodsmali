@@ -1,11 +1,4 @@
-// src/lib/DSP/ZeroCrossingDetector.ts
-
 import { Time_settings } from '@src/types/samples';
-
-// Usage
-// const zeroCrossings = findZeroCrossings(audioBuffer);
-// loopStart = snapToNearestZeroCrossing(userSelectedLoopStart, zeroCrossings);
-// loopEnd = snapToNearestZeroCrossing(userSelectedLoopEnd, zeroCrossings);
 
 export function findZeroCrossings(
   audioBuffer: AudioBuffer,

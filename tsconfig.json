@@ -35,8 +35,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "src/hooks/useLogout.js",
-    "src/hooks/useLogin.js",
+    "src/hooks/utility/useLogout.js",
+    "src/hooks/utility/useLogin.js",
     "src/components/Auth/Login.jsx",
     "src/components/UI/Shapes/Shapes.jsx"
   ],

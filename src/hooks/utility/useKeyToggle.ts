@@ -4,29 +4,30 @@ type KeyToggleOptions = {
   key: string;
   initialState?: boolean;
   preventDefault?: boolean;
+  stopPropagation?: boolean;
 };
 
 const useKeyToggle = ({
   key,
   initialState = false,
   preventDefault = true,
+  stopPropagation = true,
 }: KeyToggleOptions) => {
-  const [isToggled, setIsToggled] = useState(initialState);
+  const [isActive, setToggle] = useState(initialState);
 
   const handleKeyEvent = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === key) {
-        if (preventDefault) {
-          event.preventDefault();
-        }
+        if (preventDefault) event.preventDefault();
+        if (stopPropagation) event.stopPropagation();
 
         if (key === 'CapsLock') {
           // For CapsLock, we use the actual CapsLock state
-          setIsToggled(event.getModifierState('CapsLock'));
+          setToggle(event.getModifierState('CapsLock'));
         } else {
           // For other keys, we toggle the state on keydown
           if (event.type === 'keydown') {
-            setIsToggled((prev) => !prev);
+            setToggle((prev) => !prev);
           }
         }
       }
@@ -36,7 +37,7 @@ const useKeyToggle = ({
 
   useEffect(() => {
     if (key === 'CapsLock') {
-      setIsToggled(
+      setToggle(
         'getModifierState' in KeyboardEvent.prototype
           ? new KeyboardEvent('').getModifierState('CapsLock')
           : false
@@ -57,11 +58,11 @@ const useKeyToggle = ({
     };
   }, [handleKeyEvent, key]);
 
-  const setToggle = useCallback((state: boolean) => {
-    setIsToggled(state);
+  const toggle = useCallback((state: boolean) => {
+    setToggle(state);
   }, []);
 
-  return [isToggled, setToggle] as const;
+  return [isActive, toggle] as const;
 };
 
 export default useKeyToggle;

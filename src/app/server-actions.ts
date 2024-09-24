@@ -3,7 +3,7 @@
 
 import { revalidatePath } from 'next/cache';
 import pb from '../lib/db/pocketbase';
-import { SampleRecord } from '../types/samples';
+import { SampleRecord } from '../types/types';
 
 export async function saveSample(
   name: string,

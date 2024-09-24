@@ -1,4 +1,4 @@
-// src/types/samples.ts
+// src/types/types.ts
 
 import { FormatKey, AudioFormat, APP_FORMATS } from './constants/mimeTypes';
 
@@ -9,10 +9,12 @@ export type Time_settings = {
   loopEnd: number;
 };
 
-export type Volume_settings = {
+export type AmpEnv = {
   attackTime: number;
   releaseTime: number;
+};
 
+export type Volume_settings = {
   sampleVolume: number;
   loopVolume: number;
 };
@@ -37,10 +39,20 @@ export type Lock_settings = {
 export type Sample_settings = {
   time: Time_settings;
   volume: Volume_settings;
+  ampEnv: AmpEnv;
   pitch: Pitch_settings;
   filters: Filter_settings;
   locks: Lock_settings;
 };
+
+export type SettingsType = keyof Sample_settings;
+
+export type TimeParam = keyof Time_settings;
+export type EnvParam = keyof AmpEnv; // | FilterEnv if implemented
+export type VolumeParam = keyof Volume_settings;
+export type PitchParam = keyof Pitch_settings;
+export type FilterParam = keyof Filter_settings;
+export type LockParam = keyof Lock_settings;
 
 export type Sample_file = File & {
   type: (typeof APP_FORMATS)[FormatKey];
@@ -66,37 +78,85 @@ export type SampleRecord = {
   sample_settings: Sample_settings;
 };
 
-export function getDefaultSampleSettings(
-  bufferDuration: number,
-  existingSettings?: Partial<Sample_settings>
-): Sample_settings {
-  const defaultSettings: Sample_settings = {
-    time: {
-      startPoint: 0,
-      endPoint: bufferDuration,
-      loopStart: 0,
-      loopEnd: bufferDuration,
-    },
-    volume: {
-      attackTime: 0.02,
-      releaseTime: 0.2,
-      sampleVolume: 1,
-      loopVolume: 0.8,
-    },
-    pitch: {
-      transposition: 0,
-      tuneOffset: 0,
-    },
-    filters: {
-      lowCutoff: 40,
-      highCutoff: 20000,
-    },
-    locks: {
-      loop: false,
-    },
-  };
+// ____________________________ VOICE _____________________________________________
 
-  return { ...defaultSettings, ...existingSettings };
+export type Voice = {
+  connect: (destination: AudioNode) => void;
+  start: (midiNoteValue: number) => void;
+  stop: () => void;
+  triggerAttack: () => void;
+  triggerRelease: () => void;
+  updateLoopPoints: (
+    param: keyof Time_settings,
+    newValue: number,
+    prevSettings: Time_settings
+  ) => void;
+  updateTuning: (
+    newPitchSettings: Pitch_settings,
+    prevPitchSettings: Pitch_settings
+  ) => void;
+  toggleLoop: () => void;
+
+  sampleId: string;
+  volume: number;
+  startPoint: number;
+  endPoint: number;
+  loopStart: number;
+  loopEnd: number;
+  loop: boolean;
+  hold: boolean;
+};
+
+// ________________________________ TYPE GUARDS ______________________________________
+
+export function isTimeSettings(settings: any): settings is Time_settings {
+  return (
+    'startPoint' in settings &&
+    'endPoint' in settings &&
+    'loopStart' in settings &&
+    'loopEnd' in settings
+  );
+}
+
+export function isAmpEnvelopeSettings(settings: any): settings is AmpEnv {
+  return 'attackTime' in settings && 'releaseTime' in settings;
+}
+
+export function isVolumeSettings(settings: any): settings is Volume_settings {
+  return 'sampleVolume' in settings && 'loopVolume' in settings;
+}
+
+export function isPitchSettings(settings: any): settings is Pitch_settings {
+  return 'transposition' in settings && 'tuneOffset' in settings;
+}
+
+export function isFilterSettings(settings: any): settings is Filter_settings {
+  return 'lowCutoff' in settings && 'highCutoff' in settings;
+}
+
+export function isLockSettings(settings: any): settings is Lock_settings {
+  return 'loop' in settings;
+}
+
+export function isSampleSettings(settings: any): settings is Sample_settings {
+  return (
+    isTimeSettings(settings.time) &&
+    isAmpEnvelopeSettings(settings.amp_env) &&
+    isVolumeSettings(settings.volume) &&
+    isPitchSettings(settings.pitch) &&
+    isFilterSettings(settings.filters) &&
+    isLockSettings(settings.locks)
+  );
+}
+
+export function isSampleRecord(record: any): record is SampleRecord {
+  return (
+    'id' in record &&
+    'name' in record &&
+    'slug' in record &&
+    'sample_file' in record &&
+    'sample_settings' in record
+  );
 }
 
 // export type Sample_settings = {
