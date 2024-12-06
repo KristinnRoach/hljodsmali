@@ -389,7 +389,7 @@ const Waveform: React.FC<WaveformProps> = ({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       e.preventDefault();
-      e.stopPropagation();
+      // e.stopPropagation();
 
       const rect = canvasRef.current!.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * width;
@@ -422,8 +422,8 @@ const Waveform: React.FC<WaveformProps> = ({
 
       if (!dragState.type) return;
 
-      e.preventDefault();
-      e.stopPropagation();
+      // e.preventDefault();
+      // e.stopPropagation();
 
       setMouseStyle('grabbing');
 
@@ -435,7 +435,7 @@ const Waveform: React.FC<WaveformProps> = ({
   const handleMouseUp = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       e.preventDefault();
-      e.stopPropagation();
+      // e.stopPropagation();
 
       setDragState({ type: null, key: null, offset: 0, initialPosition: 0 });
       setMouseStyle('default');

@@ -19,7 +19,7 @@ import AmpEnvelopeControls from './AmpEnvelope';
 // import WaveformEditor from '../UI/WaveForms/WaveformEditor';
 
 import Waveform from '../UI/WaveForms/Waveform';
-// import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
+import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
 // import Shapes from '../UI/Shapes/Shapes'; // TODO: Resolve "Multiple instances of Three.js being imported" warning (if persists)
 
 import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
@@ -158,6 +158,12 @@ export default function Sampler() {
             </section>
           </>
         )}
+
+      <section className={styles.keyboardContainer}>
+        <ToggleMenu label='Keyboard'>
+          <KeyboardGUI />
+        </ToggleMenu>
+      </section>
     </div>
   );
 }
