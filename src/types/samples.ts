@@ -42,6 +42,12 @@ export type Sample_settings = {
   locks: Lock_settings;
 };
 
+// Todo: add all params explicitly
+export type SettingsParam = {
+  param: string;
+  value: number | boolean;
+};
+
 export type Sample_file = File & {
   type: (typeof APP_FORMATS)[FormatKey];
   name: `${string}${(typeof APP_FORMATS)[FormatKey]['extension']}`;

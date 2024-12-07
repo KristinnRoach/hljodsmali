@@ -3,17 +3,12 @@
 import { SettingsManager } from './SettingsManager';
 import { LoopHoldManager } from './GlobalAudioState';
 
-import { Sample_settings, Time_settings } from '../../types/samples';
-import { snapToNearestZeroCrossing } from '../audio-utils/zeroCrossingUtils';
-import {
-  snapDurationToNote,
-  C5_DURATION_SEC,
-  interpolateDurationToNote,
-} from '../../types/constants/note-utils';
 import { MIDDLE_C_MIDI } from '../../types/constants/constants';
 
 export class SingleUseVoice {
-  private static allVoices: Set<SingleUseVoice> = new Set();
+  private static settingsManager: SettingsManager;
+
+  private static activeVoices: Set<SingleUseVoice> = new Set();
   private static sampleRate: number = 48000;
 
   private source: AudioBufferSourceNode;
@@ -24,16 +19,16 @@ export class SingleUseVoice {
   constructor(
     private audioCtx: AudioContext,
     readonly buffer: AudioBuffer,
-    private sampleId: string
+    private sampleId: string,
+    settingsManager = SettingsManager.getInstance()
   ) {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(sampleId);
+    // const settings = settingsManager.getSampleSettings(sampleId);
 
-    if (!settings) {
-      throw new Error('Sample not loaded, id: ' + sampleId);
-    }
+    // if (!settings) {
+    //   throw new Error('Sample not loaded, id: ' + sampleId);
+    // }
 
-    SingleUseVoice.allVoices.add(this);
+    SingleUseVoice.activeVoices.add(this);
 
     this.source = this.audioCtx.createBufferSource();
     this.source.buffer = buffer;
@@ -42,7 +37,7 @@ export class SingleUseVoice {
     this.source.connect(this.voiceGain);
 
     const globalState = LoopHoldManager.getInstance();
-    this.source.loop = globalState.globalLoop || settings.locks.loop;
+    this.source.loop = globalState.globalLoop; // || settings.locks.loop;
 
     this.setLoop();
 
@@ -50,75 +45,75 @@ export class SingleUseVoice {
       this.stop();
     };
   }
-  // ____________  TESTING ____________
 
-  static updateActiveVoices(
-    sampleId: string,
-    updateFn: (voice: SingleUseVoice) => void
-  ): void {
-    SingleUseVoice.allVoices.forEach((voice) => {
-      if (voice.sampleId === sampleId) {
-        updateFn(voice);
+  static updateLoopPoints(
+    loopStart: number,
+    loopEnd: number,
+    sampleId?: string
+  ) {
+    SingleUseVoice.activeVoices.forEach((voice) => {
+      if (!sampleId || voice.sampleId === sampleId) {
+        voice.updateLoopPoints(loopStart, loopEnd);
       }
     });
   }
 
-  updateTimeSettings(settings: Partial<Time_settings>): Partial<Time_settings> {
-    const prevTimeSettings = SettingsManager.getInstance().getSampleSettings(
-      this.sampleId
-    )?.time;
+  // updateTimeSettings(settings: Partial<Time_settings>): Partial<Time_settings> {
+  //   const prevTimeSettings = SettingsManager.getInstance().getSampleSettings(
+  //     this.sampleId
+  //   )?.time;
 
-    const { startPoint, endPoint, loopStart, loopEnd } = settings;
-    const zeroCrossings =
-      SettingsManager.getInstance().getZeroCrossings(this.sampleId) ?? [];
+  //   const { startPoint, endPoint, loopStart, loopEnd } = settings;
+  //   const zeroCrossings =
+  //     SettingsManager.getInstance().getZeroCrossings(this.sampleId) ?? [];
 
-    if (startPoint !== undefined) {
-      const snapStart = snapToNearestZeroCrossing(
-        startPoint,
-        zeroCrossings // change to just pass id in!
-      );
-      this.source.loopStart = snapStart;
-    }
-    if (endPoint !== undefined) {
-      const snapEnd = snapToNearestZeroCrossing(
-        endPoint,
-        zeroCrossings // change to just pass id in!
-      );
-      this.source.loopEnd = snapEnd;
-    }
-    if (loopStart !== undefined || loopEnd !== undefined) {
-      this.calculateLoopPoints(
-        prevTimeSettings.loopStart,
-        prevTimeSettings.loopEnd
-      );
-    }
+  //   if (startPoint !== undefined) {
+  //     const snapStart = snapToNearestZeroCrossing(
+  //       startPoint,
+  //       zeroCrossings // change to just pass id in!
+  //     );
+  //     this.source.loopStart = snapStart;
+  //   }
+  //   if (endPoint !== undefined) {
+  //     const snapEnd = snapToNearestZeroCrossing(
+  //       endPoint,
+  //       zeroCrossings // change to just pass id in!
+  //     );
+  //     this.source.loopEnd = snapEnd;
+  //   }
+  //   if (loopStart !== undefined || loopEnd !== undefined) {
+  //     this.calculateLoopPoints(
+  //       prevTimeSettings.loopStart,
+  //       prevTimeSettings.loopEnd
+  //     );
+  //   }
 
-    return settings;
-  }
+  //   return settings;
+  // }
 
-  private calculateLoopPoints(
-    prevStart: number,
-    prevEnd: number
-  ): { loopStart: number; loopEnd: number } | null {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
-    const zeroCrossings = sampleManager.getZeroCrossings(this.sampleId) ?? [];
+  // private calculateLoopPoints(
+  //   prevStart: number,
+  //   prevEnd: number
+  // ): { loopStart: number; loopEnd: number } | null {
+  //   const sampleManager = SettingsManager.getInstance();
+  //   const settings = sampleManager.getSampleSettings(this.sampleId)!;
+  //   const zeroCrossings = sampleManager.getZeroCrossings(this.sampleId) ?? [];
 
-    const { loopStart, loopEnd } = settings.time;
-    if (!loopStart || !loopEnd) return;
+  //   const { loopStart, loopEnd } = settings.time;
+  //   if (!loopStart || !loopEnd) return;
 
-    const initLoopLength = loopEnd - loopStart;
-    if (initLoopLength <= C5_DURATION_SEC) return;
+  //   const initLoopLength = loopEnd - loopStart;
+  //   if (initLoopLength <= C5_DURATION_SEC) return;
 
-    let start = snapToNearestZeroCrossing(loopStart, zeroCrossings);
-    let end = snapToNearestZeroCrossing(loopEnd, zeroCrossings);
+  //   let start = snapToNearestZeroCrossing(loopStart, zeroCrossings);
+  //   let end = snapToNearestZeroCrossing(loopEnd, zeroCrossings);
 
-    const zeroSnapLength = end - start;
-    if (zeroSnapLength > 0.015) {
-      this.updateLoopPoints(start, end);
-      return;
-    }
-  }
+  //   const zeroSnapLength = end - start;
+  //   if (zeroSnapLength > 0.015) {
+  //     this.updateLoopPoints(start, end);
+  //     return;
+  //   }
+  // }
 
   // ____________  TESTING ____________
 
@@ -155,7 +150,7 @@ export class SingleUseVoice {
 
   stop(): void {
     this.source.stop();
-    SingleUseVoice.allVoices.delete(this);
+    SingleUseVoice.activeVoices.delete(this);
     this.source.disconnect();
     this.voiceGain.disconnect();
   }
@@ -220,24 +215,24 @@ export class SingleUseVoice {
   }
 
   static isPlaying(): boolean {
-    return SingleUseVoice.allVoices.size > 0;
+    return SingleUseVoice.activeVoices.size > 0;
   }
 
   static getCurrentPlayheadPosition(): number {
-    if (SingleUseVoice.allVoices.size === 0) return 0;
-    const voice = Array.from(SingleUseVoice.allVoices)[0];
+    if (SingleUseVoice.activeVoices.size === 0) return 0;
+    const voice = Array.from(SingleUseVoice.activeVoices)[0];
     return voice.trigger > 0 ? voice.audioCtx.currentTime - voice.trigger : 0;
   }
 
   static panic(): void {
-    SingleUseVoice.allVoices.forEach((voice) => voice.stop());
+    SingleUseVoice.activeVoices.forEach((voice) => voice.stop());
     LoopHoldManager.getInstance().globalLoop = false;
-    SingleUseVoice.allVoices.clear();
+    SingleUseVoice.activeVoices.clear();
   }
 
   static releaseNote(midiNote: number): void {
     const globalState = LoopHoldManager.getInstance();
-    SingleUseVoice.allVoices.forEach((voice) => {
+    SingleUseVoice.activeVoices.forEach((voice) => {
       if (voice.midiNote === midiNote && !globalState.hold) {
         voice.triggerRelease();
       }

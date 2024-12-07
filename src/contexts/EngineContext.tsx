@@ -81,7 +81,7 @@ const SamplerEngineContext = createContext<SamplerEngineContextValue | null>(
 );
 
 const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
-  const sampleManager = useMemo(() => SettingsManager.getInstance(), []);
+  const settingsManager = useMemo(() => SettingsManager.getInstance(), []);
   const globalAudioState = useMemo(() => LoopHoldManager.getInstance(), []);
 
   // const sampleIdsRef = useRef<Set<string>>(new Set());
@@ -189,8 +189,8 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
 
     console.log('Loading sample settings:', id, sample_settings);
 
-    sampleManager.setSampleSettings(id, sample_settings);
-    sampleManager.setZeroCrossings(id, zeroCrossings);
+    settingsManager.setSampleSettings(id, sample_settings);
+    settingsManager.setZeroCrossings(id, zeroCrossings);
 
     try {
       const sampleGain = createGainNode(
@@ -240,8 +240,8 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const unloadSample = useCallback(
     (id: string) => {
-      sampleManager.removeSampleSettings(id);
-      sampleManager.removeZeroCrossings(id);
+      settingsManager.removeSampleSettings(id);
+      settingsManager.removeZeroCrossings(id);
 
       buffersRef.current.delete(id);
       sampleNodesRef.current.delete(id);
@@ -249,7 +249,7 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
 
       console.log('Unloaded sample:', id);
     },
-    [sampleManager]
+    [settingsManager]
   );
 
   const selectForPlayback = useCallback(
@@ -309,7 +309,7 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
     id: string,
     type: 'Time' | 'Volume' | 'Pitch' | 'Filter' | 'Lock' | 'All' = 'All'
   ) => {
-    const settings = sampleManager.getSampleSettings(id);
+    const settings = settingsManager.getSampleSettings(id);
 
     if (!settings) {
       console.error(`Sample ${id} not loaded`);
@@ -342,21 +342,17 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      const currentSettings = sampleManager.getSampleSettings(id);
+      const currentSettings = settingsManager.getSampleSettings(id);
       if (!currentSettings) return;
 
-      let updated: Partial<Time_settings> | null = null;
-      // Update active voices -- STILL JUST TESTING
-      SingleUseVoice.updateActiveVoices(id, (voice) => {
-        updated = voice.updateTimeSettings(settings);
-      });
+      let updated = settingsManager.updateTimeSettings(id, settings);
 
-      const updatedSettings = { ...currentSettings.time, ...settings };
-      sampleManager.updateSampleSettings(id, { time: updatedSettings });
+      // const updatedSettings = { ...currentSettings.time, ...settings };
+      // settingsManager.updateSampleSettings(id, { time: updatedSettings });
 
       // console.log('Updated time settings:', id, updatedSettings);
     },
-    [sampleManager, selectedForSettings]
+    [settingsManager, selectedForSettings]
   );
 
   const updateEnvelopeSettings = useCallback(
@@ -374,15 +370,15 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      const currentSettings = sampleManager.getSampleSettings(id);
+      const currentSettings = settingsManager.getSampleSettings(id);
       if (!currentSettings) return;
 
       const updatedSettings = { ...currentSettings.volume, ...settings };
-      sampleManager.updateSampleSettings(id, { volume: updatedSettings });
+      settingsManager.updateSampleSettings(id, { volume: updatedSettings });
 
       console.log('Updated envelope settings:', id, updatedSettings);
     },
-    [sampleManager, selectedForSettings]
+    [settingsManager, selectedForSettings]
   );
 
   const updatePitchSettings = useCallback(
@@ -393,15 +389,15 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('Invalid sample selection for updating pitch settings');
       }
 
-      const currentSettings = sampleManager.getSampleSettings(id);
+      const currentSettings = settingsManager.getSampleSettings(id);
       if (!currentSettings) throw new Error('Sample not loaded');
 
       const updatedSettings = { ...currentSettings.pitch, ...settings };
-      sampleManager.updateSampleSettings(id, { pitch: updatedSettings });
+      settingsManager.updateSampleSettings(id, { pitch: updatedSettings });
 
       console.log('Updated pitch settings:', id, updatedSettings);
     },
-    [sampleManager, selectedForSettings]
+    [settingsManager, selectedForSettings]
   );
 
   const updateFilterSettings = (
@@ -412,11 +408,11 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error('Invalid sample selection for updating filter settings');
     }
 
-    const currentSettings = sampleManager.getSampleSettings(id);
+    const currentSettings = settingsManager.getSampleSettings(id);
     if (!currentSettings) throw new Error('Sample not loaded');
 
     const updatedSettings = { ...currentSettings.filters, ...settings };
-    sampleManager.updateSampleSettings(id, { filters: updatedSettings });
+    settingsManager.updateSampleSettings(id, { filters: updatedSettings });
 
     console.log('Updated filter settings:', id, updatedSettings);
   };
@@ -433,7 +429,7 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const sampleNodes = sampleNodesRef.current.get(sampleId);
-      const settings = sampleManager.getSampleSettings(sampleId);
+      const settings = settingsManager.getSampleSettings(sampleId);
 
       if (!sampleNodes || !settings) throw new Error('Sample not loaded');
 
@@ -444,11 +440,13 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
       );
       settings.volume.sampleVolume = volume;
 
-      sampleManager.updateSampleSettings(sampleId, { volume: settings.volume });
+      settingsManager.updateSampleSettings(sampleId, {
+        volume: settings.volume,
+      });
 
       console.log('Updated sample volume:', sampleId, volume);
     },
-    [audioCtx, sampleManager]
+    [audioCtx, settingsManager]
   );
 
   const playNote = (midiNote: number) => {
