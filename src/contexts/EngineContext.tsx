@@ -11,7 +11,7 @@ import React, {
   useState,
 } from 'react';
 
-import { SettingsManager } from '../lib/engine/SampleManager';
+import { SettingsManager } from '../lib/engine/SettingsManager';
 import { LoopHoldManager } from '../lib/engine/GlobalAudioState';
 import { SingleUseVoice } from '../lib/engine/SingleUseVoice';
 import {
@@ -25,6 +25,7 @@ import {
   Time_settings,
   Pitch_settings,
   Volume_settings,
+  Filter_settings,
   //   FormatKey,
 } from '../types/samples';
 
@@ -57,6 +58,10 @@ interface SamplerEngineContextValue {
   updateEnvelopeSettings: (
     id: string,
     settings: Partial<Volume_settings>
+  ) => void;
+  updateFilterSettings: (
+    id: string,
+    settings: Partial<Filter_settings>
   ) => void;
   playNote: (midiNote: number) => void;
   releaseNote: (midiNote: number) => void;
@@ -340,9 +345,10 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
       const currentSettings = sampleManager.getSampleSettings(id);
       if (!currentSettings) return;
 
+      let updated: Partial<Time_settings> | null = null;
       // Update active voices -- STILL JUST TESTING
       SingleUseVoice.updateActiveVoices(id, (voice) => {
-        voice.updateTimeSettings(settings);
+        updated = voice.updateTimeSettings(settings);
       });
 
       const updatedSettings = { ...currentSettings.time, ...settings };
@@ -397,6 +403,23 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
     },
     [sampleManager, selectedForSettings]
   );
+
+  const updateFilterSettings = (
+    id: string,
+    settings: Partial<Filter_settings>
+  ) => {
+    if (!(selectedForSettings.length === 1 && selectedForSettings[0] === id)) {
+      throw new Error('Invalid sample selection for updating filter settings');
+    }
+
+    const currentSettings = sampleManager.getSampleSettings(id);
+    if (!currentSettings) throw new Error('Sample not loaded');
+
+    const updatedSettings = { ...currentSettings.filters, ...settings };
+    sampleManager.updateSampleSettings(id, { filters: updatedSettings });
+
+    console.log('Updated filter settings:', id, updatedSettings);
+  };
 
   const setSampleVolume = useCallback(
     async (sampleId: string, volume: number) => {
@@ -533,6 +556,7 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
     updateTimeSettings,
     updatePitchSettings,
     updateEnvelopeSettings,
+    updateFilterSettings,
     playNote,
     releaseNote,
     stopAllVoices,

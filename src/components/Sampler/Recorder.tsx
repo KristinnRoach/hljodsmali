@@ -269,7 +269,7 @@ const Recorder: React.FC<RecorderProps> = ({
     setLabel(
       recorderState === 'idle'
         ? resamplerMode
-          ? 'ReSample!'
+          ? 'ReSample'
           : 'Start'
         : recorderState === 'armed'
         ? 'Armed'

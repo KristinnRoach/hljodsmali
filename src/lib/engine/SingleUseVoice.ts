@@ -1,6 +1,6 @@
 // src/lib/engine/SingleUseVoice.ts
 
-import { SettingsManager } from './SampleManager';
+import { SettingsManager } from './SettingsManager';
 import { LoopHoldManager } from './GlobalAudioState';
 
 import { Sample_settings, Time_settings } from '../../types/samples';
@@ -63,7 +63,7 @@ export class SingleUseVoice {
     });
   }
 
-  updateTimeSettings(settings: Partial<Time_settings>): void {
+  updateTimeSettings(settings: Partial<Time_settings>): Partial<Time_settings> {
     const prevTimeSettings = SettingsManager.getInstance().getSampleSettings(
       this.sampleId
     )?.time;
@@ -91,6 +91,32 @@ export class SingleUseVoice {
         prevTimeSettings.loopStart,
         prevTimeSettings.loopEnd
       );
+    }
+
+    return settings;
+  }
+
+  private calculateLoopPoints(
+    prevStart: number,
+    prevEnd: number
+  ): { loopStart: number; loopEnd: number } | null {
+    const sampleManager = SettingsManager.getInstance();
+    const settings = sampleManager.getSampleSettings(this.sampleId)!;
+    const zeroCrossings = sampleManager.getZeroCrossings(this.sampleId) ?? [];
+
+    const { loopStart, loopEnd } = settings.time;
+    if (!loopStart || !loopEnd) return;
+
+    const initLoopLength = loopEnd - loopStart;
+    if (initLoopLength <= C5_DURATION_SEC) return;
+
+    let start = snapToNearestZeroCrossing(loopStart, zeroCrossings);
+    let end = snapToNearestZeroCrossing(loopEnd, zeroCrossings);
+
+    const zeroSnapLength = end - start;
+    if (zeroSnapLength > 0.015) {
+      this.updateLoopPoints(start, end);
+      return;
     }
   }
 
@@ -177,62 +203,6 @@ export class SingleUseVoice {
 
     this.source.loop = isLoopOn;
     // this.calculateLoopPoints(); // test !
-  }
-
-  private calculateLoopPoints(prevStart: number, prevEnd: number): void {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
-    const zeroCrossings = sampleManager.getZeroCrossings(this.sampleId) ?? [];
-
-    const { loopStart, loopEnd } = settings.time;
-    if (!loopStart || !loopEnd) return;
-
-    const initLoopLength = loopEnd - loopStart;
-    if (initLoopLength <= C5_DURATION_SEC) return;
-
-    let start = snapToNearestZeroCrossing(loopStart, zeroCrossings);
-    let end = snapToNearestZeroCrossing(loopEnd, zeroCrossings);
-
-    const zeroSnapLength = end - start;
-    if (zeroSnapLength > 0.015) {
-      this.updateLoopPoints(start, end);
-      return;
-    }
-
-    // _____________ optimize above and below whe working ______________________
-
-    const prevLoopLength = prevEnd - prevStart;
-
-    const nearestNote = snapDurationToNote(
-      zeroSnapLength,
-      ['C'],
-      'C',
-      'C',
-      0,
-      7,
-      'sec'
-    );
-
-    interpolateDurationToNote(
-      prevLoopLength,
-      nearestNote,
-      ['C'],
-      'C',
-      'C',
-      0,
-      7,
-      'sec',
-      500, // animation duration in ms,
-      (interpolatedDuration: number) => {
-        // Update your state or UI with the interpolated duration
-        console.log(interpolatedDuration);
-
-        const newEnd = start + interpolatedDuration;
-        this.updateLoopPoints(start, newEnd);
-      }
-    );
-    // end = start + snappedLength;
-    // this.updateLoopPoints(start, end);
   }
 
   private updateLoopPoints(loopStart: number, loopEnd: number): void {

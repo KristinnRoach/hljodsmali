@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { useSamplerEngine } from '../../contexts/EngineContext';
 import BasicSlider from '../UI/Basic/BasicSlider';
 import { Volume_settings } from '../../types/samples';
-import styles from './Sampler.module.scss';
 
 const AmpEnvelopeControls = () => {
   const {

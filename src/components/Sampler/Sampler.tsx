@@ -26,6 +26,7 @@ import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
 // import * as constants from '../../types/constants/constants';
 
 import styles from './Sampler.module.scss';
+import BasicSlider from '../UI/Basic/BasicSlider';
 
 export default function Sampler() {
   // const { isAudioReady, resumeAudioContext } = useAudioCtx();
@@ -39,6 +40,8 @@ export default function Sampler() {
     toggleLoop,
     isHolding,
     toggleHold,
+    updateFilterSettings,
+    getSampleSettings,
   } = useSamplerEngine();
 
   useKeyboard(); // adds event listeners for computer keyboard for playing notes
@@ -116,53 +119,68 @@ export default function Sampler() {
         <AudioDeviceSelector className={styles.deviceSelectorContainer} />
       </section>
 
-      <section className={styles.controlsContainer}>
+      <section className={styles.recorder}>
         <Tuner className={styles.tuner} />
-
-        <Recorder resamplerMode={true} />
         <Recorder />
-
-        <Toggle
-          label='Loop'
-          isOn={isSpacebarPressed ? !loopState : loopState}
-          onToggle={handleToggleLoop}
-          type='loop'
-        />
-        <Toggle
-          label='Hold'
-          isOn={isSpacebarPressed ? !holdState : holdState}
-          onToggle={handleToggleHold}
-          type='hold'
-        />
       </section>
 
       {selectedForSettings[0] &&
         getBufferDuration(selectedForSettings[0]) > 0 && (
-          <>
-            <section className={styles.waveformContainer}>
-              <ToggleMenu label='Waveform'>
-                <Waveform
-                  sampleId={selectedForSettings[0]}
-                  buffer={getSelectedBuffers('settings')[0]}
-                  className={styles.waveform}
-                  showCenterLine={true}
-                />
-                {/* <WaveformEditor sampleId={selectedForSettings[0]} />  */}
-              </ToggleMenu>
+          <div className={styles.flexRow}>
+            <section className={styles.waveform}>
+              <Waveform
+                sampleId={selectedForSettings[0]}
+                buffer={getSelectedBuffers('settings')[0]}
+                className={styles.waveform}
+                showCenterLine={true}
+              />
+              {/* <WaveformEditor sampleId={selectedForSettings[0]} />  */}
             </section>
 
-            <section className={styles.envelopeContainer}>
-              <ToggleMenu label='Envelope'>
+            <section className={styles.controlsBox}>
+              <Toggle
+                label='Loop: CapsLock'
+                isOn={isSpacebarPressed ? !loopState : loopState}
+                onToggle={handleToggleLoop}
+                type='loop'
+              />
+              {/* <p>
+                Capslock on to lock loop. Spacebar to momentary switch loop
+                mode.
+              </p> */}
+              <Toggle
+                label='Hold: Tab'
+                isOn={isSpacebarPressed ? !holdState : holdState}
+                onToggle={handleToggleHold}
+                type='hold'
+              />
+              {/* <p>Tab to toggle hold on / off. Disables release. </p> */}
+              <Recorder resamplerMode={true} />
+              {/* <p>Arm resample and play a note to re-sample. </p> */}
+              <div className={styles.envelope}>
                 <AmpEnvelopeControls />
-              </ToggleMenu>
+                <BasicSlider
+                  label='filterCutOff'
+                  min={0}
+                  max={22000}
+                  step={1}
+                  value={
+                    getSampleSettings(selectedForSettings[0], 'Filter')
+                      ?.lowCutoff
+                  }
+                  onChange={(value) =>
+                    updateFilterSettings(selectedForSettings[0], {
+                      highCutoff: value,
+                    })
+                  }
+                />
+              </div>
             </section>
-          </>
+          </div>
         )}
 
       <section className={styles.keyboardContainer}>
-        <ToggleMenu label='Keyboard'>
-          <KeyboardGUI />
-        </ToggleMenu>
+        <KeyboardGUI />
       </section>
     </div>
   );

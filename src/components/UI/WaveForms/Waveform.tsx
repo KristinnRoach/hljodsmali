@@ -19,8 +19,8 @@ const PADDING_FACTOR = 1.1; // 10% extra space
 
 function calculateWidth(
   bufferDuration: number,
-  baseWidth: number = 800,
-  pixelsPerSecond: number = 200
+  baseWidth: number = 600,
+  pixelsPerSecond: number = 150
 ): number {
   const calculatedWidth = Math.max(
     baseWidth,
@@ -41,8 +41,8 @@ const Waveform: React.FC<WaveformProps> = ({
   const pixelRatioRef = useRef(window.devicePixelRatio || 1);
   const MIN_MARKER_DISTANCE = 0.0008;
 
-  const [width, setWidth] = useState(800);
-  const [height, setHeight] = useState(200);
+  const [width, setWidth] = useState(600);
+  const [height, setHeight] = useState(150);
   const [mouseStyle, setMouseStyle] = useState('default');
 
   const { updateTimeSettings, getSampleSettings } = useSamplerEngine();
@@ -64,7 +64,7 @@ const Waveform: React.FC<WaveformProps> = ({
       setLoopEnd(settings.loopEnd / buffer.duration);
 
       // setWidth(calculateWidth(buffer.duration, 1200, 200));
-      setWidth(800);
+      // setWidth(800);
     }
   }, [sampleId, getSampleSettings, buffer]);
 

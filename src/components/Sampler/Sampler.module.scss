@@ -14,6 +14,14 @@
   }
 }
 
+.flexRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
 .topBar {
   display: flex;
   flex-direction: row;
@@ -60,7 +68,7 @@
   }
 }
 
-.controlsContainer {
+.recorder {
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
@@ -111,9 +119,42 @@
   justify-content: center;
   align-items: center;
   margin: 0 auto;
-  min-width: fit-content;
-  max-width: 100vw;
+
+  width: fit-content;
   overflow-x: auto;
+}
+
+.controlsBox {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  // align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto;
+  padding: 0.5rem;
+  z-index: 99;
+
+  button {
+    font-size: 1rem;
+    height: 1.5rem;
+    width: fit-content;
+
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
+
+  .envelope {
+    padding: 0;
+    .slider {
+      input {
+        width: 100px;
+      }
+
+      label {
+        width: 50px;
+      }
+    }
+  }
 }
 
 .keyboardContainer {
