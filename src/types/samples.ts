@@ -31,7 +31,7 @@ export type Filter_settings = {
 };
 
 export type Lock_settings = {
-  loop: boolean;
+  loopLock: boolean;
 };
 
 export type Sample_settings = {
@@ -74,7 +74,7 @@ export type SampleRecord = {
 
 export function getDefaultSampleSettings(
   bufferDuration: number,
-  existingSettings?: Partial<Sample_settings>
+  initTimeSettings?: Time_settings
 ): Sample_settings {
   const defaultSettings: Sample_settings = {
     time: {
@@ -98,11 +98,11 @@ export function getDefaultSampleSettings(
       highCutoff: 20000,
     },
     locks: {
-      loop: false,
+      loopLock: false,
     },
   };
 
-  return { ...defaultSettings, ...existingSettings };
+  return { ...defaultSettings, ...initTimeSettings };
 }
 
 // export type Sample_settings = {

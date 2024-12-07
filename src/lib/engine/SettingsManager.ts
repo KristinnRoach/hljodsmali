@@ -34,6 +34,10 @@ export class SettingsManager {
     this.sampleSettings.set(sampleId, settings);
   }
 
+  hasSampleSettings(sampleId: string): boolean {
+    return this.sampleSettings.has(sampleId);
+  }
+
   removeSampleSettings(sampleId: string): void {
     this.sampleSettings.delete(sampleId);
   }

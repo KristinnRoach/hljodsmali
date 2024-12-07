@@ -44,9 +44,7 @@ export function snapToNearestZeroCrossing(
   );
 }
 
-export function getInitZeroSnappedPoints(
-  buffer: AudioBuffer
-): Partial<Time_settings> {
+export function getInitZeroSnappedPoints(buffer: AudioBuffer): Time_settings {
   const zeroCrossings = findZeroCrossings(buffer);
   const bufferDuration = buffer.duration;
 

@@ -12,7 +12,7 @@ import React, {
 } from 'react';
 
 import { SettingsManager } from '../lib/engine/SettingsManager';
-import { LoopHoldManager } from '../lib/engine/GlobalAudioState';
+import { LoopHoldManager } from '../lib/engine/LoopHoldManager';
 import { SingleUseVoice } from '../lib/engine/SingleUseVoice';
 import {
   findZeroCrossings,

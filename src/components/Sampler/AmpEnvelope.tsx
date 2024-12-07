@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useSamplerEngine } from '../../contexts/EngineContext';
 import BasicSlider from '../UI/Basic/BasicSlider';
 import { Volume_settings } from '../../types/samples';
+import { SettingsManager } from '@src/lib/engine/SettingsManager';
 
 const AmpEnvelopeControls = () => {
   const {
@@ -14,11 +15,21 @@ const AmpEnvelopeControls = () => {
     getBufferDuration,
   } = useSamplerEngine();
 
-  const [attackTime, setAttackTime] = useState(0);
-  const [releaseTime, setReleaseTime] = useState(0);
+  let setMan: SettingsManager;
+
+  const [selectedSampleId, setSelectedSampleId] = useState('');
   const [bufferDuration, setBufferDuration] = useState(0);
 
+  const [attackTime, setAttackTime] = useState(0);
+  const [releaseTime, setReleaseTime] = useState(0);
+
   useEffect(() => {
+    setMan = SettingsManager.getInstance();
+  }, [SettingsManager]); // remove SettingsManager ?
+
+  useEffect(() => {
+    setSelectedSampleId(selectedForSettings[0]);
+
     const sampleId = selectedForSettings[0]; // We know there's at least one selected sample
     const settings = getSampleSettings(sampleId, 'Volume') as Volume_settings;
     const duration = getBufferDuration(sampleId);
@@ -26,7 +37,7 @@ const AmpEnvelopeControls = () => {
     setAttackTime(settings.attackTime);
     setReleaseTime(settings.releaseTime);
     setBufferDuration(duration);
-  }, [selectedForSettings, getSampleSettings]);
+  }, [selectedForSettings, setMan]);
 
   const handleAttackTimeChange = (newValue: number) => {
     setAttackTime(newValue);

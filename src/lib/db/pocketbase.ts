@@ -5,6 +5,7 @@ import {
   SampleRecord,
   Sample_file,
   Sample_settings,
+  Time_settings,
   getDefaultSampleSettings,
 } from '../../types/samples';
 // import { getHoursMinSec } from '../utils/time-utils';
@@ -23,11 +24,11 @@ export async function createNewSampleRecord(
   name: string,
   sample_file: Sample_file,
   bufferDuration: number,
-  existingSettings?: Partial<Sample_settings>
+  initTimeSettings?: Time_settings
 ): Promise<SampleRecord> {
   const sampleSettings = getDefaultSampleSettings(
     bufferDuration,
-    existingSettings // undefined if not provided
+    initTimeSettings // undefined if not provided
   );
 
   const record: SampleRecord = {

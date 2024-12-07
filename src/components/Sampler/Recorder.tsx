@@ -64,7 +64,7 @@ const Recorder: React.FC<RecorderProps> = ({
       }
 
       const timeNow = getHoursMinSec();
-      const tempName = `unsaved-sample-${timeNow}`;
+      const tempName = `new-${timeNow}`;
 
       const sample_file = blobToSampleFile(blob, tempName, 'WEBM');
       if (!(sample_file && isSampleFile(sample_file))) {
