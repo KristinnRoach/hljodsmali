@@ -6,6 +6,7 @@ pocketbase
 *.kiddi
 *test.puml
 /CLEANUP
+.thrash
 
 
 # dependencies
