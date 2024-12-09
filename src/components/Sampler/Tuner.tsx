@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-// import { useSampleSettings } from '../../hooks/useSampleSettings';
 
-import { useSamplerEngine } from '../../contexts/EngineContext';
 import Knob from '../UI/Basic/Knob';
 import TestTone from './TestTone';
-
+import { useSamplerEngine } from '../../contexts/EngineContext';
 import { getFrequency } from '../../types/constants/note-utils';
 import { Pitch_settings } from '../../types/samples';
 
@@ -15,8 +13,6 @@ type TunerProps = {
 };
 
 function Tuner(props: TunerProps) {
-  // const { handleSettingChange } = useSampleSettings();
-  // const { transposition, tuneOffset } = props;
   const { selectedForSettings, getSampleSettings, updatePitchSettings } =
     useSamplerEngine();
 
@@ -32,7 +28,7 @@ function Tuner(props: TunerProps) {
 
     setTransposition(settings.transposition ?? 0);
     setTuneOffset(settings.tuneOffset ?? 0);
-  }, [selectedForSettings, getSampleSettings]); // updatePitchSettings
+  }, [selectedForSettings, getSampleSettings]);
 
   const handleTransposition = (newValue: number) => {
     setTransposition(newValue);
@@ -49,36 +45,36 @@ function Tuner(props: TunerProps) {
   };
 
   return (
-    <div className={props.className || ''}>
+    <>
       {selectedForSettings.length > 0 && (
-        <Knob
-          label={'Transpose'}
-          value={transposition ?? 0}
-          min={-24}
-          max={24}
-          step={1}
-          onChange={(value) => handleTransposition(value)}
-          size='m'
-        />
-      )}
+        <div className={props.className || ''}>
+          <Knob
+            label={'Transpose'}
+            value={transposition ?? 0}
+            min={-24}
+            max={24}
+            step={1}
+            onChange={(value) => handleTransposition(value)}
+            size='m'
+          />
 
-      <TestTone
-        frequency={oscFrequency || 261.626}
-        className={'styles.testTone'}
-      />
+          <TestTone
+            frequency={oscFrequency || 261.626}
+            className={'styles.testTone'}
+          />
 
-      {selectedForSettings.length > 0 && (
-        <Knob
-          label={'Detune'}
-          value={tuneOffset ?? 0}
-          min={-1.0}
-          max={1.0}
-          step={0.01}
-          onChange={(value) => handleTuneOffset(value)}
-          size='m'
-        />
+          <Knob
+            label={'Detune'}
+            value={tuneOffset ?? 0}
+            min={-1.0}
+            max={1.0}
+            step={0.01}
+            onChange={(value) => handleTuneOffset(value)}
+            size='m'
+          />
+        </div>
       )}
-    </div>
+    </>
   );
 }
 

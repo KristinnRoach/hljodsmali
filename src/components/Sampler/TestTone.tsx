@@ -143,7 +143,7 @@ const TestTone: React.FC<TestToneProps> = ({ frequency }) => {
         step={0.01}
         onChange={setVolume}
         className='volumeKnob'
-        size='xs'
+        size='s'
         showValue={false}
       />
     </div>

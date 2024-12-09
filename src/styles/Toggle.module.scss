@@ -71,9 +71,7 @@
   font-weight: bold;
   text-transform: uppercase;
   outline: none;
-
-  width: fit-content; // alomst never works
-  // width: 50%;
+  // box-shadow: #001f3f 0px 0px 10px;
 
   &:hover {
     opacity: 0.9;
@@ -101,7 +99,6 @@
     &.on {
       font-weight: bold;
       background-color: #61ffe5;
-      box-shadow: #001f3f 0px 0px 10px;
     }
   }
 
@@ -127,7 +124,6 @@
     color: white;
     &.on {
       background-color: #f475ff;
-      box-shadow: 0 0 10px #ff851b;
     }
   }
 
@@ -174,13 +170,11 @@
   &.idle {
     font-weight: bold;
     background-color: #c44c45;
-    box-shadow: #001f3f 0px 0px 10px;
   }
 
   &.armed {
     font-weight: bold;
     background-color: #ff4136;
-    box-shadow: #001f3f 0px 0px 10px;
 
     animation: pulse 1s infinite;
   }
@@ -188,7 +182,6 @@
   &.recording {
     font-weight: bold;
     background-color: #ff4136;
-    box-shadow: #001f3f 0px 0px 10px;
 
     animation: bounce 1s infinite;
   }

@@ -375,8 +375,6 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
 
       const updatedSettings = { ...currentSettings.volume, ...settings };
       settingsManager.updateSampleSettings(id, { volume: updatedSettings });
-
-      console.log('Updated envelope settings:', id, updatedSettings);
     },
     [settingsManager, selectedForSettings]
   );
@@ -414,7 +412,7 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
     const updatedSettings = { ...currentSettings.filters, ...settings };
     settingsManager.updateSampleSettings(id, { filters: updatedSettings });
 
-    console.log('Updated filter settings:', id, updatedSettings);
+    // console.log('Updated filter settings:', id, updatedSettings);
   };
 
   const setSampleVolume = useCallback(
@@ -458,16 +456,9 @@ const SamplerProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    console.log('Playing note, AudioCtx state:', audioCtx.state);
-
-    console.log('Selected for playback:', selectedForPlayback[0]);
-    console.log('Master gain value:', masterGainRef.current?.gain.value);
-
     selectedForPlaybackRef.current.forEach((id) => {
       const buffer = buffersRef.current.get(id);
       const sampleNodes = sampleNodesRef.current.get(id);
-
-      console.log('buffer:', buffer, 'sampleNodes:', sampleNodes);
 
       if (buffer && sampleNodes) {
         const voice = new SingleUseVoice(audioCtx, buffer, id);

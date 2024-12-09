@@ -3,10 +3,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  //   padding: 0.2rem;
 }
 
-.xs {
+.s {
   .knob {
     width: 2.5rem;
     height: 2.5rem;
@@ -19,20 +18,20 @@
   }
 }
 
-.s {
+.m {
   .knob {
-    width: 3rem;
-    height: 3rem;
+    width: 3.5rem;
+    height: 3.5rem;
   }
   .value {
-    font-size: 0.7rem;
+    font-size: 0.9rem;
   }
   .label {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
 }
 
-.m {
+.l {
   .knob {
     width: 5rem;
     height: 5rem;
@@ -45,23 +44,8 @@
   }
 }
 
-.l {
-  .knob {
-    width: 7rem;
-    height: 7rem;
-  }
-  .value {
-    font-size: 1.1rem;
-  }
-  .label {
-    font-size: 1.3rem;
-  }
-}
-
 .knob {
   display: flex;
-  // width: 10rem;
-  // height: 5rem;
   border-radius: 50%;
   background-color: #afff8f63;
   position: relative;

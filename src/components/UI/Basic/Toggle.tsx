@@ -4,13 +4,13 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../../../styles/Toggle.module.scss';
 
-type ToggleProps = {
+interface ToggleProps {
   isOn: boolean;
-  onToggle: () => void;
+  onToggle: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   label: string;
   type?: 'default' | 'menu' | 'record' | 'loop' | 'hold' | 'lock' | 'link';
   children?: React.ReactNode;
-};
+}
 
 const Toggle: React.FC<ToggleProps> = ({
   isOn,

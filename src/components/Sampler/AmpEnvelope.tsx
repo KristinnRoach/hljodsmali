@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSamplerEngine } from '../../contexts/EngineContext';
 import BasicSlider from '../UI/Basic/BasicSlider';
-import { Volume_settings } from '../../types/samples';
+import { Sample_settings, Volume_settings } from '../../types/samples';
 import { SettingsManager } from '@src/lib/engine/SettingsManager';
 
 const AmpEnvelopeControls = () => {
@@ -15,7 +15,7 @@ const AmpEnvelopeControls = () => {
     getBufferDuration,
   } = useSamplerEngine();
 
-  let setMan: SettingsManager;
+  const [setMan, setSetMan] = useState<SettingsManager | null>(null);
 
   const [selectedSampleId, setSelectedSampleId] = useState('');
   const [bufferDuration, setBufferDuration] = useState(0);
@@ -23,20 +23,31 @@ const AmpEnvelopeControls = () => {
   const [attackTime, setAttackTime] = useState(0);
   const [releaseTime, setReleaseTime] = useState(0);
 
+  const [startPoint, setStartPoint] = useState(0);
+  const [endPoint, setEndPoint] = useState(bufferDuration ?? 1);
+
+  const [loopStart, setLoopStart] = useState(0);
+  const [loopEnd, setLoopEnd] = useState(endPoint ?? 1);
+
   useEffect(() => {
-    setMan = SettingsManager.getInstance();
-  }, [SettingsManager]); // remove SettingsManager ?
+    const manager = SettingsManager.getInstance();
+    setSetMan(manager);
+  }, []);
 
   useEffect(() => {
     setSelectedSampleId(selectedForSettings[0]);
 
     const sampleId = selectedForSettings[0]; // We know there's at least one selected sample
-    const settings = getSampleSettings(sampleId, 'Volume') as Volume_settings;
+    const settings = getSampleSettings(sampleId, 'All') as Sample_settings;
     const duration = getBufferDuration(sampleId);
 
-    setAttackTime(settings.attackTime);
-    setReleaseTime(settings.releaseTime);
     setBufferDuration(duration);
+    setStartPoint(settings.time.startPoint);
+    setEndPoint(settings.time.endPoint);
+    setLoopStart(settings.time.loopStart);
+    setLoopEnd(settings.time.loopEnd);
+    setAttackTime(settings.volume.attackTime);
+    setReleaseTime(settings.volume.releaseTime);
   }, [selectedForSettings, setMan]);
 
   const handleAttackTimeChange = (newValue: number) => {
@@ -49,6 +60,15 @@ const AmpEnvelopeControls = () => {
     setReleaseTime(newValue);
     const sampleId = selectedForSettings[0];
     updateEnvelopeSettings(sampleId, { releaseTime: newValue });
+  };
+
+  const handleStartPointChange = (newValue: number) => {
+    if (!setMan) return;
+    setStartPoint(newValue);
+    setMan.updateParam(selectedForSettings[0], {
+      param: 'startPoint',
+      value: newValue,
+    });
   };
 
   return (
@@ -71,6 +91,15 @@ const AmpEnvelopeControls = () => {
         onChange={(value) => handleReleaseTimeChange(value)}
         ceiling={bufferDuration - attackTime}
       />
+      {/* <BasicSlider
+        label='Start'
+        value={startPoint}
+        min={0}
+        max={bufferDuration}
+        step={0.0001}
+        onChange={(value) => handleStartPointChange(value)}
+        // ceiling={endPoint}
+      /> */}
     </>
   );
 };

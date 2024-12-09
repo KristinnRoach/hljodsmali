@@ -7,7 +7,7 @@ function AudioDeviceSelector({ className }: { className?: string }) {
   const { inputs, outputs, inputID, outputID, setInputID, setOutputID } =
     useAudioDeviceCtx();
 
-  // TODO: re-render when input devices change
+  // TODO: re-render when input devices become available / unavailable
 
   return (
     <div className={className}>

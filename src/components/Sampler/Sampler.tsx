@@ -15,23 +15,15 @@ import AudioDeviceSelector from './AudioDeviceSelector';
 import Recorder from './Recorder';
 import Tuner from './Tuner';
 import AmpEnvelopeControls from './AmpEnvelope';
-
-// import WaveformEditor from '../UI/WaveForms/WaveformEditor';
-
 import Waveform from '../UI/WaveForms/Waveform';
 import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
-// import Shapes from '../UI/Shapes/Shapes'; // TODO: Resolve "Multiple instances of Three.js being imported" warning (if persists)
+import Shapes from '../UI/Shapes/Shapes'; // TODO: Resolve "Multiple instances of Three.js being imported" warning (if persists)
 
 import Toggle, { ToggleMenu } from '../UI/Basic/Toggle';
-// import * as constants from '../../types/constants/constants';
-
-import styles from './Sampler.module.scss';
 import BasicSlider from '../UI/Basic/BasicSlider';
+import styles from './Sampler.module.scss';
 
 export default function Sampler() {
-  // const { isAudioReady, resumeAudioContext } = useAudioCtx();
-  // const { ensureAudioContext } = useAudioCtxUtils();
-
   const {
     selectedForSettings,
     getSelectedBuffers,
@@ -51,16 +43,16 @@ export default function Sampler() {
 
   const [capsLockToggle] = useKeyToggle({
     key: 'CapsLock',
-    initialState: loopState, // currently always false
+    initialState: loopState,
   });
 
   const [tabToggle] = useKeyToggle({
     key: 'Tab',
-    initialState: holdState, // currently always false
+    initialState: holdState,
   });
 
   const isSpacebarPressed = useKeyMomentary({
-    key: ' ', // Space key
+    key: ' ',
     onPress: () => {
       const newLoopState = toggleLoop();
       setLoopState(newLoopState);
@@ -76,9 +68,9 @@ export default function Sampler() {
   });
 
   const handleToggleLoop = useCallback(
-    (event?: React.MouseEvent) => {
-      event?.preventDefault();
-      event?.stopPropagation();
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
       console.log('handleToggleLoop');
       const newState = toggleLoop();
       setLoopState(newState);
@@ -87,9 +79,9 @@ export default function Sampler() {
   );
 
   const handleToggleHold = useCallback(
-    (event?: React.MouseEvent) => {
-      event?.preventDefault();
-      event?.stopPropagation();
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
       console.log('handleToggleHold');
       const newState = toggleHold();
       setHoldState(newState);
@@ -113,53 +105,58 @@ export default function Sampler() {
 
   return (
     <div className={styles.sampler}>
-      <section className={styles.topBar}>
-        {/* <Auth className={styles.loginContainer} />
-        <Shapes className={styles.shapesContainer} /> */}
-        <AudioDeviceSelector className={styles.deviceSelectorContainer} />
-      </section>
+      {/*  <section className={styles.topBar}>
+         <Auth className={styles.loginContainer} /> 
+        <AudioDeviceSelector className={styles.inputDevice} />
+      </section> */}
 
-      <section className={styles.recorder}>
+      <section className={styles.topBox}>
+        <div>
+          <p>Input device: </p>
+          <AudioDeviceSelector className={styles.inputDevice} />
+        </div>
         <Tuner className={styles.tuner} />
-        <Recorder />
+        <Recorder className={styles.recorder} />
+        <Shapes className={styles.shapesContainer} />
       </section>
 
-      {selectedForSettings[0] &&
-        getBufferDuration(selectedForSettings[0]) > 0 && (
-          <div className={styles.flexRow}>
-            <section className={styles.waveform}>
-              <Waveform
-                sampleId={selectedForSettings[0]}
-                buffer={getSelectedBuffers('settings')[0]}
-                className={styles.waveform}
-                showCenterLine={true}
-              />
-              {/* <WaveformEditor sampleId={selectedForSettings[0]} />  */}
-            </section>
+      <div className={styles.flexRow}>
+        <section className={styles.keyboardContainer}>
+          <KeyboardGUI />
+        </section>
 
-            <section className={styles.controlsBox}>
-              <Toggle
-                label='Loop: CapsLock'
-                isOn={isSpacebarPressed ? !loopState : loopState}
-                onToggle={handleToggleLoop}
-                type='loop'
-              />
-              {/* <p>
-                Capslock on to lock loop. Spacebar to momentary switch loop
-                mode.
-              </p> */}
-              <Toggle
-                label='Hold: Tab'
-                isOn={isSpacebarPressed ? !holdState : holdState}
-                onToggle={handleToggleHold}
-                type='hold'
-              />
-              {/* <p>Tab to toggle hold on / off. Disables release. </p> */}
-              <Recorder resamplerMode={true} />
-              {/* <p>Arm resample and play a note to re-sample. </p> */}
+        {selectedForSettings[0] &&
+          getBufferDuration(selectedForSettings[0]) > 0 && (
+            <div className={styles.controlsBox}>
+              <section className={styles.togglesRow}>
+                <Toggle
+                  label='Loop: CapsLock'
+                  isOn={isSpacebarPressed ? !loopState : loopState}
+                  onToggle={handleToggleLoop}
+                  type='loop'
+                />
+                <Toggle
+                  label='Hold: Tab'
+                  isOn={isSpacebarPressed ? !holdState : holdState}
+                  onToggle={handleToggleHold}
+                  type='hold'
+                />
+                <Recorder resamplerMode={true} />
+              </section>
+
+              <section className={styles.waveform}>
+                <Waveform
+                  sampleId={selectedForSettings[0]}
+                  buffer={getSelectedBuffers('settings')[0]}
+                  className={styles.waveform}
+                  showCenterLine={true}
+                />
+                {/* <WaveformEditor sampleId={selectedForSettings[0]} />  */}
+              </section>
+
               <div className={styles.envelope}>
                 <AmpEnvelopeControls />
-                <BasicSlider
+                {/* <BasicSlider
                   label='filterCutOff'
                   min={0}
                   max={22000}
@@ -173,15 +170,11 @@ export default function Sampler() {
                       highCutoff: value,
                     })
                   }
-                />
+                /> */}
               </div>
-            </section>
-          </div>
-        )}
-
-      <section className={styles.keyboardContainer}>
-        <KeyboardGUI />
-      </section>
+            </div>
+          )}
+      </div>
     </div>
   );
 }

@@ -81,10 +81,11 @@ export class SettingsManager {
     }
   }
 
+  // Todo: fix undefined bug
   getParam(sampleId: string, param: string): number | boolean | undefined {
     const currentSettings = this.sampleSettings.get(sampleId);
     if (currentSettings) {
-      console.log('getParam: ', currentSettings[param]);
+      // console.log('getParam: ', currentSettings[param]);
       return currentSettings[param];
     }
   }

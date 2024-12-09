@@ -4,10 +4,10 @@ import { SettingsManager } from './SettingsManager';
 import { LoopHoldManager } from './LoopHoldManager';
 
 import { MIDDLE_C_MIDI } from '../../types/constants/constants';
+import { Settings } from 'react-feather';
+import { Sample_settings } from '@src/types/samples';
 
 export class SingleUseVoice {
-  private static settingsManager: SettingsManager;
-
   private static activeVoices: Set<SingleUseVoice> = new Set();
   private static sampleRate: number = 48000;
 
@@ -21,10 +21,7 @@ export class SingleUseVoice {
     readonly buffer: AudioBuffer,
     private sampleId: string
   ) {
-    if (!SingleUseVoice.settingsManager) {
-      SingleUseVoice.settingsManager = SettingsManager.getInstance();
-    }
-    if (!SingleUseVoice.settingsManager.hasSampleSettings(this.sampleId)) {
+    if (!this.getSetMan().hasSampleSettings(this.sampleId)) {
       throw new Error(
         'Sample not found in settings manager, id: ' + this.sampleId
       );
@@ -48,6 +45,22 @@ export class SingleUseVoice {
     };
   }
 
+  private getSetMan() {
+    return SettingsManager.getInstance();
+  }
+
+  private getSettings(): Sample_settings {
+    return this.getSetMan().getSampleSettings(this.sampleId)!;
+  }
+
+  getParam(param: string): number | boolean {
+    return this.getSetMan().getParam(this.sampleId, param);
+  }
+
+  getVoiceGain(): GainNode {
+    return this.voiceGain;
+  }
+
   static updateLoopPoints(
     loopStart: number,
     loopEnd: number,
@@ -60,17 +73,8 @@ export class SingleUseVoice {
     });
   }
 
-  getVoiceGain(): GainNode {
-    return this.voiceGain;
-  }
-
-  getParam(param: string): number | boolean {
-    return SingleUseVoice.settingsManager.getParam(this.sampleId, param);
-  }
-
   start(midiNote: number): void {
-    const settingsManager = SettingsManager.getInstance();
-    const settings = settingsManager.getSampleSettings(this.sampleId)!;
+    const settings = this.getSettings();
 
     const midiRate = this.semitoneToRate(1, midiNote - MIDDLE_C_MIDI);
     const transposedRate = this.semitoneToRate(
@@ -103,8 +107,8 @@ export class SingleUseVoice {
   }
 
   triggerAttack(): void {
-    const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
+    // const sampleManager = SettingsManager.getInstance();
+    const settings = this.getSettings(); // sampleManager.getSampleSettings(this.sampleId)!;
 
     this.voiceGain.gain.linearRampToValueAtTime(
       settings.volume.sampleVolume,
@@ -118,7 +122,7 @@ export class SingleUseVoice {
     if (this.trigger <= 0 || globalState.hold) return;
 
     const sampleManager = SettingsManager.getInstance();
-    const settings = sampleManager.getSampleSettings(this.sampleId)!;
+    const settings = this.getSettings(); // sampleManager.getSampleSettings(this.sampleId)!;
 
     this.voiceGain.gain.linearRampToValueAtTime(
       0,

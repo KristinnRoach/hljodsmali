@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable */
 
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
@@ -16,12 +17,12 @@ export default function Shapes({ className = '' }) {
         shadows
         gl={{ antialias: false }}
         dpr={[1, 1.5]}
-        camera={{ position: [0, 0, 25], fov: 30, near: 1, far: 40 }}
+        camera={{ position: [0, 0, 25], fov: 50, near: 1, far: 40 }}
       >
         <Suspense fallback={null}>
           <Geometries />
           <ContactShadows
-            position={[0, -3.5, 0]}
+            position={[0, -5.5, 0]}
             opacity={0.65}
             scale={40}
             blur={1}
@@ -37,13 +38,14 @@ export default function Shapes({ className = '' }) {
 function Geometries() {
   const geometries = [
     {
-      position: [0, 0, -2],
+      position: [0, 1, -1],
       rate: 0.3,
-      geometry: new THREE.IcosahedronGeometry(3),
+      geometry: new THREE.IcosahedronGeometry(5),
     },
   ];
 
   const materials = [new THREE.MeshNormalMaterial()];
+  materials[0].flatShading = true;
 
   return geometries.map(({ position, rate, geometry }) => (
     <Geometry
