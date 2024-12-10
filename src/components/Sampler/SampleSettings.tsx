@@ -29,9 +29,9 @@ const SampleSettings: React.FC = () => {
     highCutoff,
   } = settings;
 
-  const bufferDuration = sample.bufferDuration;
-  const playDuration = endPoint - startPoint;
-  const loopDuration = loopEnd - loopStart;
+  // const bufferDuration = sample.bufferDuration;
+  // const playDuration = endPoint - startPoint;
+  // const loopDuration = loopEnd - loopStart;
 
   const [durationHasChanged, setDurationHasChanged] = useState(false);
   const [loopDurationHasChanged, setLoopDurationHasChanged] = useState(false);

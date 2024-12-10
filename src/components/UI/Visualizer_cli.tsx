@@ -5,7 +5,6 @@ import WaveDynamic from './WaveForms/WaveDynamic';
 import { useSamplerCtx } from '../../contexts/sampler-context';
 import { Sample_db, Sample_settings } from '../../types/sample';
 import styles from './Visualizer_cli.module.scss';
-import { set } from 'react-hook-form';
 
 function Visualizer_cli() {
   const { latestSelectedSample, latestSelectedBuffer } = useSamplerCtx();

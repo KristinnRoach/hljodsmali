@@ -87,7 +87,7 @@ export default function LinkList<T extends Item>({
           >
             {item.name}
           </Link>
-          <div className={styles.buttons}>
+          {/* <div className={styles.buttons}>
             <button
               onClick={() => onSave(item.id)}
               className={styles.saveButton}
@@ -100,7 +100,7 @@ export default function LinkList<T extends Item>({
             >
               <Trash2 size={16} className={styles.deleteIcon} />
             </button>
-          </div>
+          </div> */}
         </div>
       ))}
       <div className={styles.pagination}>

@@ -3,7 +3,6 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 import { Sample_settings } from '../../../types/sample';
 import { useSampleSettings } from '../../../hooks/useSampleSettings';
-import { set } from 'react-hook-form';
 
 interface WaveDynamicProps {
   buffer: AudioBuffer;
@@ -153,18 +152,17 @@ const WaveDynamic: React.FC<WaveDynamicProps> = ({
       drawMarker(loopEnd, 'green', 'Loop-End');
     }
   }, [
-    buffer,
-    width,
-    height,
-    color,
     backgroundColor,
+    buffer,
+    color,
+    height,
+    normalizeData,
     showCenterLine,
-    loopStart,
-    loopEnd,
     startPoint,
     endPoint,
-    normalizeData,
-    scale,
+    loopStart,
+    loopEnd,
+    width,
   ]);
 
   useEffect(() => {
@@ -172,20 +170,23 @@ const WaveDynamic: React.FC<WaveDynamicProps> = ({
   }, [drawWaveform, scale]);
 
   // Helper function to get the current value of a marker
-  const getMarkerValue = (key: string): number => {
-    switch (key) {
-      case 'startPoint':
-        return startPoint || 0;
-      case 'endPoint':
-        return endPoint || 1;
-      case 'loopStart':
-        return loopStart || 0;
-      case 'loopEnd':
-        return loopEnd || 1;
-      default:
-        return 0;
-    }
-  };
+  const getMarkerValue = useCallback(
+    (key: string): number => {
+      switch (key) {
+        case 'startPoint':
+          return startPoint || 0;
+        case 'endPoint':
+          return endPoint || 1;
+        case 'loopStart':
+          return loopStart || 0;
+        case 'loopEnd':
+          return loopEnd || 1;
+        default:
+          return 0;
+      }
+    },
+    [startPoint, endPoint, loopStart, loopEnd]
+  );
 
   const getMarkerAtPosition = useCallback(
     // refactor to separate concerns // mouseStyle separate
@@ -267,7 +268,15 @@ const WaveDynamic: React.FC<WaveDynamicProps> = ({
 
       handleSettingChange(dragState.key as keyof Sample_settings, newValue);
     },
-    [dragState, handleSettingChange, width]
+    [
+      dragState,
+      handleSettingChange,
+      width,
+      startPoint,
+      endPoint,
+      loopStart,
+      loopEnd,
+    ]
   );
 
   const handleMouseDown = useCallback(
@@ -292,7 +301,7 @@ const WaveDynamic: React.FC<WaveDynamicProps> = ({
         });
       }
     },
-    [getMarkerAtPosition, width]
+    [getMarkerAtPosition, width, getMarkerValue]
   );
 
   const handleMouseMove = useCallback(
@@ -315,7 +324,7 @@ const WaveDynamic: React.FC<WaveDynamicProps> = ({
 
       handleDrag(x, dragState.type);
     },
-    [dragState, handleDrag, width]
+    [dragState, handleDrag, width, getMarkerAtPosition]
   );
 
   const handleMouseUp = useCallback(

@@ -1,6 +1,6 @@
 .toggleButton {
   padding: 10px 20px;
-  border: none;
+  border: solid 2px rgb(37, 37, 37);
   border-radius: 44px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -34,7 +34,7 @@
     &.on {
       font-weight: bold;
       background-color: #61ffe5;
-      box-shadow: #001f3f 0px 0px 10px;
+      // box-shadow: #001f3f 0px 0px 10px;
     }
   }
 
@@ -60,7 +60,7 @@
     color: white;
     &.on {
       background-color: #f475ff;
-      box-shadow: 0 0 10px #ff851b;
+      // box-shadow: 0 0 10px #ff851b;
     }
   }
 

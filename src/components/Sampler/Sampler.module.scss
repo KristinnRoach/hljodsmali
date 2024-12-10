@@ -6,7 +6,6 @@
 
   margin: 0 auto;
   max-width: 80vw;
-  // width: 50vw;
   z-index: 99;
 
   &.buttons {
@@ -15,24 +14,67 @@
       padding: 0.2rem;
       font-size: 1rem;
     }
+
+    z-index: 99;
   }
 
-  .samples {
+  .samples > * {
     max-width: 20vw;
-    // position: absolute; // position: sticky;
-    // top: 2rem;
-    // right: 2rem;
+    max-height: 10vh;
+    overflow-y: visible;
+
+    z-index: 99;
+
+    button {
+      z-index: 99;
+    }
+  }
+
+  button {
+    z-index: 99;
+  }
+
+  input {
+    z-index: 99;
   }
 }
 
-// .waveform {
-//   display: flex;
-//   flex-direction: column;
-//   justify-content: center;
-//   align-items: center;
-//   gap: 1rem;
-//   width: 200px;
-// }
+.clickable {
+  cursor: pointer;
+  z-index: 99;
+}
+
+.shapes {
+  max-height: 50%;
+  max-width: 50%;
+  overflow: visible;
+  z-index: -1;
+}
+
+.keyboardBoxWrapper {
+  margin: 0 auto;
+  padding: 0;
+  max-width: 100vw;
+  max-height: 100vh;
+  height: 100%;
+  width: 100%;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+.keyboardBox {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: 10vw;
+
+  width: 100%;
+  max-width: 100vw;
+  max-height: 40vh;
+
+  overflow: visible;
+  // border: 1px solid #000; /* For debugging */
+}
 
 .slider {
   display: flex;
@@ -52,32 +94,4 @@
 
 .piano {
   display: flex;
-}
-
-.sliderContainer {
-  // display: flex;
-  // flex-direction: column;
-  // justify-content: center;
-  // align-items: center;
-  // gap: 1rem;
-  // width: 200px;
-
-  // h1 {
-  //   text-align: center;
-  //   padding: 0.2rem;
-  //   font-size: 1rem;
-  //   border-style: ridge;
-  //   border-radius: 20%;
-  // }
-  // .slider {
-  //   display: flex;
-  //   flex-direction: row;
-
-  //   input {
-  //     width: 100px;
-  //   }
-  //   label {
-  //     width: 50px;
-  //   }
-  // }
 }

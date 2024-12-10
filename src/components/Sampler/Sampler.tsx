@@ -6,6 +6,8 @@ import useKeyboard from '../../hooks/useKeyboard';
 import Recorder_CSR from './Recorder';
 import SampleSettings from './SampleSettings';
 import LinkList from '../UI/LinkList';
+import Shapes from '../UI/Shapes/Shapes';
+import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
 
 import styles from './Sampler.module.scss';
 import { useSamplerCtx } from '../../contexts/sampler-context';
@@ -28,49 +30,90 @@ export default function Sampler_cli() {
     toggleHold,
   } = useSamplerCtx();
 
+  const [visualizer, setVisualizer] = React.useState<'shapes' | 'keyboard'>(
+    'shapes'
+  );
+
   if (!samplerEngine) {
     console.error('SamplerEngine not initialized in Sampler component');
     return null;
   }
 
+  function switchVisualizer(
+    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ): void {
+    setVisualizer((prev) => (prev === 'shapes' ? 'keyboard' : 'shapes'));
+  }
+
   return (
     <>
       <div className={styles.sampler}>
-        <button onClick={saveAll} disabled={!hasUnsavedSamples}>
+        {/* <button onClick={saveAll} disabled={!hasUnsavedSamples}>
           Save All
-        </button>
-        <Toggle
-          label='Loop'
-          isOn={isLooping}
-          onToggle={toggleLoop}
-          type='loop'
-        />
-        <Toggle
-          label='Hold'
-          isOn={isHolding}
-          onToggle={toggleHold}
-          type='hold'
-        />
+        </button> */}
+        <div className={`${styles.sampler} ${styles.clickable}`}>
+          <button
+            style={{ backgroundColor: '#65F0C8' }}
+            onClick={switchVisualizer}
+          >
+            Switch Visualizer
+          </button>
 
-        <Recorder_CSR />
-        <section className={styles.samples}>
+          <Toggle
+            label='Loop'
+            isOn={isLooping}
+            onToggle={toggleLoop}
+            type='loop'
+          />
+          <Toggle
+            label='Hold'
+            isOn={isHolding}
+            onToggle={toggleHold}
+            type='hold'
+          />
+
+          <Recorder_CSR />
+        </div>
+        <section className={`${styles.samples} ${styles.clickable}`}>
           <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
-            {!isLoading && allSamples.length > 0 && (
-              <LinkList
-                items={allSamples}
-                title='Samples'
-                paramName='samples'
-                itemsPerPage={10}
-                onDelete={(id) => deleteSample(id)}
-                onSave={(id) => updateSample(id)}
-              />
+            {allSamples.length < 1 && (
+              <p style={{ padding: '2rem' }}>
+                No samples yet. Record something!
+              </p>
             )}
-            <MenuToggle label='Settings'>
-              <SampleSettings />
-            </MenuToggle>
+            {!isLoading && allSamples.length > 0 && (
+              <div className={styles.clickable}>
+                <LinkList
+                  items={allSamples}
+                  title='Samples'
+                  paramName='samples'
+                  itemsPerPage={10}
+                  onDelete={(id) => deleteSample(id)}
+                  onSave={(id) => updateSample(id)}
+                />
+
+                <MenuToggle label='Settings'>
+                  <SampleSettings />
+                </MenuToggle>
+              </div>
+            )}
           </MenuToggle>
         </section>
       </div>
+      <section className={styles.graphics}>
+        {visualizer === 'shapes' && (
+          <div className={styles.shapes}>
+            <Shapes />{' '}
+          </div>
+        )}
+        {visualizer === 'keyboard' && (
+          <div className={styles.keyboardBoxWrapper}>
+            <div className={styles.keyboardBox}>
+              <KeyboardGUI />
+            </div>
+          </div>
+        )}
+      </section>
     </>
   );
 }
