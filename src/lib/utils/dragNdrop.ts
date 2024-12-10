@@ -24,6 +24,8 @@ export const filesToAudioBuffer = (files: FileList) => {
   }
 };
 
+/* Todo: explore below for visual feedback */
+
 // onDragEnter={handleDragEnter} // nota í visual
 // onDragLeave={handleDragLeave}
 // onDragEnd={handleDragEnd}

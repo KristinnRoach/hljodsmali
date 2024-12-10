@@ -2,8 +2,7 @@ import React from 'react';
 import { useAudioDeviceCtx } from '../../contexts/audio-device-context';
 
 function AudioDeviceSelector() {
-  const { inputs, outputs, inputID, outputID, setInputID, setOutputID } =
-    useAudioDeviceCtx();
+  const { inputs, inputID, setInputID } = useAudioDeviceCtx();
 
   return (
     <div>
@@ -21,7 +20,11 @@ function AudioDeviceSelector() {
 
 export default AudioDeviceSelector;
 
-/* Audio Output Devices API seems to be not supported (19.06.2024) */
+/* Audio Output Devices API seems not supported yet (19.06.2024) */
+
+// const { inputs, outputs, inputID, outputID, setInputID, setOutputID } =
+// useAudioDeviceCtx();
+
 // function handleOutputChange(e: React.ChangeEvent<HTMLSelectElement>) {
 //   if (!navigator.mediaDevices.selectAudioOutput) {
 //     console.log('selectAudioOutput() not supported.');

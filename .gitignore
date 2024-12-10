@@ -9,6 +9,9 @@ pocketbase
 /TRASH
 /pb_data
 /OldCore
+*.txt
+
+.vscode
 
 # dependencies
 /node_modules

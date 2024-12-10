@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Toggle from './Toggle';
-import styles from './MenuToggle.module.scss';
 
 type MenuToggleProps = {
   label: string;
@@ -36,23 +35,3 @@ const MenuToggle: React.FC<MenuToggleProps> = ({ label, children }) => {
 };
 
 export default MenuToggle;
-
-// const MenuToggle: React.FC<MenuToggleProps> = ({ label, children }) => {
-//   const [isOpen, setIsOpen] = React.useState(false);
-
-//   return (
-//     <div className={styles.menuToggle}>
-//       <Toggle
-//         isOn={isOpen}
-//         onToggle={() => setIsOpen(!isOpen)}
-//         label={label}
-//         type='menu'
-//       />
-//       <div className={`${styles.content} ${isOpen ? styles.open : ''}`}>
-//         {children}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default MenuToggle;

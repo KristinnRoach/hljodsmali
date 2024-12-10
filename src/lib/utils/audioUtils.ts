@@ -1,14 +1,3 @@
-// export function createAudioContext(
-//   latencyHint: number = 0.001,
-//   outputID?: string
-// ): AudioContext {
-//   return new (window.AudioContext || (window as any).webkitAudioContext)({
-//     latencyHint: latencyHint,
-//     // sinkId: outputID,
-//     // sampleRate: 44100, // henda ef gerir ekkert gott (defaultar í devices preferred sample rate)
-//   });
-// }
-
 export async function resumeAudioContext(
   audioCtx: AudioContext
 ): Promise<void> {
@@ -46,10 +35,22 @@ export function createBufferSourceNode(
   try {
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuffer;
-    //source.connect(audioCtx.destination);
     return source;
   } catch (error) {
     console.error('Failed to create buffer source node:', error);
     return null;
   }
 }
+
+/* Not currently needed */
+
+// export function createAudioContext(
+//   latencyHint: number = 0.001,
+//   outputID?: string
+// ): AudioContext {
+//   return new (window.AudioContext || (window as any).webkitAudioContext)({
+//     latencyHint: latencyHint,
+//     // sinkId: outputID,
+//     // sampleRate: 44100, // henda ef gerir ekkert gott (defaultar í devices preferred sample rate)
+//   });
+// }

@@ -16,8 +16,6 @@ export type Sample_settings = {
   highCutoff: number;
 };
 
-/* The Sample type should be the same as in the database schema. */
-
 export type LoadedSample = {
   id: string;
   name: string;
@@ -33,15 +31,15 @@ export type Sample_db = {
   name: string;
   slug: string;
   user?: string | null;
-  sample_file: File | string; // is this ok?
+  sample_file: File | string;
   bufferDuration: number;
   created: string;
   updated: string;
-  zeroCrossings?: number[]; // REMOVE, ONLY IN LOADEDSAMPLE
+  zeroCrossings?: number[];
   sample_settings: Sample_settings;
 };
 
-// export type newSample = Omit<Sample_db, 'id' | 'created' | 'updated'>;
+// TODO: Move below to sample utils!
 
 export function getDefaultSampleSettings(
   bufferDuration: number
@@ -61,8 +59,6 @@ export function getDefaultSampleSettings(
   };
 }
 
-// Moved from engine to sample type file, localize creation of sample_db objects to one place for consistency
-
 export function createNewSampleObject(
   tempId: string,
   name: string,
@@ -76,7 +72,6 @@ export function createNewSampleObject(
 
   const defaultSettings = getDefaultSampleSettings(duration);
 
-  // Find zero crossings // óþarfi hér?
   const zeroCrossings: number[] = audioBuffer
     ? findZeroCrossings(audioBuffer)
     : [];
@@ -85,10 +80,10 @@ export function createNewSampleObject(
     id: tempId,
     name: name,
     slug: slug,
-    user: user, // Add user ID ? remove?
+    user: user,
     sample_file: file,
-    created: new Date().toISOString(), // remove?
-    updated: new Date().toISOString(), // remove?
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
     bufferDuration: duration,
     zeroCrossings: zeroCrossings,
     sample_settings: defaultSettings,

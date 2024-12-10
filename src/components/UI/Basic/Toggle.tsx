@@ -27,28 +27,3 @@ const Toggle: React.FC<ToggleProps> = ({
 };
 
 export default Toggle;
-
-// type MenuToggleProps = {
-//   label: string;
-//   children: React.ReactNode;
-// };
-
-// export const MenuToggle: React.FC<MenuToggleProps> = ({ label, children }) => {
-//   const [isOpen, setIsOpen] = React.useState(false);
-
-//   return (
-//     <>
-//       <Toggle
-//         isOn={isOpen}
-//         onToggle={() => setIsOpen(!isOpen)}
-//         label={label}
-//         type='menu'
-//       />
-//       <div
-//         className={`${styles.dropdown_content} ${isOpen ? styles.open : ''}`}
-//       >
-//         {children}
-//       </div>
-//     </>
-//   );
-// };
