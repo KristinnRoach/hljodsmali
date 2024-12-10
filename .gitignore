@@ -6,7 +6,9 @@ pocketbase
 *.kiddi
 *test.puml
 /CLEANUP
-
+/TRASH
+/pb_data
+/OldCore
 
 # dependencies
 /node_modules

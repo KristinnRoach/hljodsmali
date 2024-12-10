@@ -35,9 +35,6 @@ export default class SamplerEngine {
   private loadedSamples: Map<string, Loaded> = new Map();
   private selectedSampleIds: Set<string> = new Set();
 
-  // private newRecordedSamples: Sample_db[] = [];
-  // private updatedSamples: Map<string, Sample_db> = new Map();
-
   private masterGain: GainNode;
   // private globalLoop: boolean = false;
 
@@ -77,12 +74,20 @@ export default class SamplerEngine {
     SingleUseVoice.toggleLoop();
   }
 
+  setLoop(isLooping: boolean): void {
+    SingleUseVoice.setLoop(isLooping);
+  }
+
   public isLooping(): boolean {
     return SingleUseVoice.isLooping();
   }
 
   toggleHold(): void {
     SingleUseVoice.toggleHold();
+  }
+
+  setHold(isHolding: boolean): void {
+    SingleUseVoice.setHold(isHolding);
   }
 
   isHolding(): boolean {
@@ -449,152 +454,3 @@ export default class SamplerEngine {
     });
   }
 }
-
-// getNewRecordings(): Sample_db[] {
-//   const newRecordings = [...this.newRecordedSamples];
-//   this.newRecordedSamples = [];
-//   return newRecordings;
-// }
-
-// hasNewRecordings(): boolean {
-//   return this.newRecordedSamples.length > 0;
-// }
-
-// // Move to sample type file, localize creation of sample_db objects to one place for consistency
-
-// createNewSampleObject(name: string, blob: Blob, duration: number): Sample_db {
-//   const file = new File([blob], name + '.webm', { type: 'audio/webm' }); // check for consistency
-//   const slug = name.toLowerCase().replace(/ /g, '-');
-
-//   const defaultSettings = getDefaultSampleSettings(duration);
-
-//   const sample: Sample_db = {
-//     id: `new-sample: ${this.newRecordedSamples.length + 1}`,
-//     name: name,
-//     slug: slug,
-//     user: 'user', // Add user ID
-//     sample_file: file + '',
-//     created: new Date().toISOString(),
-//     updated: new Date().toISOString(),
-//     bufferDuration: duration,
-//     sample_settings: defaultSettings,
-//   };
-//   return sample;
-// }
-
-//   loadSample(sample: Sample, buffer: AudioBuffer): LoadedSample {
-//     // should be void?
-//     const defaultSettings = this.getDefaultSampleSettings(buffer.duration);
-
-//     // Set default values if not present
-//     const updatedSample: Sample = {
-//       ...sample,
-//       bufferDuration: buffer.duration,
-//       sample_settings: sample.sample_settings
-//         ? {
-//             ...defaultSettings,
-//             ...sample.sample_settings,
-//           }
-//         : defaultSettings,
-//     };
-
-//     // prep gain node for individual sample volume control
-//     const sampleGain = this.audioContext.createGain();
-//     sampleGain.connect(this.masterGain);
-//     sampleGain.gain.value =
-//       sample.sample_settings?.sampleVolume ?? this.masterGain.gain.value;
-
-//     const loadedSample: LoadedSample = {
-//       sample: updatedSample,
-//       buffer: buffer,
-//       sampleGain: sampleGain,
-//     };
-
-//     this.loadedSamples.set(sample.id, loadedSample);
-//     // Set the newly loaded sample as the only selected sample
-//     this.setSelectedSampleIds([sample.id]);
-//     return loadedSample;
-//   }
-
-//   releaseAllLoops(): void {
-//     const activeVoiceKeys = Array.from(this.activeVoices.keys());
-
-//     activeVoiceKeys.forEach((voiceKey) => {
-//       const voice = this.activeVoices.get(voiceKey);
-
-//       if (voice && voice.getLoop()) {
-//         voice.setLoop(false);
-//         // voice.release();
-//         this.activeVoices.delete(voiceKey);
-//       }
-//     });
-//     console.log('releaseAllLoops called. Active voices: ', this.activeVoices);
-//   }
-
-//   playNote(midiNote: number, isLoopOn: boolean): void {
-//     const selected = this.getSelectedLoadedSamples();
-//     selected.forEach((loadedSample) => {
-//       if (loadedSample) {
-//         // loadedSample.sample.sample_settings && loadedSample.buffer && loadedSample.sampleGain
-//         const voice = new SingleUseVoice(
-//           this.audioContext,
-//           isLoopOn,
-//           loadedSample.sample.sample_settings.sampleVolume,
-//           loadedSample.buffer,
-//           loadedSample.sample.sample_settings
-//         );
-//         voice.voiceGain.connect(loadedSample.sampleGain);
-//         loadedSample.sampleGain.connect(this.masterGain);
-//         this.masterGain.connect(this.audioContext.destination);
-//         voice.start(
-//           midiNote
-//           // this.masterGain.gain.value,
-//           // loadedSample.sample.sample_settings.attackTime
-//         );
-
-//         const voiceKey = `${loadedSample.sample.id}-${midiNote}`;
-//         this.activeVoices.set(voiceKey, voice);
-//       }
-//     });
-//   }
-
-//   releaseNote(midiNote: number, isLoopOn: boolean): void {
-//     const selectedSamples = this.getSelectedLoadedSamples();
-//     selectedSamples.forEach((loadedSample) => {
-//       const voiceKey = `${loadedSample.sample.id}-${midiNote}`;
-//       const voice = this.activeVoices.get(voiceKey);
-//       if (voice) {
-//         voice.release(); // loadedSample.sample.sample_settings.releaseTime
-
-//         if (voice.getLoop()) {
-//           // || isLoopOn ?
-//           // if (loadedSample.sampleGain.gain.value !== voice.loopVolume)
-//           //   loadedSample.sampleGain.gain.setValueAtTime(
-//           //     loadedSample.sampleGain.gain.value,
-//           //     this.audioContext.currentTime // + voice.releaseTime
-//           //   );
-//           // loadedSample.sampleGain.gain.linearRampToValueAtTime(
-//           //   voice.loopVolume,
-//           //   this.audioContext.currentTime + voice.releaseTime
-//           // );
-//         } else {
-//           // voice.release(); // loadedSample.sample.sample_settings.releaseTime
-
-//           // Wait for release time before removing voice from activeVoices // is this necessary?
-//           setTimeout(() => {
-//             this.activeVoices.delete(voiceKey);
-//           }, voice.releaseTime * 1000);
-//         }
-//       }
-//     });
-//   }
-// updateActiveLoopLocks(id?: string): void {
-//   this.loadedSamples.forEach((s) => {
-//     if (id && s.sample.id === id) {
-//       return;
-//     }
-//     if (s.sample.sample_settings.loopLocked) {
-//       this.updateActiveVoiceSettings(s.sample.id, s.sample.sample_settings);
-//     }
-//   });
-// }

@@ -7,8 +7,7 @@ export default function useKeyboard() {
   const pressedKeys = useRef(new Set<string>());
   const isEnabled = useRef(true);
 
-  const { samplerEngine, toggleHold, toggleLoop, isLooping, isHolding } =
-    useSamplerCtx();
+  const { samplerEngine, toggleHold, setLoop } = useSamplerCtx();
 
   if (!samplerEngine) {
     console.error('SamplerEngine not initialized in useKeyboard hook');
@@ -37,8 +36,11 @@ export default function useKeyboard() {
 
       switch (event.code) {
         case 'CapsLock':
-          event.preventDefault();
-          toggleLoop();
+          const capsLockActive = event.getModifierState('CapsLock');
+          if (capsLockActive) {
+            setLoop(true);
+          }
+          pressedKeys.current.delete(event.code);
           break;
         case 'Space':
           event.preventDefault();
@@ -50,7 +52,7 @@ export default function useKeyboard() {
           break;
         default:
           const midiNote = keyMap[event.code];
-          if (midiNote && !(event.target instanceof HTMLInputElement)) {
+          if (midiNote) {
             samplerEngine.playNote(midiNote);
           }
       }
@@ -70,24 +72,23 @@ export default function useKeyboard() {
       pressedKeys.current.delete(event.code);
 
       switch (event.code) {
+        case 'CapsLock':
+          const capsLockActive = event.getModifierState('CapsLock');
+          if (!capsLockActive) {
+            setLoop(false);
+          }
+          break;
         default:
           const midiNote = keyMap[event.code];
           if (midiNote) {
-            if (
-              !(event.target instanceof HTMLInputElement) ||
-              event.target.type !== 'text'
-            ) {
-              event.preventDefault();
-              samplerEngine.releaseNote(midiNote);
-            }
+            event.preventDefault();
+            samplerEngine.releaseNote(midiNote);
           }
       }
     };
 
     const handleBlur = () => {
       if (isEnabled.current) {
-        // isSpacebarDown.current = false;
-        // isTabActive.current = false;
         pressedKeys.current.clear();
         console.log('blur occured');
       }
@@ -102,39 +103,14 @@ export default function useKeyboard() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [samplerEngine, toggleHold, toggleLoop]);
+  }, [samplerEngine, toggleHold, setLoop]);
 
   return {
     setEnabled: (enabled: boolean) => {
       isEnabled.current = enabled;
       if (!enabled) {
-        isSpacebarDown.current = false;
         pressedKeys.current.clear();
       }
     },
   };
 }
-
-// function setIsLooping() { // caps: boolean, space: boolean ?
-//   // ... optimize for reliability
-//   isLooping.current =
-//     (isCapslockActive.current && !isSpacebarDown.current)
-//     || (isSpacebarDown.current && !isCapslockActive.current);
-
-//   samplerEngine.setIsLooping(isLooping.current); // implement setIsLooping in SamplerEngine
-// }
-
-// const setIsLooping = useCallback(() => {
-//   console.log(
-//     'caps: ',
-//     isCapslockActive.current,
-//     'space: ',
-//     isSpacebarDown.current
-//   );
-//   const newLoopState = isCapslockActive.current !== isSpacebarDown.current;
-
-//   if (newLoopState !== isLooping.current) {
-//     isLooping.current = newLoopState;
-//     samplerEngine?.setGlobalLoop(newLoopState);
-//   }
-// }, [samplerEngine]);

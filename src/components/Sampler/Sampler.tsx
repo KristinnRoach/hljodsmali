@@ -30,6 +30,8 @@ export default function Sampler_cli() {
     toggleHold,
   } = useSamplerCtx();
 
+  const [loopState, setLoopState] = React.useState(isLooping || false);
+
   const [visualizer, setVisualizer] = React.useState<'shapes' | 'keyboard'>(
     'shapes'
   );
@@ -40,7 +42,7 @@ export default function Sampler_cli() {
   }
 
   function switchVisualizer(
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ): void {
     setVisualizer((prev) => (prev === 'shapes' ? 'keyboard' : 'shapes'));
   }

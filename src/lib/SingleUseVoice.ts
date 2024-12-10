@@ -104,15 +104,13 @@ export default class SingleUseVoice {
   }
 
   static toggleLoop() {
-    // if (SingleUseVoice.globalLoop === isLoopOn) return;
-
     SingleUseVoice.globalLoop = !SingleUseVoice.globalLoop;
-    // better to not set for active voices ?
     SingleUseVoice.allVoices.forEach((voice) => voice.setLoop());
-    // setTimeout(() => {
-    //   console.log('all voices: ', SingleUseVoice.allVoices);
-    //   // SingleUseVoice.allVoices.clear();
-    // }, 500);
+  }
+
+  static setLoop(isLoopOn: boolean) {
+    SingleUseVoice.globalLoop = isLoopOn;
+    SingleUseVoice.allVoices.forEach((voice) => voice.setLoop());
   }
 
   static isLooping() {
@@ -121,6 +119,15 @@ export default class SingleUseVoice {
 
   static toggleHold() {
     SingleUseVoice.hold = !SingleUseVoice.hold;
+    if (!SingleUseVoice.hold) {
+      SingleUseVoice.allVoices.forEach((voice) => {
+        voice.triggerRelease();
+      });
+    }
+  }
+
+  static setHold(isHoldOn: boolean) {
+    SingleUseVoice.hold = isHoldOn;
     if (!SingleUseVoice.hold) {
       SingleUseVoice.allVoices.forEach((voice) => {
         voice.triggerRelease();
