@@ -1,31 +1,70 @@
-Appið hýst á Vercel // Application Hosted on Vercel:
+# Hljóð Smali
 
-** Current demo only tested in Chrome with Icelandic keyboard **
+A browser-based audio sampling and playback application that lets you quickly record sounds and play them back polyphonically using your computer keyboard.
 
-https://hljod-smali.vercel.app/
+## [Live Demo](https://hljod-smali.vercel.app/)
 
-Leiðbeiningar (english below):
+> **Note:** Currently optimized for Chrome browser with Icelandic keyboard layout. Support for additional browsers and keyboard layouts coming soon.
 
-Taktu upp stutt hljóð með því að ýta á upptökuhnappinn einu sinni til að byrja og svo aftur til að stoppa. Góð byrjun væri til dæmis að syngja eða flauta eina stutta nótu, eða slá í gler glas eða eitthvað sem gefur frá sér tón. Best er að tónninn byrji strax eða sé þegar byrjaður þegar upptaka hefst.
+## Features
 
-Eftir upptöku getur þú spilað á hljóðið eins og píanó með tölvulyklaborðinu. Lyklarnir 'Z' til 'Þ' eru eins og hvítar nótur á píanói og svörtu nóturnar eru í röðinni fyrir ofan. Raðirnar fyrir ofan, frá 'Q' til '?' eru áttund fyrir ofan, upprunalega upptakan er á 'Q'.
+- Real-time audio recording and playback
+- Keyboard-based sample triggering with piano-style layout
+- Loop functionality with adjustable start/end points
+- Sustain mode for extended sample playback
+- Sample management system
+- Core audio processing controls
 
-Ef CapsLock er á loopast hljóðið og Tab lætur hljóðið alltaf spilast til enda í staðinn fyrir að deyja út þegar hætt er að ýta á viðkomandi takka.
+## Quick Start Guide
 
-Instructions:
+### Recording
 
-Recording Audio:
-Press the record button once to start recording and press it again to stop.
-A good starting point is to sing or whistle a short note, or tap a glass or something that produces a clear pitch.
-It is best if the sound starts immediately or is already ongoing when the recording begins to avoid silence at the beginning of the sample.
+1. Click the 'Record' button to toggle audio recording
+2. Begin making sound slightly before clicking record to capture the full audio
+   (or trim the start point afterwards)
+3. Click 'Record' again to stop
 
-Playing Back Audio:
-After recording, you can play the audio polyphonically using your computer keyboard.
-The keys 'Z' to 'Þ' correspond to the white notes on a piano, with the black notes arranged above them.
-The rows above, from 'Q' to '?', represent an octave higher, with the original recording starting at 'Q'.
+### Playback
 
-Additional Features:
-If CapsLock is on, the sound will loop continuously.
-Pressing Tab will toggle on 'Hold' mode, which makes the sound play to the end instead of fading out when you stop pressing the respective keys.
-The attack slider controls the duration of volume fade in for the selected sound and the release sliders controls the fade out, when 'Hold' is not on.
-More features coming very soon!
+- Use your computer keyboard as a virtual piano
+- Base pitch is mapped to 'q' key
+- Lower octave starts at 'z'
+- View the keyboard layout using the 'Switch Visualizer' button
+
+### Playback Modes
+
+- **Loop Mode**: Toggle with Capslock or 'Loop' button
+  - Experiment with loop points (e.g. short loops and high-cut for synthesizer-like effects)
+- **Sustain Mode**: Toggle with Tab or 'Hold' button
+  - Plays sample to completion regardless of when key is released
+
+### Sample Management
+
+Access your recorded samples through the 'Samples' menu, where you can:
+
+- View all recorded samples
+- Select active sample for playback
+- Access sample-specific settings
+
+### Audio Processing Settings
+
+Each sample has the following adjustable parameters:
+
+| Setting    | Description                                 |
+| ---------- | ------------------------------------------- |
+| Start      | Playback start point (trim initial silence) |
+| End        | Playback end point (trim trailing sounds)   |
+| Loop Start | Loop section beginning                      |
+| Loop End   | Loop section end                            |
+| Attack     | Volume fade-in duration                     |
+| Release    | Volume fade-out duration                    |
+| Low Cut    | High-pass filter (leftmost = disabled)      |
+| High Cut   | Low-pass filter (rightmost = disabled)      |
+
+## Upcoming Features
+
+- User authentication
+- Persistent data storage for logged in users
+- Enhanced UI
+- Cross-browser compatibility improvements
+- Additional feature implementations
