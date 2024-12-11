@@ -67,7 +67,7 @@ export function createNewSampleObject(
   user: string = '',
   audioBuffer?: AudioBuffer
 ): Sample_db {
-  const file = new File([blob], name + '.webm', { type: 'audio/webm' }); // check for consistency
+  const file = new File([blob], name + '.webm', { type: 'audio/webm' });
   const slug = name.toLowerCase().replace(/ /g, '-');
 
   const defaultSettings = getDefaultSampleSettings(duration);

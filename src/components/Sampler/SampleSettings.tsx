@@ -73,7 +73,7 @@ const SampleSettings: React.FC = () => {
       {sample && isSampleLoaded(sample.id) && isSampleSelected(sample.id) && (
         <section className={styles.sample_settings}>
           <div key={sample.id} title={sample.name}>
-            <h2>{sample.name}</h2>
+            {/* <h4>{sample.name}</h4> */}
             <BasicSlider
               label='Start'
               value={startPoint}

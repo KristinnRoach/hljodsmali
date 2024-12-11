@@ -9,7 +9,6 @@ const nextConfig = {
   reactStrictMode: true,
   sassOptions: {
     includePaths: [path.join(__dirname, 'src', 'styles')],
-    // includePaths: [new URL('styles', import.meta.url).pathname],
   },
 };
 

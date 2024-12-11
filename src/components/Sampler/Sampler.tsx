@@ -69,7 +69,7 @@ export default function Sampler_cli() {
 
           <Recorder_CSR />
         </div>
-        <section className={`${styles.samples} ${styles.clickable}`}>
+        <section className={`${styles.sampleMenuBox} ${styles.clickable}`}>
           <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
             {allSamples.length < 1 && (
               <p style={{ padding: '2rem' }}>
@@ -77,20 +77,26 @@ export default function Sampler_cli() {
               </p>
             )}
             {!isLoading && allSamples.length > 0 && (
-              <div className={styles.clickable}>
-                <LinkList
-                  items={allSamples}
-                  title='Samples'
-                  paramName='samples'
-                  itemsPerPage={10}
-                  onDelete={(id) => deleteSample(id)}
-                  onSave={(id) => updateSample(id)}
-                />
+              <>
+                <div className={`${styles.sampleListBox} ${styles.clickable}`}>
+                  <LinkList
+                    items={allSamples}
+                    title='Samples'
+                    paramName='samples'
+                    itemsPerPage={10}
+                    onDelete={(id) => deleteSample(id)}
+                    onSave={(id) => updateSample(id)}
+                  />
+                </div>
 
-                <MenuToggle label='Settings'>
-                  <SampleSettings />
-                </MenuToggle>
-              </div>
+                <div className={styles.settingsBox}>
+                  <MenuToggle label='Settings'>
+                    <div className={styles.paramsBox}>
+                      <SampleSettings />
+                    </div>
+                  </MenuToggle>
+                </div>
+              </>
             )}
           </MenuToggle>
         </section>
@@ -98,7 +104,7 @@ export default function Sampler_cli() {
       <section className={styles.graphics}>
         {visualizer === 'shapes' && (
           <div className={styles.shapes}>
-            <Shapes />{' '}
+            <Shapes />
           </div>
         )}
         {visualizer === 'keyboard' && (

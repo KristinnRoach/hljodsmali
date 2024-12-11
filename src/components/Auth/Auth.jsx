@@ -8,7 +8,6 @@ import useLogin from '../../hooks/useLogin';
 import pb from '../../lib/db/pocketbase';
 import styles from './Auth.module.scss';
 
-/* TODO: REFACTOR TO USE SERVER ACTIONS */ // 'use client' only for button?
 /* TODO: ADD SIGN UP */
 
 export default function Auth() {
@@ -67,7 +66,6 @@ export default function Auth() {
 // }
 
 // let isNewUser = false;
-
 // function toggleIsNewUser(event) {
 //   // placeholder for signup
 //   isNewUser = !isNewUser;

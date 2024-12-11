@@ -15,11 +15,11 @@ $max-width: 1600px;
 html,
 body {
   max-width: $max-width;
-  // overflow: hidden;
 }
 
 body {
   background-color: $bg-color;
+  margin: 0 auto;
 }
 
 a {

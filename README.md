@@ -1,5 +1,7 @@
 Appið hýst á Vercel // Application Hosted on Vercel:
 
+** Current demo only tested in Chrome with Icelandic keyboard **
+
 https://hljod-smali.vercel.app/
 
 Leiðbeiningar (english below):
@@ -15,7 +17,7 @@ Instructions:
 Recording Audio:
 Press the record button once to start recording and press it again to stop.
 A good starting point is to sing or whistle a short note, or tap a glass or something that produces a clear pitch.
-It is best if the sound starts immediately or is already ongoing when the recording begins to avoid silence at the beginning of the sample. 
+It is best if the sound starts immediately or is already ongoing when the recording begins to avoid silence at the beginning of the sample.
 
 Playing Back Audio:
 After recording, you can play the audio polyphonically using your computer keyboard.
@@ -25,5 +27,5 @@ The rows above, from 'Q' to '?', represent an octave higher, with the original r
 Additional Features:
 If CapsLock is on, the sound will loop continuously.
 Pressing Tab will toggle on 'Hold' mode, which makes the sound play to the end instead of fading out when you stop pressing the respective keys.
-The attack slider controls the duration of volume fade in for the selected sound and the release sliders controls the fade out, when 'Hold' is not on. 
+The attack slider controls the duration of volume fade in for the selected sound and the release sliders controls the fade out, when 'Hold' is not on.
 More features coming very soon!

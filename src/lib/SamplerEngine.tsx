@@ -1,4 +1,4 @@
-// src/lib/SamplerEngine.tsx // ts or tsx !?
+// src/lib/SamplerEngine
 import SingleUseVoice from './SingleUseVoice';
 import {
   Sample_db,
@@ -53,7 +53,6 @@ export default class SamplerEngine {
     // TODO: ADD LIMITER / COMPRESSOR NODE
 
     this.setupRecording();
-    console.log('Audio Engine context: ', this.audioCtx);
 
     SingleUseVoice.initialize(this.audioCtx.sampleRate);
   }
@@ -158,8 +157,6 @@ export default class SamplerEngine {
 
     SingleUseVoice.zeroCrossings.set(loading.id, loading.zeroCrossings ?? []);
 
-    console.log('Zero crossings:', SingleUseVoice.zeroCrossings);
-
     const settings = loading.sample_settings;
 
     // --------DELETE THIS WHEN FILTERS ARE IMPLEMENTED--------
@@ -209,22 +206,6 @@ export default class SamplerEngine {
     SingleUseVoice.sampleSettings.delete(id);
     SingleUseVoice.zeroCrossings.delete(id);
   }
-
-  // getUpdatedSamples(): Sample_db[] {
-  //   const updatedSamples = [...this.updatedSamples.values()];
-  //   this.updatedSamples = new Map();
-  //   return updatedSamples;
-  // }
-
-  // addBufferDurationToLoadedSamples(): void {
-  //   // remove function if redundant, else add zeroCrossings
-  //   this.loadedSamples.forEach((loadedSample, key) => {
-  //     if (loadedSample.buffer && loadedSample.buffer.duration) {
-  //       loadedSample.sample.bufferDuration = loadedSample.buffer.duration;
-  //       this.loadedSamples.set(key, loadedSample);
-  //     }
-  //   });
-  // }
 
   setSampleVolume(sampleId: string, volume: number) {
     const loaded = this.loadedSamples.get(sampleId);
@@ -437,14 +418,13 @@ export default class SamplerEngine {
           const audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
 
           const newSample: Sample_db = createNewSampleObject(
-            `new-sample${Date.now().toString()}`, // date eða index eðeikka
-            `new-sample${this.loadedSamples.size}`,
+            `new-sample-${Date.now().toString()}`,
+            `new-sample-${this.loadedSamples.size + 1}`,
             blob,
             audioBuffer.duration
           );
           this.recordedChunks = [];
           resolve({ sample: newSample, buffer: audioBuffer });
-          // this.setupRecording(); // Reset media recorder here?
         } catch (error) {
           reject(error);
         }
