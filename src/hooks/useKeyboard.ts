@@ -9,14 +9,13 @@ export default function useKeyboard() {
 
   const { samplerEngine, toggleHold, setLoop } = useSamplerCtx();
 
-  if (!samplerEngine) {
-    console.error('SamplerEngine not initialized in useKeyboard hook');
-    throw new Error('SamplerEngine not initialized in useKeyboard hook');
-  }
+  // if (!samplerEngine) {
+  //   console.error('SamplerEngine not initialized in useKeyboard hook');
+  //   throw new Error('SamplerEngine not initialized in useKeyboard hook');
+  // }
 
   useEffect(() => {
     if (!samplerEngine) {
-      console.error('SamplerEngine not initialized in useKeyboard effect');
       return;
     }
 

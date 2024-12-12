@@ -10,6 +10,7 @@ type ReactAudioCtxProviderProps = {
 
 type ReactAudioCtxType = {
   audioCtx: AudioContext | null;
+  ensureAudioCtx: () => void;
 };
 
 export const ReactAudioCtx = createContext<ReactAudioCtxType | null>(null);
@@ -19,39 +20,28 @@ export default function ReactAudioCtxProvider({
 }: ReactAudioCtxProviderProps) {
   const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
 
-  useEffect(() => {
+  // function to start or resume audio context when it is suspended
+  const ensureAudioCtx = () => {
     if (typeof window !== 'undefined' && !audioCtx) {
       const newAudioCtx = new (window.AudioContext ||
         (window as any).webkitAudioContext)({
         latencyHint: 0.0001,
       });
       setAudioCtx(newAudioCtx);
+    } else if (audioCtx && audioCtx.state === 'suspended') {
+      resumeAudioContext(audioCtx);
     }
-  }, [audioCtx]);
-
-  // if (!audioCtx) {
-  //   console.warn('Failed to create audio context');
-  //   throw new Error('Failed to create audio context');
-  // }
+  };
 
   useEffect(() => {
-    if (audioCtx) {
-      const handleStateChange = () => {
-        resumeAudioContext(audioCtx!);
-      };
-
-      audioCtx.addEventListener('statechange', handleStateChange);
-
-      return () => {
-        audioCtx?.removeEventListener('statechange', handleStateChange);
-        // audioCtx.close(); // unecessary and could cause issues?
-        // console.warn('audioCtx closed from ReactAudioCtxProvider');
-      };
-    }
+    return () => {
+      // audioCtx.close(); // unecessary and could cause issues?
+      // console.warn('audioCtx closed from ReactAudioCtxProvider');
+    };
   }, [audioCtx]);
 
   return (
-    <ReactAudioCtx.Provider value={{ audioCtx }}>
+    <ReactAudioCtx.Provider value={{ audioCtx, ensureAudioCtx }}>
       {children}
     </ReactAudioCtx.Provider>
   );
@@ -67,19 +57,17 @@ export function useReactAudioCtx() {
   return context;
 }
 
-// const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
-
 // useEffect(() => {
-//   // try {
 //   if (typeof window !== 'undefined' && !audioCtx) {
-//     setAudioCtx(
-//       new (window.AudioContext || (window as any).webkitAudioContext)({
-//         latencyHint: 0.0001,
-//       })
-//     );
+//     const newAudioCtx = new (window.AudioContext ||
+//       (window as any).webkitAudioContext)({
+//       latencyHint: 0.0001,
+//     });
+//     setAudioCtx(newAudioCtx);
 //   }
-//   // } catch (error) {
-//   //   console.error('Failed to create audio context:', error);
-//   //   throw new Error('Failed to create audio context');
-//   // }
-// }, [audioCtx]); // audioCtx
+// }, [audioCtx]);
+
+// if (!audioCtx) {
+//   console.warn('Failed to create audio context');
+//   throw new Error('Failed to create audio context');
+// }

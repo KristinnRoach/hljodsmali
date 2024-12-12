@@ -3,7 +3,7 @@
 import React from 'react';
 
 import useKeyboard from '../../hooks/useKeyboard';
-import Recorder_CSR from './Recorder';
+import Recorder from './Recorder';
 import SampleSettings from './SampleSettings';
 import LinkList from '../UI/LinkList';
 import Shapes from '../UI/Shapes/Shapes';
@@ -15,7 +15,6 @@ import Toggle from '../UI/Basic/Toggle';
 import MenuToggle from '../UI/Basic/MenuToggle';
 
 export default function Sampler_cli() {
-  useKeyboard();
   const {
     samplerEngine,
     allSamples,
@@ -28,14 +27,11 @@ export default function Sampler_cli() {
     toggleHold,
   } = useSamplerCtx();
 
+  useKeyboard();
+
   const [visualizer, setVisualizer] = React.useState<'shapes' | 'keyboard'>(
     'shapes'
   );
-
-  if (!samplerEngine) {
-    console.error('SamplerEngine not initialized in Sampler component');
-    return null;
-  }
 
   function switchVisualizer(
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
@@ -67,7 +63,7 @@ export default function Sampler_cli() {
             type='hold'
           />
 
-          <Recorder_CSR />
+          <Recorder />
         </div>
         <section className={`${styles.sampleMenuBox} ${styles.clickable}`}>
           <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>

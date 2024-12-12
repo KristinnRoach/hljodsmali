@@ -36,6 +36,7 @@ export default class SamplerEngine {
   private selectedSampleIds: Set<string> = new Set();
 
   private masterGain: GainNode;
+  private limiter: DynamicsCompressorNode;
   // private globalLoop: boolean = false;
 
   /* Constructor */
@@ -48,9 +49,18 @@ export default class SamplerEngine {
 
     this.masterGain = this.audioCtx?.createGain();
     this.masterGain.gain.value = 0.75;
-    this.masterGain.connect(this.audioCtx.destination);
 
-    // TODO: ADD LIMITER / COMPRESSOR NODE
+    // Create and congfigure limiter
+    this.limiter = audioCtx.createDynamicsCompressor();
+
+    this.limiter.threshold.value = -1;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = 0.003;
+    this.limiter.release.value = 0.25;
+
+    this.masterGain.connect(this.audioCtx.destination);
+    this.limiter.connect(this.masterGain);
 
     this.setupRecording();
 
@@ -77,7 +87,7 @@ export default class SamplerEngine {
     SingleUseVoice.setLoop(isLooping);
   }
 
-  public isLooping(): boolean {
+  isLooping(): boolean {
     return SingleUseVoice.isLooping();
   }
 
@@ -128,13 +138,15 @@ export default class SamplerEngine {
     sampleGain: GainNode,
     lowCut: BiquadFilterNode,
     highCut: BiquadFilterNode,
-    masterOut: GainNode = this.masterGain
+    masterOut: GainNode = this.masterGain,
+    limiter: DynamicsCompressorNode = this.limiter
   ): void {
     if (!masterOut) throw new Error('Master output not set up');
 
     sampleGain.connect(lowCut);
     lowCut.connect(highCut);
-    highCut.connect(masterOut);
+    highCut.connect(this.limiter);
+    limiter.connect(masterOut);
     masterOut.connect(this.audioCtx.destination);
   }
 

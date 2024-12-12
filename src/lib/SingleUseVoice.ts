@@ -27,10 +27,6 @@ export default class SingleUseVoice {
     readonly buffer: AudioBuffer,
     sampleId: string
   ) {
-    console.log(
-      'SingleUseVoice.sampleSettings: ',
-      SingleUseVoice.sampleSettings
-    );
     if (!SingleUseVoice.sampleSettings.has(sampleId)) {
       throw new Error('Sample not loaded, id: ' + sampleId);
     }

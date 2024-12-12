@@ -70,11 +70,11 @@ export default function SamplerProvider({
   const searchParams = useSearchParams();
 
   if (typeof window === 'undefined')
-    throw new Error('No window object in sampler context'); // not necessary in a 'use client' context?
+    throw new Error('No window object in sampler context'); //  necessary in a 'use client' context?
 
-  const { audioCtx } = useReactAudioCtx();
+  const { audioCtx, ensureAudioCtx } = useReactAudioCtx();
 
-  const samplerEngine = audioCtx ? SamplerEngine.getInstance(audioCtx) : null; // should this be in a useMemo?
+  const samplerEngine = audioCtx ? SamplerEngine.getInstance(audioCtx) : null; // useMemo?
 
   // State
   const [allSamples, setAllSamples] = useState<Sample_db[]>([]);
@@ -161,6 +161,7 @@ export default function SamplerProvider({
 
   const handleDroppedFile = useCallback(
     async (file: File) => {
+      ensureAudioCtx();
       if (!(samplerEngine && audioCtx)) return;
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -183,7 +184,7 @@ export default function SamplerProvider({
         console.error('Error decoding dropped audio file:', error);
       }
     },
-    [audioCtx, samplerEngine, router, addLoadedBuffer]
+    [audioCtx, samplerEngine, router, addLoadedBuffer, ensureAudioCtx]
   );
 
   useEffect(() => {
@@ -215,6 +216,7 @@ export default function SamplerProvider({
 
   // Sample selection and loading to sampler engine
   useEffect(() => {
+    ensureAudioCtx();
     if (!(samplerEngine && audioCtx)) return;
     const loadSamples = async () => {
       const ids: string[] = [];
@@ -246,7 +248,14 @@ export default function SamplerProvider({
     return () => {
       samplerEngine.setSelectedSampleIds([]);
     };
-  }, [selectedSlugsMemo, allSamples, audioCtx, samplerEngine, addLoadedBuffer]); // allSamples ?
+  }, [
+    selectedSlugsMemo,
+    allSamples,
+    audioCtx,
+    samplerEngine,
+    addLoadedBuffer,
+    ensureAudioCtx,
+  ]); // allSamples ?
 
   const selectedSamples = useMemo(
     () =>
