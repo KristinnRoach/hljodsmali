@@ -13,7 +13,7 @@ A browser-based audio sampling and playback application that lets you quickly re
 - Loop functionality with adjustable start/end points
 - Sustain mode for extended sample playback
 - Sample management system
-- Core audio processing controls
+- Core sample parameters adjustable
 
 ## Quick Start Guide
 
@@ -46,7 +46,7 @@ Access your recorded samples through the 'Samples' menu, where you can:
 - Select active sample for playback
 - Access sample-specific settings
 
-### Audio Processing Settings
+### Audio Sample Settings
 
 Each sample has the following adjustable parameters:
 
