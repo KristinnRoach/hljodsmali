@@ -6,7 +6,6 @@ import pb from '../lib/db/pocketbase';
 import { Sample_db } from '../types/sample';
 
 export async function saveSample(name: string, file: File): Promise<Sample_db> {
-  // currentPath: string ?
   const formData = new FormData();
   formData.append('name', name);
   formData.append('sample_file', file);

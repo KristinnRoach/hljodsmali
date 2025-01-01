@@ -58,7 +58,7 @@ const BasicSlider: React.FC<BasicSliderProps> = ({
   return (
     <div style={{ margin: '20px 0' }}>
       <label>
-        {label} {/* : {value.toFixed(isLogarithmic ? 0 : 2)} */}
+        {label || '?'} {/* : {value.toFixed(isLogarithmic ? 0 : 2)} */}
       </label>
       <input
         type='range'

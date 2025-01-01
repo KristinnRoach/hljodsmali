@@ -210,8 +210,8 @@ export default class SingleUseVoice {
     newLoopStart: number = this.source.loopStart,
     newLoopEnd: number = this.source.loopEnd
   ) {
-    this.source.loopStart = newLoopStart;
-    this.source.loopEnd = newLoopEnd;
+    this.source.loopStart = newLoopStart / SingleUseVoice.sampleRate;
+    this.source.loopEnd = newLoopEnd / SingleUseVoice.sampleRate;
   }
 
   calculateLoopPoints(updated: Partial<Sample_settings> = this.settings) {

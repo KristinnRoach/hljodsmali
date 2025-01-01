@@ -32,7 +32,6 @@ export default function Auth() {
 
   return (
     <div className={styles.login}>
-      <h1></h1>
       {isLoading && <p>Loading...</p>}
       {/* <button onClick={toggleIsNewUser} disabled={isLoading}>
         New User?

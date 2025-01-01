@@ -32,6 +32,8 @@ const SampleSettings: React.FC = () => {
   const [durationHasChanged, setDurationHasChanged] = useState(false);
   const [loopDurationHasChanged, setLoopDurationHasChanged] = useState(false);
 
+  const [stepSize, setStepSize] = useState(0.1);
+
   const handleStartChange = (value: number) => {
     handleSettingChange('startPoint', value);
     setDurationHasChanged(true);
@@ -95,18 +97,20 @@ const SampleSettings: React.FC = () => {
             <BasicSlider
               label='Loop Start'
               value={loopStart ?? 0}
-              min={0}
+              min={0.000001}
               max={sample.bufferDuration}
-              step={0.0001}
+              step={0.001}
+              isLogarithmic={true}
               onChange={handleLoopStartChange}
               maxDynamic={loopEnd - 0.0001}
             />
             <BasicSlider
               label='Loop End'
               value={loopEnd ?? sample.bufferDuration}
-              min={0}
+              min={0.0001}
               max={sample.bufferDuration}
               step={0.001}
+              isLogarithmic={true}
               onChange={handleLoopEndChange}
               minDynamic={loopStart + 0.0001}
             />

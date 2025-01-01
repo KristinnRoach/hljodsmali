@@ -3,20 +3,21 @@
 import React from 'react';
 
 import useKeyboard from '../../hooks/useKeyboard';
+import { useSamplerCtx } from '../../contexts/sampler-context';
+import Auth from '../Auth/Auth';
 import Recorder from './Recorder';
 import SampleSettings from './SampleSettings';
 import LinkList from '../UI/LinkList';
 import Shapes from '../UI/Shapes/Shapes';
 import KeyboardGUI from '../UI/Keyboard/spline/KeyboardGUISpline';
-
-import styles from './Sampler.module.scss';
-import { useSamplerCtx } from '../../contexts/sampler-context';
 import Toggle from '../UI/Basic/Toggle';
 import MenuToggle from '../UI/Basic/MenuToggle';
+import AudioDeviceSelector from './AudioDeviceSelector';
+
+import styles from './Sampler.module.scss';
 
 export default function Sampler_cli() {
   const {
-    samplerEngine,
     allSamples,
     isLoading,
     updateSample,
@@ -64,6 +65,9 @@ export default function Sampler_cli() {
           />
 
           <Recorder />
+        </div>
+        <div className={styles.inputDevice}>
+          <AudioDeviceSelector />
         </div>
         <section className={`${styles.sampleMenuBox} ${styles.clickable}`}>
           <MenuToggle label={isLoading ? 'Loading...' : 'Samples'}>
